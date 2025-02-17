@@ -208,7 +208,7 @@ footer {
     display: inline-block;
     width: 30px; 
     height: 30px;
-    background-image: url('image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
     transform: rotate(180deg)
 }
@@ -218,7 +218,7 @@ footer {
     display: inline-block;
     width: 30px; 
     height: 30px;
-    background-image: url('image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
 }
 
@@ -227,7 +227,7 @@ footer {
     display: inline-block;
     width: 30px; 
     height: 30px;
-    background-image: url('image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
     transform: rotate(-90deg)
 }
@@ -237,7 +237,7 @@ footer {
     display: inline-block;
     width: 30px; 
     height: 30px;
-    background-image: url('image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
     transform: rotate(90deg)
 }
@@ -249,7 +249,7 @@ footer {
     display: inline-block;
     width: 30px; 
     height: 30px;
-    background-image: url('image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
     transform: rotate(-45deg)
 }
@@ -258,7 +258,7 @@ footer {
     display: inline-block;
     width: 30px; 
     height: 30px;
-    background-image: url('image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
     transform: rotate(-135deg)
 }
@@ -267,7 +267,7 @@ footer {
     display: inline-block;
     width: 30px; 
     height: 30px;
-    background-image: url('image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
     transform: rotate(45deg)
 }
@@ -276,7 +276,7 @@ footer {
     display: inline-block;
     width: 30px; 
     height: 30px;
-    background-image: url('image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
     transform: rotate(135deg)
 }
