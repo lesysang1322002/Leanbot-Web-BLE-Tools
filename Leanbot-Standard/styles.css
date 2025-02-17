@@ -1,0 +1,707 @@
+
+body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    margin: 0;
+  }
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #navbarTitle {
+    margin-left:65px;
+    font-size: 16px;
+    font-weight: bold;
+  }
+  .btn-primary-scan {
+    display: flex;
+    align-items: center;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    color:  #ffffff!important; 
+    background-color: #2c5f85 !important; 
+    border-color:  #000000 !important;
+    width: 80px; /* Đảm bảo kích thước tối đa không vượt quá kích thước của phần tử cha */
+    height: auto;
+  }
+  .btn-primary-scan img {
+    padding-bottom: 2px;
+    width: 22px; /* Đặt kích thước chiều rộng mong muốn */
+    height: auto;
+  }
+  #buttonText{
+    font-weight: bold;
+  }
+  #infoButton {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding: 0 0 px;
+    background: #ffffff;
+    color: rgb(38, 15, 15);
+    border: none;
+    font-size: 17px;
+    cursor: pointer;
+  }
+  .info-content {
+    display: none;
+    position: absolute;
+    top: 5px; 
+    left: 5px;
+    background-color: #f1f1f1;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    white-space: pre-line; /* Hiển thị thông tin theo hàng dòng */
+    line-height: 0.1;
+  }
+  .info-popup {
+    display: none;
+    position: fixed; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%);
+    background-color: #f1f1f1;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    z-index: 1;
+    white-space: pre-line;
+    line-height: 1;
+  }
+
+#cancelButton {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: white;
+  color: #f44336;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#cancelButton:hover {
+  background-color: #ddd;
+}
+
+  .alert-info {
+    background-color: #17a2b8;
+    color: #fff;
+  }
+  body h6 {
+    font-size: 12px;
+  }
+  footer {
+    background-color: #343a40;
+    color: #fff;
+  }
+  .center-text {
+    text-align: center;
+    color: #333; /* Màu sắc văn bản tùy chọn */
+    font-size: 24px; /* Kích thước font tùy chọn */
+  }
+  @media screen and (orientation: landscape) {
+    
+  }
+  
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .top-panel, .bottom-panel {
+    flex: 1;
+    overflow: auto;
+    padding: 10px;
+  }
+  
+  /* Add any additional styling for your panels as needed */
+  .top-panel {
+    background-color: #7adae9;
+  }
+  
+  .bottom-panel {
+    background-color: #ffffff;
+  }
+  .square {
+    aspect-ratio: 1; /* Tạo hình vuông bằng cách giữ tỷ lệ khung hình */
+    padding: 15px;
+    background-color: white;
+  }
+  .row{
+    justify-content: space-between;
+    padding: 70px;
+  }
+  .content {
+    color: #000000;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .column{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .grid-item.black {
+    background-color: black;
+    color:white;
+  }
+  .grid-item.red{
+  background-color:red;
+  color:white;
+  }
+  .grid-item.white {
+    background-color: white;
+    color:black;
+  }
+  input[type="range"] {
+    width: 98%; 
+  }
+  
+  .distance-text{
+    margin:0 0;
+  }
+  
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(15, 1fr); /* Tạo 15 cột với chiều rộng bằng nhau */
+    grid-template-rows: 30px 30px 30px 30px 34px 30px 34px 30px 30px 30px 30px 30px 30px 30px 30px 30px 30px 30px 30px 30px;
+    width: 100vw;
+  }
+
+  
+  .grid-item {
+    border: 3px solid #CCCCCC;
+    background-color: white;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+  }
+  .distance-text {
+    grid-column: 3 / span 11; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 2; /* Nằm ở hàng 2 */
+    font-size: 20px;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+  }
+  .container-slider{
+    grid-column: 3 / span 11; 
+    grid-row: 2 / span 3;
+    border: 3px solid #CCCCCC;
+    border-radius: 15px;
+  } 
+  .distance-slider {
+    grid-column: 3 / span 11; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 3; /* Nằm ở hàng 2 */
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+  }
+  .slider-text10{
+    grid-column: 5;
+    grid-row: 4;
+  }
+  .slider-text30{
+    grid-column: 11;
+    grid-row: 4;
+  }
+  #text10cm, #text30cm {
+    color: #CCCCCC; /* Màu xám cho văn bản */
+    font-size:13px;
+  }
+  #distanceValue{
+    font-size:13px;
+  }
+  .angleL{
+    grid-column: 6;
+    grid-row: 5;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center;
+  }
+  .angleLvalue{
+    grid-column: 6;
+    grid-row: 6;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center;
+  }
+  .angle{
+    grid-column: 7 / span 3;
+    grid-row: 5;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center;
+  }
+  .angleR{
+    grid-column: 10;
+    grid-row: 5;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center;
+  }
+  .angleRvalue{
+    grid-column: 10;
+    grid-row: 6;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center;
+  }
+
+  .GripperCalibration{
+    grid-column: 7 / span 3;
+    grid-row: 6;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center;
+  }
+
+  .grid-item.ir4L {
+    grid-column: 3; /* Bắt đầu từ cột 3 */
+    grid-row: 8; /* Nằm ở hàng 8 và chiếm 2 hàng */
+    height: 34px;
+    width: 34px;
+    border-radius: 50%;
+
+    place-self: center; 
+  }
+
+  .grid-item.ir2L {
+    grid-column: 5; /* Bắt đầu từ cột 5 */
+    grid-row: 8 ; /* Nằm ở hàng 8 và chiếm 2 hàng */
+    height: 34px;
+    width:  34px;
+    border-radius: 50%;
+    place-self: center;
+  }
+  .grid-item.ir0L {
+    grid-column: 7; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 8; /* Nằm ở hàng 8 và chiếm 2 hàng */
+    height: 34px;
+    width:  34px;
+    border-radius: 50%;
+    place-self: center;
+  }
+  .grid-item.ir1R {
+    grid-column: 9; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 8 ; /* Nằm ở hàng 8 và chiếm 2 hàng */
+    height: 34px;
+    width:  34px;
+    border-radius: 50%;
+    place-self: center;
+  }
+  .grid-item.ir3R {
+    grid-column: 11; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 8; /* Nằm ở hàng 2 */
+    height: 34px;
+    width:  34px;
+    border-radius: 50%;
+    place-self: center;
+  }
+  .grid-item.ir5R {
+    grid-column: 13; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 8 ; /* Nằm ở hàng 8 và chiếm 2 hàng */
+    height: 34px;
+    width:  34px;
+    border-radius: 50%;
+    place-self: center;
+  }
+  .grid-item.ir6L {
+    grid-column: 3; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 6 ; /* Nằm ở hàng 2 */
+    height: 34px;
+    width:  34px;
+    border-radius: 50%;
+    place-self: center;
+  }
+  .grid-item.ir7R {
+    grid-column: 13; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 6 ; /* Nằm ở hàng 2 */
+    height: 34px;
+    width:  34px;
+    border-radius: 50%;
+    place-self: center;
+  }
+  
+  .grid-item.TB1A {
+    grid-column: 4; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 10 / span 2; /* Nằm ở hàng 2 */
+    height:60px;
+    width:33px;
+    border-radius: 5px;
+    place-self: center;
+  }
+  
+  .grid-item.TB2A {
+    grid-column: 4; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 13 / span 2; /* Nằm ở hàng 2 */
+    height:60px;
+    width:33px;
+    border-radius: 5px;
+    place-self: center;
+  }
+  
+  .grid-item.TB1B {
+    grid-column: 12; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 10 / span 2; /* Nằm ở hàng 2 */
+    height:60px;
+    width:33px;
+    border-radius: 5px;
+    place-self: center;
+  }
+  
+  .grid-item.TB2B {
+    grid-column: 12; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 13 / span 2;/* Nằm ở hàng 2 */
+    height:60px;
+    width:33px;
+    border-radius: 5px;
+    place-self: center;
+  }
+  
+  .Gripper{
+    grid-column: 6 / span 5; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 4;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+  }
+  
+  .button {
+    align-items: center; 
+    background-color: #4b89b9 !important; 
+    width: 100px; /* Đảm bảo kích thước tối đa không vượt quá kích thước của phần tử cha */
+    height: 20px; 
+    border-radius: 5px solid #CCCCCC;
+  }
+  
+  .buttonGripper{
+    border-radius: 4px;
+    width: 42px;
+    background-color: #a0cef1 !important; 
+    border: none;
+  }
+
+  .buttonGripperCalibration{
+    border-radius: 4px;
+    width: 80px;
+    background-color: #a0cef1 !important; 
+    border: none;
+  }
+  
+  p{
+    font-size:10px;
+    margin: 0;
+    font-weight: bold;
+    text-align: center;
+  }
+  .testGripper{
+    grid-column: 9 / span 3; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 10 / span 2;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+  }
+  .testLed{
+    grid-column: 5 / span 3; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 10 / span 2;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center;
+  }
+  .testBuzzer{
+    grid-column: 5 / span 3; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 13 / span 2;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; 
+  }
+  .testMotor{
+    grid-column: 9 / span 3; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 13 / span 2;
+    background-color: white;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+  }
+  .testFollowline{
+    grid-column: 4 / span 4; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 16 / span 2;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; 
+  }
+  .testStraightMotion{
+    grid-column: 9 / span 4; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 16 / span 2;
+    background-color: white;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+  }
+  .testObjectfollow{
+    grid-column: 9 / span 4; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 19 / span 2;
+    background-color: white;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+  }
+  .testIRLineCalibration{
+    grid-column: 4 / span 4; /* Bắt đầu từ cột 6 và chiếm 4 cột */
+    grid-row: 19 / span 2;
+    background-color: white;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+  }
+  .buttonTest {
+    align-items: center; 
+    background-color: #a0cef1 !important; 
+    width: 62px; /* Đảm bảo kích thước tối đa không vượt quá kích thước của phần tử cha */
+    height: 60px; 
+    border-radius: 5px;
+    border: 3px solid #CCCCCC;
+  }
+  #testFollowline,#testStraightMotion,#testObjectfollow,#testIRLineCalibration{
+    width: 95px;
+  }
+  .buttonIRLine {
+    align-items: center; 
+    background-color: #a0cef1 !important;
+    color:#CCCCCC; 
+    width: 62px; /* Đảm bảo kích thước tối đa không vượt quá kích thước của phần tử cha */
+    height: 60px; 
+    border-radius: 5px;
+    border: 3px solid white;
+  }
+
+.contentCalibration {
+  display: none;
+  position: fixed; 
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%);
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  width: 50%;
+  height: 50%;
+}
+
+.grid-containerCalibration {
+  display: grid;
+  grid-template-columns: repeat(17, 1fr); 
+  grid-template-rows: repeat(12, 1fr);
+  place-items: center;
+  justify-content:center; 
+}
+
+.TextArea{
+  grid-column: 1 / span 17;
+  grid-row: 1;
+}
+
+.angleLCali, .angleCali, .angleRCali {
+  text-align: center;
+  width: 50px;
+  height: 15px;
+}
+
+.angleCali {
+  grid-column: 8 / span 3;
+  grid-row: 2;
+}
+.angleRCali {
+  grid-column: 2 / span 3;
+  grid-row: 3;
+  text-align: center;
+}
+.angleLCali {
+  grid-column: 14 / span 3;
+  grid-row: 3;
+  text-align: center;
+}
+.angleRvalueCali {
+  grid-column: 2 / span 3;
+  grid-row: 4 / span 3;
+  text-align: center;
+  cursor: pointer;
+  background: none;
+  border-radius: 5px;
+  width: 100px;
+  height: 100px;
+}
+.angleLvalueCali {
+  grid-column: 14 / span 3;
+  grid-row: 4 / span 3;
+  text-align: center;
+  cursor: pointer;
+  background: none;
+  border-radius: 5px;
+  width: 100px;
+  height: 100px;
+}
+.R0_5decrement {
+  grid-column: 1;
+  grid-row: 7;
+}
+.R0decrement {
+  grid-column: 2;
+  grid-row: 7;
+}
+.R0increment {
+  grid-column: 4;
+  grid-row: 7;
+}
+.R0_5increment {
+  grid-column: 5;
+  grid-row: 7;
+}
+
+.L0_5increment {
+  grid-column: 13;
+  grid-row: 7;
+}
+.L0increment {
+  grid-column: 14;
+  grid-row: 7;
+}
+.L0decrement {
+  grid-column: 16;
+  grid-row: 7;
+}
+.L0_5decrement {
+  grid-column: 17;
+  grid-row: 7;
+}
+
+.R90_5increment {
+  grid-column: 6;
+  grid-row: 3;
+}
+.R90increment {
+  grid-column: 6;
+  grid-row: 4;
+}
+.R90decrement {
+  grid-column: 6;
+  grid-row: 6;
+}
+.R90_5decrement {
+  grid-column: 6;
+  grid-row: 7;
+}
+
+.L90_5increment {
+  grid-column: 12 ;
+  grid-row: 3;
+}
+.L90increment {
+  grid-column: 12 ;
+  grid-row: 4;
+}
+.L90decrement {
+  grid-column: 12;
+  grid-row: 6;
+}
+.L90_5decrement {
+  grid-column: 12;
+  grid-row: 7;
+}
+.Nextbutton {
+  grid-column: 8 / span 3;
+  grid-row: 7;
+  font-weight: bold;
+}
+
+
+#textareaCali{
+  width: 100%;
+  height: 30px;
+  resize: none;
+  text-align: center;
+  font-size: 14px;
+  border: 2px solid #ccc;
+  border-radius: 3px;
+}
+
+.angleRvalueCali, .angleLvalueCali {
+  width: 50px;
+  height: 50px;
+  text-align: center;
+  border: 2px solid #ccc;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.buttonCalibration {
+  width: 30px;
+  height: 25px;
+  font-size: 12px;
+  border-radius: 5px;
+  border: 2px solid #ccc;
+  background-color: #f0f0f0;
+}
+
+.Nextbutton, .Backbutton ,.Cancelbutton{
+  width: 65px;
+  height: 30px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 2px solid #ccc;
+  background-color: #f0f0f0;
+}
+
+.Backbutton {
+  grid-column: 2 / span 3;
+  grid-row: 10;
+  font-weight: bold;
+  background-color: #2196F3; /* Màu xanh dương */
+  color: white; /* Màu chữ trắng để nổi bật */
+}
+
+.Cancelbutton{
+  grid-column: 14 / span 3;
+  grid-row: 10;
+  font-weight: bold;
+  background-color: #f44336; /* Màu đỏ */
+  color: white; /* Màu chữ trắng để nổi bật */
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0px;
+}
+
+.LinkWeb {
+  width: calc(33.33% - 20px);
+  display: flex;
+  height: 10px;
+  margin: 0px 10px;
+  justify-content: center;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+@media screen and (orientation: landscape) {
+  .LinkWeb {
+    width: calc(33.33% - 20px);
+  }
+}
+
+/* Media query cho chế độ dọc */
+@media screen and (orientation: portrait) {
+  .contentCalibration {
+    width: 100%;
+    height: 60%;
+  }
+  #textareaCali{
+    height: 50px;
+  }
+}

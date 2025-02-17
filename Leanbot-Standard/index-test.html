@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leanbot Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" type="text/css" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="info-popup" id = "infopopup" style="display:none;">
+        <h6><strong>Incorrect data from Leanbot.</strong></h6>
+        <h6><strong> Please upload the following code to Leanbot:</strong></h6>
+        <a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Testing/Leanbot_Standard/code/Leanbot_Standard_test.ino">https://git.pythaverse.space/quang.dinh/
+            LeanbotDistributors/blob/master/Leanbot_Testing/
+            Leanbot_Standard/code/Leanbot_Standard_test.ino
+        </a>
+        <button id="cancelButton" onclick = "closeAlertErrorCode()">Cancel</button>
+    </div>
+    <nav class="navbar" style="padding: 0px 0px;">
+        <button class="btn btn-primary-scan" id="toggleButton" onclick="toggleFunction()" style="padding: 0px 0px">
+            <img src="ble_logo.png" alt="Scan Icon"><span id="buttonText">Scan</span>  
+        </button>
+        <a class="navbar-brand center-text" href="#" id="navbarTitle" style="color: orange">SCAN to connect</a>
+        <div class="info-container">
+            <a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Testing/Leanbot_Standard/code/Leanbot_Standard_test.ino"><strong>Leanbot Code</strong></a>
+            <button id="infoButton"><i class="fas fa-info-circle"></i></button>
+            <div class="info-content" id="infoContent">
+                <h6><strong>Leanbot Demo</strong></h6>
+                <h6><strong>Device: JDY-33</strong></h6>
+                <h6>Service UUID: 0000ffe0-0000-1000-8000-00805f9b34fb</h6>
+                <h6>Characteristic UUID: 0000ffe1-0000-1000-8000-00805f9b34fb</h6>
+                <footer class="text-center py-2" style="color: red">
+                    &copy; DTT
+                </footer>
+            </div>
+        </div>
+    </nav>
+    <div class="grid-container">
+        <div class="container-slider" id="ctn-slider"></div>
+        <div class="distance-text"><p id="HCSR04" style="margin:0px 0px";>HC-SR04 Ultrasonic distance</p></div>
+        <div class="distance-slider" id="slider" ><input type="range" id="distanceSlider" min="0" max="100" value="0" /></div>
+        <div class="slider-text10"><p id="text10cm" style="margin:0px 0px";>10cm</p></div>
+        <div class="slider-text30"><p id="text30cm" style="margin:0px 0px";>30cm</p></div>
+        <div class="angleL"><button class = "buttonGripper" onclick = "buttonGripperLeft()"><p id="Gripper_Left" style="margin:0px 0px";>Left</p></button></div>
+        <div class="angle"><p id="Gripper" style="margin:0px 0px";>Gripper</p></div>
+        <div class="angleR"><button class = "buttonGripper" onclick = "buttonGripperRight()"><p id="Gripper_Right_Text" style="margin:0px 0px";>Right</p></button></div>
+        <div class="angleLvalue"><p id="textangleL" style="margin:0px 0px";></p></div>
+        <div class="angleRvalue"><p id="textangleR" style="margin:0px 0px";></p></div>
+        <div class = "GripperCalibration" id = "GripperCalibration">
+            <button class = "buttonGripperCalibration" onclick = "GripperCalibration()"><p id = "Gripper_Calibration" style="margin:0px 0px">Gripper Calibration</p></button>
+        </div>
+        <div id="tab1" class="contentCalibration" style="display:none;">
+            <div class="grid-containerCalibration">
+                <div class="angleLCali"><p id="angleLeft" style="margin:0px 0px";>Left</p></div>
+                <div class="angleCali"><p id="textangleCali" style="margin:0px 0px";>Gripper</p></div>
+                <div class="angleRCali"><p id="angleRight" style="margin:0px 0px";>Right</p></div>
+                
+                <textarea  class="TextArea" id="textareaCali" readonly=""></textarea>
+        
+                <input class="angleRvalueCali" id = "angleRvalueCali" type="text" value="0" readonly>
+                <input class="angleLvalueCali" id = "angleLvalueCali" type="text" value="0" readonly>
+        
+                <button class="L0decrement buttonCalibration"   id="L0decrement">-1</button>
+                <button class="L0increment buttonCalibration"   id="L0increment">+1</button>
+        
+                <button class="R0decrement buttonCalibration"   id="R0decrement">-1</button>
+                <button class="R0increment buttonCalibration"   id="R0increment">+1</button>
+
+                <button class="L0_5decrement buttonCalibration"   id="L0_5decrement">-5</button>
+                <button class="L0_5increment buttonCalibration"   id="L0_5increment">+5</button>
+        
+                <button class="R0_5decrement buttonCalibration"   id="R0_5decrement">-5</button>
+                <button class="R0_5increment buttonCalibration"   id="R0_5increment">+5</button>
+        
+                <button class="L90decrement buttonCalibration" style="display:none;"  id="L90decrement">-1</button>
+                <button class="L90increment buttonCalibration" style="display:none;"  id="L90increment">+1</button>
+        
+                <button class="R90decrement buttonCalibration" style="display:none;"  id="R90decrement">-1</button>
+                <button class="R90increment buttonCalibration" style="display:none;"  id="R90increment">+1</button>
+
+                <button class="L90_5decrement buttonCalibration" style="display:none;"  id="L90_5decrement">-5</button>
+                <button class="L90_5increment buttonCalibration" style="display:none;"  id="L90_5increment">+5</button>
+        
+                <button class="R90_5decrement buttonCalibration" style="display:none;"  id="R90_5decrement">-5</button>
+                <button class="R90_5increment buttonCalibration" style="display:none;"  id="R90_5increment" >+5</button>
+        
+        
+                <button class="Nextbutton buttonCalibration"   id = "Next" onclick = "Next()" >Next</button>
+                <button class="Backbutton buttonCalibration"   style="display:block;" id = "Backbutton" onclick="Back()" >Back</button>
+                <button class="Cancelbutton buttonCalibration" style="display:block;" id = "Cancelbutton" onclick="Cancel()" >Cancel</button>
+            </div>
+        </div>  
+        <div class="grid-item ir4L" id="ir4L">
+            <p style="margin:0px 0px">ir4L<br>0</p>
+        </div>
+        <div class="grid-item ir2L" id="ir2L">
+            <p style="margin:0px 0px">ir2L<br>0</p>
+        </div>
+        <div class="grid-item ir0L" id="ir0L">
+            <p style="margin:0px 0px">ir0L<br>0</p>
+        </div>
+        <div class="grid-item ir1R" id="ir1R">
+            <p style="margin:0px 0px">ir1R<br>0</p>
+        </div>
+        <div class="grid-item ir3R" id="ir3R">
+            <p style="margin:0px 0px">ir3R<br>0</p>
+        </div>
+        <div class="grid-item ir5R" id="ir5R">
+            <p style="margin:0px 0px">ir5R<br>0</p>
+        </div>
+        <div class="grid-item ir6L" id="ir6L">
+            <p style="margin:0px 0px">ir6L<br>0</p>
+        </div>
+        <div class="grid-item ir7R" id="ir7R">
+            <p style="margin:0px 0px">ir7R<br>0</p>
+        </div>
+        <div class="grid-item TB1A" id="TB1A">
+            <p style="margin:0px 0px">TB1A
+                0
+            </p>  
+        </div>
+        <div class="grid-item TB1B" id="TB1B">
+            <p style="margin:0px 0px">TB1B
+                0
+            </p>
+        </div>
+        <div class="grid-item TB2A" id="TB2A">
+            <p style="margin:0px 0px">TB2A
+                0
+            </p>
+        </div>
+        <div class="grid-item TB2B" id="TB2B">
+            <p style="margin:0px 0px">TB2B
+                0
+            </p>
+        </div>
+        <div class="testMotor">
+            <button onclick="TestMotor()" class="buttonTest" id="testMotor"><p style="margin:0px 0px";>Motion Demo</p></button>
+        </div>
+        <div class="testLed">
+            <button onclick="TestLed()" class="buttonTest" id="testLed"><p style="margin:0px 0px";>RGB Leds Demo</p></button>
+        </div>
+        <div class="testGripper">
+            <button onclick="TestGripper()" class="buttonTest" id="testGripper"><p style="margin:0px 0px";>Gripper Demo</p></button>
+        </div>
+        <div class="testBuzzer">
+            <button onclick="TestBuzzer()" class="buttonTest" id="testBuzzer"><p  style="margin:0px 0px";>Buzzer Demo</p></button>
+        </div>
+        <div class="testFollowline">
+            <button onclick="TestLineFollow()" class="buttonTest" id="testFollowline"><p style="margin:0px 0px";>Line Follow Demo</p></button>
+        </div>
+        <div class="testStraightMotion">
+            <button onclick="TestStraightMotion()" class="buttonTest" id="testStraightMotion"><p  style="margin:0px 0px";>Straight Motion Demo</p></button>
+        </div>
+        <div class="testObjectfollow">
+            <button onclick="TestObjectfollow()" class="buttonTest" id="testObjectfollow"><p  style="margin:0px 0px";>Object follow Demo</p></button>
+        </div>
+        <div class="IR_LineCalibration">
+            <button onclick="TestIRLineCalibration()" class="buttonIRLine" id="IR_LineCalibration"><p  style="margin:0px 0px";>IRLine Manual Calibration</p></button>
+        </div>
+    </div>
+    <br>
+    <div id="customAlert" class = "info-popup">
+        <h6><strong>To start Object Follow Demo, please put your hand </strong></h6>
+        <h6><strong>(or an object) within 50 cm in front of Leanbot   </strong></h6>
+        <button id="cancelButton" onclick = "closeCustomAlert()">Cancel</button>
+    </div>  
+    <div id="customAlertFollowLine" class = "info-popup">
+        <h6><strong>To start the Line Follow Demo, please place the Leanbot </strong></h6>
+        <h6><strong>so that the IR sensors are not completely on black or white areas.</strong></h6>
+        <button id="cancelButton" onclick = "closeCustomAlertFollowLine()">Cancel</button>
+    </div>
+
+    <div class="container">
+        <div class="LinkWeb">
+            <a href="https://lesysang1322002.github.io/LeanbotDemoAndTest/">Test Leanbot Standard</a>
+        </div>
+        <div class="LinkWeb">
+            <a href="https://lesysang1322002.github.io/Leanbot-Advanced/advance">Test Leanbot Advance</a>
+        </div>
+        <div class="LinkWeb">
+            <a href="https://lesysang1322002.github.io/Leanbot-BLE-IoT/">Test Leanbot IoT</a>
+        </div>
+    </div>
+  
+</body>
+    <script src="https://lesysang1322002.github.io/Leanbot-BLE-IoT/Leanbot.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/annyang/2.4.0/annyang.min.js"></script>
+    <script type = "text/javascript" src="scriptcopy.js"></script>
+</html>

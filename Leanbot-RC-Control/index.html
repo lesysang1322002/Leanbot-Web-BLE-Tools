@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leanbot BLE Control</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" type="text/css" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <nav class="navbar" style="padding: 0px 0px;">
+        <button class="btn btn-primary-scan" id="toggleButton" onclick="toggleFunction()" style="padding: 0px 0px">
+            <img src="../image/ble_logo.png" alt="Scan Icon"><span id="buttonText"><strong>Scan</strong></span>  
+        </button>
+        <a class="navbar-brand center-text" href="#" id="navbarTitle" style="color: rgb(218, 79, 79)"><strong>SCAN to connect</strong></a>
+        <div class="info-container">
+            <a href="https://git.pythaverse.space/leanbot/Examples/blob/master/02_Demo/Leanbot_demo_v3_Bluetooth.ino"><strong>Leanbot Code</strong></a>
+            <button id="infoButton"><i class="fas fa-info-circle"></i></button>
+            <div class="info-content" id="infoContent">
+                <h6><strong>Leanbot BLE Control</strong></h6>
+                <h6><strong>Device: JDY-33</strong></h6>
+                <h6>Service UUID: 0000ffe0-0000-1000-8000-00805f9b34fb</h6>
+                <h6>Characteristic UUID: 0000ffe1-0000-1000-8000-00805f9b34fb</h6>
+                <footer class="text-center py-2" style="color: rgb(218, 79, 79)">
+                    &copy; DTT
+                </footer>
+            </div>
+        </div>
+    </nav>
+    <div class="row">
+    <div class="column on-off ">
+    <div class="row" style="margin:0px">
+        <div class="button-container">
+            <button class="button" onclick="ledOff()">
+                <img src="../image/ledOff.png" alt="Led off">
+            </button>
+            <br>
+            <span id="ledOffText"></span>
+        </div>
+        <div class="button-container">        
+        <button class="button" onclick="gripperOpen()"><img src="../image/gripopen.png" alt="Gripper Open"></button>
+        <br>
+        <span id="OpenText" ></span>
+        </div>
+        <div class="button-container">        
+        <button class="button" onclick="hornOff()"><img src="../image/audioOff.png" alt="Horn Off"></button>
+        <br>
+        <span id="MuteText"></span>
+        </div>
+    </div>
+    <div class="row" style="margin:0px;">
+        <div class="button-container">       
+        <button class="button" onclick="ledOn()"><img src="../image/ledOn.png" alt="Led On"></button>
+        <br>
+        <span id="ledOnText" ></span>
+        </div>
+        <div class="button-container">        
+        <button class="button" onclick="gripperClose()"><img src="../image/gripclose.png" alt="Gripper Close"></button>
+        <br>
+        <span id="CloseText" ></span>
+        </div>
+        <div class="button-container">        
+        <button class="button" onclick="hornOn()"><img src="../image/audioOn.png" alt="Horn On"></button>
+        <br>
+        <span id="UnmuteText"></span>
+        </div>
+    </div>
+    </div>
+    <div class="control-buttons cloumn">
+        <button class="control-button button-Forward"   onclick="Forward()"></button>
+        <button class="control-button button-Backward"  onclick="Backward()"></button>
+        <button class="control-button button-Right"     onclick="Right()"></button>
+        <button class="control-button button-Left"      onclick="Left()"></button>
+        <button class="control-button button-Stop"      onclick="Stop()"></button>
+        <button class="control-button button-ForwardRight" onclick="ForwardRight()"></button>
+        <button class="control-button button-ForwardLeft"  onclick="ForwardLeft()"></button>
+        <button class="control-button button-BackLeft"     onclick="BackLeft()"></button>
+        <button class="control-button button-BackRight"    onclick="BackRight()"></button>
+    </div> 
+  </div>
+    <div class="row" style="display: flex; justify-content: center;">
+        <div class="speed" style="text-align: center;">
+            <img src="../image/speed.png" alt="Speed" id="image">
+            <input type="range" id="speed-slider" min="0" max="9" value="5" step="1">
+            <div class="speed-value" id="display-speed"><strong>Speed: </strong><span id="speed-value">5</span></div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class= "mic no-influence" style="text-align: center;">
+            <button class="button" onclick="toggleListen()">
+                <img id="micImage" src="../image/micoff.png" alt="Mic Off">
+            </button>
+            <br>
+            <div id="spokenCommand"></div>
+        </div>
+    </div>
+    <br>
+    <!-- <p id="OpenlinkCode"><a href="https://git.pythaverse.space/leanbot/Examples/blob/master/02_Demo/Leanbot_demo_v3_Bluetooth.ino">Leanbot Code</a></p> -->
+</body>
+<script src="//cdnjs.cloudflare.com/ajax/libs/annyang/2.4.0/annyang.min.js"></script>
+<script type = "text/javascript" src="script.js"></script>
+</html>

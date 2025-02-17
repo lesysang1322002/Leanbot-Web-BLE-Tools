@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leanbot BLE Advance</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" type="text/css" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.min.js"></script>
+</head>
+<body>
+    <div class="info-popup" id="infopopup" style="display:none;">
+        <h6><strong>Incorrect data from Leanbot.</strong></h6>
+        <h6><strong> Please upload the following code to Leanbot:</strong></h6>
+        <a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Testing/Leanbot_Advanced/code/Leanbot_Advanced_test.ino">https://git.pythaverse.space/quang.dinh/
+            LeanbotDistributors/blob/master/Leanbot_Testing/
+            Leanbot_Advanced/code/Leanbot_Advanced_test.ino</a>
+    </div>
+    <nav class="navbar" style="padding: 0px 0px;">
+        <button class="btn btn-primary-scan" id="toggleButton" onclick="toggleFunction()" style="padding: 0px 0px">
+            <img src="../image/ble_logo.png" alt="Scan Icon"><span id="buttonText">Scan</span>  
+        </button>
+        <a class="navbar-brand center-text" href="#" id="navbarTitle" style="color: red">SCAN to connect</a>
+        <div class="info-container">
+            <a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Testing/Leanbot_Advanced/code/Leanbot_Advanced_test.ino"><strong>Leanbot code</strong></a>
+            <button id="infoButton"><i class="fas fa-info-circle"></i></button>
+            <div class="info-content" id="infoContent">
+                <h6><strong>Leanbot BLE Advance</strong></h6>
+                <h6><strong>Device: JDY-33</strong></h6>
+                <h6>Service UUID: 0000ffe0-0000-1000-8000-00805f9b34fb</h6>
+                <h6>Characteristic UUID: 0000ffe1-0000-1000-8000-00805f9b34fb</h6>
+                <footer class="text-center py-2" style="color: red">
+                    &copy; DTT
+                </footer>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        <div class = "item" id = "RGB">
+            <label class="sensor-name"><strong>APDS 9960</strong></label>
+            <textarea class="sensor-value monospace" id="APDS9960_TextArea" readonly ></textarea>
+            <div class = "column">
+                <div class = "row">
+                    <div class="form-group" style = "margin-bottom: 8px;">
+                        <label for="message">C</label>
+                        <textarea id="APDS9960_TextArea_C" name="message" class = "monospace"readonly ></textarea>
+                    </div>
+                    <div id="APDS9960_Square_C" style = "margin-bottom: 8px;"></div>
+                </div>
+                <div class = "row" style = "padding-top: 0px;">
+                    <div class = "column">
+                        <div class="form-group" style = "margin-bottom: 8px;">
+                            <label for="message">R</label>
+                            <textarea id="APDS9960_TextArea_R" name="message" class = "monospace"readonly ></textarea>
+                        </div>
+                        <div class="form-group" style = "margin-bottom: 8px;">
+                            <label for="message">G</label>
+                            <textarea id="APDS9960_TextArea_G" name="message" class = "monospace"readonly ></textarea>
+                        </div>
+                        <div class="form-group" style = "margin-bottom: 8px;">
+                            <label for="message">B</label>
+                            <textarea id="APDS9960_TextArea_B" name="message" class = "monospace"readonly ></textarea>
+                        </div>
+                    </div>
+                    <div id="APDS9960_Square_RGB" style = "margin-bottom: 8px;"></div>
+                </div>
+            </div>
+
+            <div class="column">
+                <progress id = "APDS9960_progressProx" max="255" value="0"></progress>
+                <div class="form-group" style = "margin-bottom: 0px;">
+                    <label for="message">Proximity</label>
+                    <textarea id="APDS9960_TextArea_proximity" name="message" class = "monospace"readonly ></textarea>
+                </div>
+            </div>
+
+            <div class="gesture-container">
+                <div class="row">
+                    <button id="btnUp"><h5>UP<br>0</h5></button>
+                </div>
+                <div class="row">
+                    <button id="btnLeft"><h5>LEFT<br>0</h5></button>
+                    <p style="padding-top: 11px;">Gesture</p>                
+                    <button id="btnRight"><h5>RIGHT<br>0</h5></button>
+                </div>
+                <div class="row">
+                    <button id="btnDown"><h5>DOWN<br>0</h5></button>
+                </div>
+            </div>
+        </div>
+        <div class = "item">
+            <label class = "sensor-name"><strong>MAX 4466</strong></label>
+            <textarea class = "sensor-value monospace" id="MAX4466_TextArea" readonly ></textarea>
+            <div class = "row" style = "padding-top: 0px;">
+                <div class="row-gap2">
+                    <div class="column">
+                        <div class="form-group" style = "margin-bottom: 8px;">
+                            <label for="message">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;max</label>
+                            <textarea id = "MAX4466_TextArea_MaxMean" name="message" class="monospace"readonly ></textarea>
+                        </div>
+                        <div class="form-group" style = "margin-bottom: 8px;">
+                            <label for="message">DC Level</label>
+                            <textarea id = "MAX4466_TextArea_Mean" name="message" class="monospace"readonly ></textarea>
+                        </div>
+                        <div class="form-group" style = "margin-bottom: 8px;">
+                            <label for="message">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;min</label>
+                            <textarea id = "MAX4466_TextArea_MinMean" name="message" class="monospace"readonly ></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class ="row-gap2">
+                    <div class="column">
+                        <div class="form-group" style = "margin-bottom: 8px;">
+                            <label for="message">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;max</label>
+                            <textarea id="MAX4466_TextArea_MaxVariance" name="message" class="monospace"readonly ></textarea>
+                        </div>
+                        <div class="form-group" style = "margin-bottom: 8px;">
+                            <label for="message">AC Level</label>
+                            <textarea id="MAX4466_TextArea_Variance" name="message" class="monospace"readonly ></textarea>
+                        </div>
+                        <div class="form-group" style = "margin-bottom: 8px;">
+                            <label for="message">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;min</label>
+                            <textarea id="MAX4466_TextArea_MinVariance" name="message" class="monospace"readonly ></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>               
+            <canvas id = "demo"></canvas>
+            <div id = "preview-textfield" style = "padding-left: 9px;" >0</div>
+        </div>
+        <div class="item">
+            <label class="sensor-name"><strong>MPU 6050</strong></label>
+            <textarea class="sensor-value monospace" id="MPU6050_TextArea" readonly ></textarea>
+            <div class="row-gap"> <!-- Thêm khoảng cách giữa các cột -->
+                <div class="column">
+                    <div class="row-gap2" style="padding-top:0px; margin-right: 0px;">
+                        <div class="column form-group" style = "margin-bottom: 8px;">
+                            <label for="message">&nbsp;&nbsp;&nbsp;&nbsp;</label>
+                            <textarea id="MPU6050_TextArea_TemIC" name="message" class="monospace"readonly ></textarea>
+                        </div>
+                        <div class="column form-group" style = "margin-bottom: 8px;">
+                            <label id="ICTemp" style="margin-left: 3px;">IC Temp</label>
+                        </div>
+                    </div>
+                    <div class="row-gap" style="padding-top:0px;">
+                        <div class="column">
+                            <div class="form-group" style = "margin-bottom: 8px;">
+                                <label for="message">Ax</label>
+                                <textarea id="MPU6050_TextArea_Ax" name="message" class="monospace"readonly ></textarea>
+                            </div>
+                            <div class="form-group" style = "margin-bottom: 8px;">
+                                <label for="message">Ay</label>
+                                <textarea id="MPU6050_TextArea_Ay" name="message" class="monospace"readonly ></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="message" style = "margin-bottom: 8px;">Az</label>
+                                <textarea id="MPU6050_TextArea_Az" name="message" class="monospace"readonly ></textarea>
+                            </div>
+                        </div>
+                        <div class="column" style="margin-left: 20px;">
+                            <div class="form-group" style = "margin-bottom: 8px;">
+                                <label for="message">Gx</label>
+                                <textarea id="MPU6050_TextArea_Gx" name="message" class="monospace"readonly ></textarea>
+                            </div>
+                            <div class="form-group" style = "margin-bottom: 8px;">
+                                <label for="message">Gy</label>
+                                <textarea id="MPU6050_TextArea_Gy" name="message" class="monospace"readonly ></textarea>
+                            </div>
+                            <div class="form-group" style = "margin-bottom: 8px;">
+                                <label for="message">Gz</label>
+                                <textarea id="MPU6050_TextArea_Gz" name="message" class="monospace"readonly ></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="form-group" style = "margin-bottom: 8px;">
+                        <label for="message">Qw</label>
+                        <textarea id="MPU6050_TextArea_Qw" name="message" class="monospace"readonly ></textarea>
+                    </div>
+                    <div class="form-group" style = "margin-bottom: 8px;">
+                        <label for="message">Qx</label>
+                        <textarea id="MPU6050_TextArea_Qx" name="message" class="monospace"readonly ></textarea>
+                    </div>
+                    <div class="form-group" style = "margin-bottom: 8px;">
+                        <label for="message">Qy</label>
+                        <textarea id="MPU6050_TextArea_Qy" name="message" class="monospace"readonly ></textarea>
+                    </div>
+                    <div class="form-group" style = "margin-bottom: 8px;">
+                        <label for="message">Qz</label>
+                        <textarea id="MPU6050_TextArea_Qz" name="message" class="monospace"readonly ></textarea>
+                    </div>
+                </div>
+            </div>           
+
+            <div class="cube-content">
+                <div id="3Dcube"></div>
+            </div>
+        </div>
+        
+        <div class="item">
+            <label  for="DCMotor_Slider" class="sensor-name"><strong>DC Motor</strong></label>
+                <div class="DCMotor_Slider">
+                    <div class="ToggleSwitch">
+                        <p id="DCMotor_Backward">Backward</p>
+                        <label class="switch">
+                            <input type="checkbox" id="DCMotor_Switch" checked onclick="DCMotor_handleSwitchChange()">
+                            <span class="slider round"></span>
+                        </label>
+                        <p id="DCMotor_Forward">Forward</p>
+                    </div>
+                    <!-- <button id="DCMotor_Direction" class = "DCMotor_Button" onclick = "DCMotor_toggleDirection()">Forward</button> -->
+                    <div class="form-group" style = "margin-top: 10px;">
+                        <button class = "DCMotor_Button_Slider" onclick="DCMotor_updateSliderValue(0)">Off</button>
+                        <input type="range" id="DCMotor_Slider" min="0" max="255" value="0" oninput="DCMotor_updateSliderValue(this.value)">
+                        <button class = "DCMotor_Button_Slider" onclick="DCMotor_updateSliderValue(255)">Max</button>
+                    </div>
+                    <div class = "form-group">
+                        <label for="powerlevel" style = "margin-bottom: 0px;">Power Level</label>
+                        <textarea id="DCMotor_TextArea_PowerLevel" name="powerlevel" class = "monospace"readonly ></textarea>
+                    </div>
+            </div>
+        </div>
+
+        <div class="item">
+         
+        </div>
+
+        <div class="item">
+            <label class="sensor-name"><strong>VL53L0x</strong></label>
+            <textarea class="sensor-value monospace" id="VL53L0x_TextArea" readonly ></textarea>
+            <progress id = "VL53L0x_ProgressDistance" max="2000" value="0"></progress>     
+            <div class = "form-group">
+                <label for="distance" style = "margin-bottom: 0px;">Distance</label>
+                <textarea id="VL53L0x_TextArea_Distance" name="distance" class = "monospace" readonly ></textarea>
+            </div>      
+        </div>
+
+        <div class="LinkWeb">
+            <a href="https://lesysang1322002.github.io/leanbot-standard">Test Leanbot Standard</a>
+        </div>
+        <div class="LinkWeb">
+            <a href="https://lesysang1322002.github.io/leanbot-standard/leanbot-advance">Test Leanbot Advance</a>
+        </div>
+        <div class="LinkWeb">
+            <a href="https://lesysang1322002.github.io/leanbot-standard/leanbot-iot">Test Leanbot IoT</a>
+        </div>
+        
+    </div>
+    <!-- <p class="openLinkCode"> <a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Testing/Leanbot_Advanced/code/Leanbot_Advanced_test.ino">Leanbot code</a></p> -->
+</body>
+    <script src="https://lesysang1322002.github.io/leanbot-standard/Leanbot.js"></script>
+    <script src="gauge.js"></script>
+    <script type = "text/javascript" src="script.js"></script>
+</html>

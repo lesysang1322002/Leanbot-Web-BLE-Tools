@@ -1,0 +1,501 @@
+body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#navbarTitle {
+  margin-left: 65px;
+  font-size: 16px;
+  font-weight: bold;
+}
+.btn-primary-scan {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  color:  #ffffff!important; 
+  background-color: #2c5f85 !important; 
+  border-color:  #000000 !important;
+  width: 80px; /* Đảm bảo kích thước tối đa không vượt quá kích thước của phần tử cha */
+  height: auto;
+}
+.btn-primary-scan img {
+  padding-bottom: 2px;
+  width: 22px; /* Đặt kích thước chiều rộng mong muốn */
+  height: auto;
+}
+
+#buttonText{
+  font-weight: bold;
+}
+#infoButton {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  padding: 0 0 px;
+  background: #ffffff;
+  color: rgb(38, 15, 15);
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
+}
+.info-content {
+  display: none;
+  position: absolute;
+  top: 5px; 
+  left: 5px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  white-space: pre-line; /* Hiển thị thông tin theo hàng dòng */
+  line-height: 0.1;
+}
+.info-popup {
+  display: none;
+  position: fixed; 
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%);
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  z-index: 1;
+  white-space: pre-line;
+  line-height: 1;
+}
+.alert-info {
+  background-color: #17a2b8;
+  color: #fff;
+}
+body h6 {
+  font-size: 12px;
+}
+
+footer {
+  background-color: #343a40;
+  color: #fff;
+}
+
+.center-text {
+  text-align: center;
+  color: #333; /* Màu sắc văn bản tùy chọn */
+  font-size: 24px; /* Kích thước font tùy chọn */
+}
+
+body h5{
+  font-size: 15px;
+  font-weight: bold;
+  text-align: center;
+}
+
+p{
+  font-size:15px;
+  margin: 0;
+  font-weight: bold;
+  text-align: center;
+}
+
+.openLinkCode{
+  position: fixed;
+  bottom: 0;
+  width: 100vw;
+  text-align: center;
+}
+
+#APDS9960_TextArea_R, #APDS9960_TextArea_G, #APDS9960_TextArea_B, #APDS9960_TextArea_C, #textAreaQwxyz, 
+#APDS9960_TextArea_proximity,#DCMotor_TextArea_PowerLevel, #MPU6050_TextArea_Qw, #MPU6050_TextArea_Qx, 
+#MPU6050_TextArea_Qy, #MPU6050_TextArea_Qz, #MPU6050_TextArea_Ax, #MPU6050_TextArea_Ay, #MPU6050_TextArea_Az, 
+#MPU6050_TextArea_Gx, #MPU6050_TextArea_Gy,#MPU6050_TextArea_Gz, #MAX4466_TextArea_Mean, #MAX4466_TextArea_MaxMean, 
+#MAX4466_TextArea_MinMean, #MAX4466_TextArea_Variance, #MAX4466_TextArea_MaxVariance,  #MAX4466_TextArea_MinVariance
+#VL53L0x_TextArea_Distance{
+  height: 30px;
+  resize: none;
+  text-align: right;
+  font-size: 14px;
+  border: 2px solid #ccc;
+  border-radius: 3px;
+}
+
+#VL53L0x_TextArea_Distance{
+  width: 70px;
+  text-align: right;
+}
+
+
+#APDS9960_Square_RGB,#APDS9960_Square_C {
+  width: 55px;
+  height: auto;
+  background-color: rgb(255, 255, 255); /* Màu trắng */
+  border: 1px solid #FFF; /* Đường viền trắng */
+  margin-bottom: 18px;
+}
+
+progress::-webkit-progress-bar {
+  background-color: blue; /* Màu nền xanh */
+  border-radius: 10px; /* Bo viền góc */
+  height: 10px; /* Chiều cao thanh tiến trình */
+}
+
+/* Thay đổi màu thanh tiến trình */
+progress::-webkit-progress-value {
+  background-color: white; /* Màu thanh tiến trình trắng */
+  border-radius: 10px; /* Bo viền góc cho thanh tiến trình */
+  height: 10px; /* Chiều cao thanh tiến trình */
+}
+
+/* Mỏng thanh tiến trình */
+progress {
+  width: 100%; /* Chiều rộng tùy ý */
+  height: 10px; /* Làm thanh mỏng lại */
+  border-radius: 10px; /* Bo viền toàn bộ thanh */
+  height: 10px; /* Chiều cao thanh tiến trình */
+}
+
+/* Cho Firefox */
+progress::-moz-progress-bar {
+  background-color: white; /* Màu thanh tiến trình trắng */
+  border-radius: 10px; /* Bo viền góc cho Firefox */
+  height: 10px; /* Chiều cao thanh tiến trình */
+}
+
+.gesture-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 5px;
+  text-align: center;
+}
+
+.sensor-name {
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.sensor-value {
+  border: 3px solid #ccc;
+  resize: none;
+  text-align: center;
+  white-space: normal; /* Để nội dung tự động xuống dòng */
+  border-radius: 5px;
+  height: 82px;
+}
+
+.monospace {
+  font-family: 'Roboto Mono', monospace;
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-group label {
+  text-align: right;
+  font-weight: bold;
+  padding-right: 5px;
+  margin-bottom: 0px;
+}
+
+.form-group textarea {
+  /* flex: 1; */
+  width: 50px;
+  height: 30px;
+  resize: none;
+  text-align: center;
+  font-size: 14px;
+  border: 2px solid #ccc;
+  border-radius: 3px;
+}
+
+.row{
+  padding-top: 8px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.row-gap {
+  padding-top: 8px;
+  display: flex;
+  justify-content: space-around;
+  gap: 8px; /* Chỉ thêm khoảng cách 20px giữa các cột trong row này */
+}
+
+.row-gap2 {
+  padding-top: 8px;
+  display: flex;
+  gap: 1px; /* Chỉ thêm khoảng cách 20px giữa các cột trong row này */
+  align-items: end;
+}
+
+
+#btnUp,#btnDown {
+  width: 85px;
+  height: 55px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 2px solid #ccc;
+  background-color: #f0f0f0;
+  margin: 10px; /* Thêm margin để có khoảng cách với các nút khác */
+}
+
+#btnLeft, #btnRight {
+  width: 85px;
+  height: 55px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 2px solid #ccc;
+  background-color: #f0f0f0;
+  margin: 0 10px; /* Khoảng cách bên trái và bên phải */
+}
+
+.fade-out {
+  transition: background-color 10s ease; /* Mờ dần trong 2 giây */
+  background-color: transparent; /* Trạng thái cuối cùng là trong suốt */
+}
+
+
+.row:nth-child(2) p {
+  margin: 0 20px; /* Khoảng cách giữa chữ Gesture và các nút */
+}
+
+#VL53L0x_ProgressDistance {
+  width: 100%;
+  height: 20px;
+  margin-top: 10px;
+}
+
+#DCMotor_Slider{
+  width: 200px !important; /* Đảm bảo chiều rộng của slider được ưu tiên */
+}
+
+.DCMotor_Button_Slider {
+  width: 45px;
+  height: 25px;
+  font-size: 12px;
+  border-radius: 5px;
+  border: 2px solid #ccc;
+  background-color: #2c5f85;
+  cursor: pointer;
+  font-weight: bold;
+  margin: 0px 10px;
+}
+
+/* Toggle Switch */
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin-top: 8px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #2c5f85;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2c5f85;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2c5f85;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.ToggleSwitch {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+#DCMotor_Backward{
+  margin-right: 10px;
+  margin-bottom: 0px;
+}
+
+#DCMotor_Forward{
+  margin-left: 10px;
+  margin-bottom: 0px;
+}
+
+/* ****** */
+
+@media screen and (max-width: 1100px) {
+  .form-group textarea{
+    width: 35px;
+    font-size: 9px;
+    height: 22px;
+  }
+
+  #APDS9960_TextArea, #APDS9960_GValue, #APDS9960_BValue, #APDS9960_TextArea{
+    width: 28px;
+  }
+}
+
+#APDS9960_progressProx{
+  width: 100%;
+  height: 20px;
+  margin-top: 5px;
+}
+
+#ICTemp{
+  height: 30px;
+}
+
+.cube-content{
+  width: 100%;
+  background-color: white;
+  height: 300px; margin: auto;
+  padding-top:2%;
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  margin:0px;
+}
+
+.preview-textfield {
+  font-size: 20px;
+  text-align: center;
+  font-weight: bold;
+  width: 300px;
+}
+
+.DCMotor_Slider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.DCMotor_Button{
+  width: 100px;
+  height: 50px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 2px solid #ccc;
+  background-color: #2c5f85;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#DCMotor_SliderValue, #DCMotor_Slider{
+  width: 100%;
+  align-items: center;
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+#DCMotor_Slider{
+  height: 20px;
+  margin-top: 5px;
+}
+
+
+.item {
+  width: calc(33.33% - 20px);
+  margin: 10px;
+  background-color: #f0f0f0;
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+.LinkWeb {
+  display: flex;
+  height: 10px;
+  margin: 0px 10px;
+  justify-content: center;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+/* CSS cho màn hình ngang */
+@media screen and (orientation: landscape) {
+  .item,.LinkWeb {
+    width: calc(33.33% - 20px);
+  }
+}
+/* CSS cho màn hình dọc */
+@media screen and (orientation: portrait) {
+  .item,.LinkWeb {
+    width: calc(100% - 20px);
+  }
+  #navbarTitle {
+    font-size: 12px;
+  }
+  .form-group textarea {
+    flex: 1;
+    height: 30px;
+    width: 60px;
+    resize: none;
+    text-align: center;
+    font-size: 14px;
+  }
+  #APDS9960_TextArea, #APDS9960_GValue, #APDS9960_BValue, #APDS9960_TextArea{
+    width: 42px;
+  }
+}
+
+#MPU6050_TextArea_TemIC {
+  width: 70px !important; /* Đảm bảo chiều rộng của textarea được ưu tiên */
+  text-align: right;
+}
+
+#MAX4466_TextArea_MinVariance{
+  text-align: right;
+}
