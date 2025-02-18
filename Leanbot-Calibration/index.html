@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leanbot BLE Calibration</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" type="text/css" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="info-popup" id="infopopup" style="display:none;">
+        <h6><strong>Incorrect data from Leanbot.</strong></h6>
+        <h6><strong> Please upload the following code to Leanbot:</strong></h6>
+        <a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Calibration/code/Leanbot_Calibration.ino">https://git.pythaverse.space/lesang/Bao_cao/
+            blob/master/LeanbotBLE_Calibration/
+            LeanbotBLE_Calibration.ino</a>
+    </div>
+    <nav class="navbar" style="padding: 0px 0px;">
+        <button class="btn btn-primary-scan" id="toggleButton" onclick="toggleFunction()" style="padding: 0px 0px">
+            <img src="ble_logo.png" alt="Scan Icon"><span id="buttonText">Scan</span>  
+        </button>
+        <a class="navbar-brand center-text" href="#" id="navbarTitle" style="color: red">SCAN to connect</a>
+        <div class="info-container">
+            <a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Calibration/code/Leanbot_Calibration.ino"><strong>Leanbot Code</strong></a>
+            <button id="infoButton"><i class="fas fa-info-circle"></i></button>
+            <div class="info-content" id="infoContent">
+                <h6><strong>Leanbot BLE Calibration</strong></h6>
+                <h6><strong>Device: JDY-33</strong></h6>
+                <h6>Service UUID: 0000ffe0-0000-1000-8000-00805f9b34fb</h6>
+                <h6>Characteristic UUID: 0000ffe1-0000-1000-8000-00805f9b34fb</h6>
+                <footer class="text-center py-2" style="color: red">
+                    &copy; DTT V1
+                </footer>
+            </div>
+        </div>
+    </nav>
+    <header>
+        <div class="tab-container">
+        <div class="tab active" onclick="showTab('tab1'); GrippersTab();">Grippers</div>
+        <div class="tab" onclick="showTab('tab2'); RGBStep();">RGB Leds + Steppers</div>
+        </div>
+    </header>
+    <div id="tab1" class="content active">
+        <div class="container">
+            <div class="grid-container">
+                <div class="angleL"><p id="textangleLeft" style="margin:0px 0px";>Left</p></div>
+                <div class="angle"><p id="textangle" style="margin:0px 0px";>Gripper</p></div>
+                <div class="angleR"><p id="textangleRight" style="margin:0px 0px";>Right</p></div>
+                
+                <textarea  class="TextArea" id="textareaNotification" readonly=""></textarea>
+        
+                <input class="angleRvalue" id = "angleRvalue" type="text" value="0" readonly>
+                <input class="angleLvalue" id = "angleLvalue" type="text" value="0" readonly>
+        
+                <button class="L0decrement buttonCalibration"   id="L0decrement">-</button>
+                <button class="L0increment buttonCalibration"   id="L0increment">+</button>
+        
+                <button class="R0decrement buttonCalibration"   id="R0decrement">-</button>
+                <button class="R0increment buttonCalibration"   id="R0increment">+</button>
+        
+                <button class="L90decrement buttonCalibration" style="display:none;"  id="L90decrement">-</button>
+                <button class="L90increment buttonCalibration" style="display:none;"  id="L90increment">+</button>
+        
+                <button class="R90decrement buttonCalibration" style="display:none;"  id="R90decrement">-</button>
+                <button class="R90increment buttonCalibration" style="display:none;" id="R90increment">+</button>
+        
+                <button class="Nextbutton buttonCalibration" id = "Next" onclick="Next()" >Next</button>
+                <button class="Backbutton buttonCalibration" id = "Backbutton" onclick="Back()" >Back</button>
+            </div>
+        </div>
+    </div>
+    <div id="tab2" class="content">
+        <div class="border" id = "RBGTab">
+        <h3>RGB Leds</h3>
+        <h5><strong>Select correct mode so that</strong></h5>
+        <h5><strong>LEDs rotate clockwise:</strong></h5>
+        <div class="custom-radio">
+          <input type="radio" id="led1" name="rgbLeds">
+          <label for="led1">Mode 1</label><br>
+          <input type="radio" id="led2" name="rgbLeds">
+          <label for="led2">Mode 2</label><br>
+        </div>
+        </div>
+        <div class="border" id = "StepTab">
+        <h3>Steppers</h3>            
+        <h5><strong>Select correct mode so that</strong></h5>
+        <h5><strong>Leanbot move forward:</strong></h5>
+        <div class="custom-radio">
+          <input type="radio" id="dir1" name="steppers" >
+          <label for="dir1">Mode 1</label><br>
+          <input type="radio" id="dir2" name="steppers" >
+          <label for="dir2">Mode 2</label><br>
+        </div>
+        </div>        
+    </div>
+    </div>
+    <!-- <p class="openLinkCode"><a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Calibration/code/Leanbot_Calibration.ino">Leanbot Code</a></p> -->
+</body>
+<script type = "text/javascript" src="script.js"></script>
+</html>

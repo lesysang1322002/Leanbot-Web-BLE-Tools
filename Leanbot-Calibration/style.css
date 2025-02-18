@@ -1,0 +1,385 @@
+body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#navbarTitle {
+  margin-left:65px;
+  /* margin: 0 auto; */
+  font-size: 16px;
+  font-weight: bold;
+}
+.btn-primary-scan {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  color:  #ffffff!important; 
+  background-color: #2c5f85 !important; 
+  border-color:  #000000 !important;
+  width: 80px; /* Đảm bảo kích thước tối đa không vượt quá kích thước của phần tử cha */
+  height: auto;
+}
+.btn-primary-scan img {
+  padding-bottom: 2px;
+  width: 22px; /* Đặt kích thước chiều rộng mong muốn */
+  height: auto;
+}
+#buttonText{
+  font-weight: bold;
+}
+#infoButton {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  padding: 0 0 px;
+  background: #ffffff;
+  color: rgb(38, 15, 15);
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
+}
+.info-content {
+  display: none;
+  position: absolute;
+  top: 5px; 
+  left: 5px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  white-space: pre-line; /* Hiển thị thông tin theo hàng dòng */
+  line-height: 0.1;
+}
+.info-popup {
+  display: none;
+  position: fixed; 
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%);
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  z-index: 1;
+  white-space: pre-line;
+  line-height: 1;
+}
+.alert-info {
+  background-color: #17a2b8;
+  color: #fff;
+}
+body h6 {
+  font-size: 12px;
+}
+footer {
+  background-color: #343a40;
+  color: #fff;
+}
+.center-text {
+  text-align: center;
+  color: #333; /* Màu sắc văn bản tùy chọn */
+  font-size: 24px; /* Kích thước font tùy chọn */
+}
+p{
+  font-size:15px;
+  margin: 0;
+  font-weight: bold;
+  text-align: center;
+}
+#angleRvalue, #angleLvalue{
+  font-size: 25px;
+}
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(17, 1fr); 
+  grid-template-rows: repeat(12, 1fr);
+  place-items: center;
+  justify-content:center; 
+}
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column; /* Sắp xếp theo cột */
+}
+.grid-item {
+  border: 3px solid #CCCCCC;
+  background-color: white;
+}
+.buttonCalibration{
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center; /* Căn giữa theo chiều dọc */
+  justify-content: center;
+  border-radius: 5px;
+  width:80px;
+  height:50px;
+  font-weight: bold;
+}
+#Backbutton,#Next{
+  width:100px;
+}
+/* On screens that are 600px wide or less, the background color is olive */
+.angle{
+  grid-column: 8 / span 3;
+  grid-row: 1 ;
+}
+.angleR{
+  grid-column: 2 / span 3;
+  grid-row: 2 ;
+  text-align: center;
+}
+.angleL{
+  grid-column: 14 / span 3;
+  grid-row: 2;
+  text-align: center;
+}
+.angleRvalue {
+  grid-column: 2 / span 3;
+  grid-row: 3 / span 3;
+  text-align: center;
+  cursor: pointer;
+  background: none;
+  border-radius: 5px;
+  width: 100px;
+  height: 100px;
+}
+.angleLvalue {
+  grid-column: 14 / span 3;
+  grid-row: 3 / span 3;
+  text-align: center;
+  cursor: pointer;
+  background: none;
+  border-radius: 5px;
+  width: 100px;
+  height: 100px;
+}
+.R0decrement{
+  grid-column: 1 / span 2;
+  grid-row: 7 ;
+}
+.R0increment{
+  grid-column: 4 / span 2;
+  grid-row: 7 ;
+}
+.L0increment{
+  grid-column: 13 / span 2;
+  grid-row: 7;
+}
+.L0decrement{
+  grid-column: 16 / span 2;
+  grid-row: 7;
+}
+.R90increment{
+  grid-column: 6 / span 2;
+  grid-row: 3 ;
+}
+.R90decrement{
+  grid-column: 6 / span 2;
+  grid-row: 5;
+}
+.L90decrement{
+  grid-column: 11 / span 2;
+  grid-row: 5;
+}
+.L90increment{
+  grid-column: 11 / span 2;
+  grid-row: 3;
+}
+.Nextbutton{
+  grid-column: 8 / span 3;
+  grid-row: 7  ;
+  font-weight: bold;
+}
+.Backbutton{
+  grid-column: 8 / span 3;
+  grid-row: 9;
+  font-weight: bold;
+}
+.TextArea{
+  grid-column: 1 / span 17;
+  grid-row: 11 / span 2;
+  text-align: center;
+  font-size: 18px;
+  border: none;
+  width:900px;
+  height:80px;
+}
+#L90decrement,#L90increment,#L0decrement,#L0increment,#R90decrement,#R90increment,#R0decrement,#R0increment{
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.info-popup {
+  display: none;
+  position: fixed; 
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%);
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  z-index: 1;
+  white-space: pre-line;
+  line-height: 1;
+}
+
+.textArea{
+  padding-top: 30px;
+  padding-bottom: 0px;
+  font-size: 16px;
+  width:600px;
+  height:160px;
+  margin:0px;
+  border: none;
+  text-align: center;
+}
+header {
+  background-color: #333;
+  color: #fff;
+  padding: 1px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tab {
+  padding: 10px 200px;
+  cursor: pointer;
+}
+.tab-container {
+  display: flex;
+  justify-content: space-between;
+}
+.tab.active {
+  background-color: #555;
+}
+.content {
+  display: none;
+  padding: 20px;
+}
+.content.active {
+  display: block;
+  padding:5px;
+}
+.stepper{
+  display: flex;
+  justify-content: space-between;
+  width: 100vw;
+}
+.RGB{
+  display: flex;
+  justify-content: space-between;
+  width: 100vw;
+}
+.buttonRGB-Stepper{
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center; 
+  justify-content: center;
+  border-radius: 5px;
+  width:150px;
+  height:60px;
+  font-weight: bold;
+  margin: 0px 50px;
+}
+.openLinkCode{
+  position: fixed;
+  bottom: 0;
+  width: 100vw;
+  text-align: center;
+}
+
+#textAreaStepper{
+  width:700px;
+}
+
+.border{
+  border: 10px solid #0a0a0a;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+.active-tab {
+  background-color: #CCCCCC;
+}
+.border {
+  width: 50%;
+  float: left;
+  text-align: center;
+}
+.custom-radio label {
+  font-size: 25px; /* Kích thước của chữ trong label */
+}
+@media screen and (max-width: 1100px) {
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(17, 25px); 
+    grid-template-rows: repeat(12, 25px);
+  }
+  .angleLvalue {
+    width: 75px;
+    height: 75px;
+  }
+  .angleRvalue {
+    width: 75px;
+    height: 75px;
+  }
+  .buttonCalibration{
+    width:50px;
+    height:32px;
+  }
+  #Backbutton,#Next{
+    width:75px;
+  }
+  .h3{
+    font-size: 14px;
+  }
+  h5{
+    font-size: 10px;
+  }
+  .tab{
+    padding: 10px 10px;
+  }
+}
+@media screen and (max-width: 400px) {
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(17, 18px); 
+    grid-template-rows: repeat(12, 18px);
+  }
+  .angleLvalue {
+    width: 50px;
+    height: 50px;
+  }
+  .angleRvalue {
+    width: 50px;
+    height: 50px;
+  }
+  .buttonCalibration{
+    width:35px;
+    height:18px;
+  }
+  #Backbutton,#Next{
+    width:50px;
+    font-size: 12px;
+  }
+  .TextArea{
+    font-size: 11px;
+    width: 100vw;
+  }
+  .border {
+    width: 100%;
+  }
+  #L90decrement,#L90increment,#L0decrement,#L0increment,#R90decrement,#R90increment,#R0decrement,#R0increment{
+    font-size: 12px;
+    font-weight: bold;
+  }
+}
