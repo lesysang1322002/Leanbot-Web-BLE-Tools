@@ -325,6 +325,9 @@ function MPU6050_handleTempIC(arrString) {
 function VL53L0X_handle(arrString) {
     UI('VL53L0x_TextArea').value = arrString.slice(1, arrString.length).join(" ");
 
+    const idx = arrString.indexOf('Init');
+    if ( idx === 1) return;
+
     const Distance = parseInt(arrString[1]);
     if ( Distance <= 2000) { // Nếu khoảng cách nhỏ hơn 2m
         UI('VL53L0x_ProgressDistance').value  = Distance; // Hiển thị thanh tiến trình
