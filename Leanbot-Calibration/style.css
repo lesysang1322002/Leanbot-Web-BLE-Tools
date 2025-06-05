@@ -4,15 +4,18 @@ body {
   padding: 0;
 }
 .navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
 }
 #navbarTitle {
-  margin-left:65px;
-  /* margin: 0 auto; */
-  font-size: 16px;
-  font-weight: bold;
+    /* margin-left:65px; */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0 auto;
+    font-size: 15px;
 }
 .btn-primary-scan {
   display: flex;
@@ -34,14 +37,16 @@ body {
   font-weight: bold;
 }
 #infoButton {
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding: 0 0 px;
-  background: #ffffff;
-  color: rgb(38, 15, 15);
-  border: none;
-  font-size: 17px;
-  cursor: pointer;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding: 0 0 px;
+    background: #ffffff;
+    color: rgb(38, 15, 15);
+    border: none;
+    font-size: 17px;
+    cursor: pointer;
+    padding-left: 0px;
+    padding-right: 0px;
 }
 .info-content {
   display: none;
