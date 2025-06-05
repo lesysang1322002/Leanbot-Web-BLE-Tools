@@ -197,6 +197,13 @@ function hornOff(){
 function hornOn(){
     send("V");
 }
+function LineFollow(){
+    send("T");
+}
+function LineCalibration(){
+    send("C");
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     var infoButton = document.getElementById('infoButton');
     var infoContent = document.getElementById('infoContent');
