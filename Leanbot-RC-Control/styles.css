@@ -77,9 +77,14 @@ footer {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    margin :5px;
+    margin: 5px;
 }
-  @media screen and (orientation: landscape) {
+
+.btn_Line{
+    width: 130px;
+}
+
+@media screen and (orientation: landscape) {
     .control-buttons {
         position: relative;
         width: 200px;
