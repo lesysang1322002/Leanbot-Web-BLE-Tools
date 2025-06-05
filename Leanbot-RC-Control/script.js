@@ -86,6 +86,36 @@ function  logstatus(text){
 const navbarTitle = document.getElementById('navbarTitle');
 navbarTitle.textContent = text;
 }
+
+// let string = "";
+// Hàm này sẽ được gọi khi có dữ liệu mới từ Bluetooth
+// // Nó sẽ xử lý dữ liệu và gọi hàm handleSerialLine cho mỗi dòng dữ liệu
+// function handleChangedValue(event) {
+//     const data = event.target.value;
+//     const dataArray = new Uint8Array(data.buffer);
+//     const textDecoder = new TextDecoder('utf-8');
+//     const valueString = textDecoder.decode(dataArray);
+
+//     string += valueString;
+//     const lines = string.split(/[\r\n]+/);
+//     string = lines.pop() || "";
+//     lines.forEach(line => {
+//         if (line) { 
+//             handleSerialLine(line);
+//         }
+//     });
+// }
+
+// let checkLineTracking = false;
+
+// function handleSerialLine(line) {
+//     console.log("line: " + line);
+//     if (line === "Run Line Tracking") {
+//         document.getElementById("lineTracking").style.backgroundColor = "#4CAF50"; // Màu xanh lá cây
+//         checkLineTracking = true;
+//     }
+// }
+
 function handleHover(action) {
     // Thực hiện hành động tương ứng với hover (ví dụ: gọi hàm Forward(), Backward(), ...)
     switch (action) {
@@ -197,9 +227,10 @@ function hornOff(){
 function hornOn(){
     send("V");
 }
-function LineFollow(){
-    send("T");
+function LineTracking(){
+    send("T.");
 }
+
 function LineCalibration(){
     send("C");
 }
