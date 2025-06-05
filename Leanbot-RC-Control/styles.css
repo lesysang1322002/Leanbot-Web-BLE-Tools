@@ -9,11 +9,15 @@ p {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
 }
 #navbarTitle {
-    margin-left:65px;
-    /* margin: 0 auto; */
-    font-size: 16px;
+    /* margin-left:65px; */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0 auto;
+    font-size: 15px;
 }
 .btn-primary-scan {
     display: flex;
