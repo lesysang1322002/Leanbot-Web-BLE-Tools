@@ -44,6 +44,8 @@ p {
     border: none;
     font-size: 17px;
     cursor: pointer;
+    padding-left: 0px;
+    padding-right: 0px;
 }
 .info-content {
     display: none;
