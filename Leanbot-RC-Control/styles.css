@@ -118,7 +118,7 @@ footer {
         margin-right: 15px;
     }
     .no-influence {
-        position: fixed;
+        /* position: fixed; */
         width:50%;
         margin-bottom: 90px;
     }
@@ -156,6 +156,7 @@ footer {
         display: flex;
         justify-content: center;
         align-items: center;
+        flex-direction: column;
     }
     .no-influence {
         /* position: fixed; */
