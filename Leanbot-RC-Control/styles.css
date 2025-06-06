@@ -1,6 +1,8 @@
-
 body {
     height: 100vh; /* 100% of the viewport height */
+    margin: 0; /* Remove default body margin */
+    padding: 0; /* Remove default body padding */
+    overflow: hidden; /* This will hide any overflow, preventing scrollbars */
 }
 p {
    font-weight: bold;
@@ -24,11 +26,11 @@ p {
     align-items: center;
     margin-top: 5px;
     margin-bottom: 5px;
-    color:  #ffffff!important; 
-    background-color: #2c5f85 !important; 
+    color:  #ffffff!important;
+    background-color: #2c5f85 !important;
     border-color:  #000000 !important;
     width: 80px; /* Đảm bảo kích thước tối đa không vượt quá kích thước của phần tử cha */
-    height: auto; 
+    height: auto;
 }
 .btn-primary-scan img {
     padding-bottom: 2px;
@@ -50,7 +52,7 @@ p {
 .info-content {
     display: none;
     position: absolute;
-    top: 5px; 
+    top: 5px;
     left: 5px;
     background-color: #f1f1f1;
     border-radius: 5px;
@@ -84,10 +86,12 @@ footer {
     border-radius: 5px;
     cursor: pointer;
     margin: 5px;
+    height: 55px;
 }
 
-.btn_Line{
-    width: 140px;
+.btnLine{
+    width: 135px;
+    height: 55px;
 }
 
 @media screen and (orientation: landscape) {
@@ -217,7 +221,7 @@ footer {
 .button-Left::before {
     content: "";
     display: inline-block;
-    width: 30px; 
+    width: 30px;
     height: 30px;
     background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
@@ -227,7 +231,7 @@ footer {
 .button-Right::before {
     content: "";
     display: inline-block;
-    width: 30px; 
+    width: 30px;
     height: 30px;
     background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
@@ -236,7 +240,7 @@ footer {
 .button-Forward::before {
     content: "";
     display: inline-block;
-    width: 30px; 
+    width: 30px;
     height: 30px;
     background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
@@ -246,7 +250,7 @@ footer {
 .button-Backward::before {
     content: "";
     display: inline-block;
-    width: 30px; 
+    width: 30px;
     height: 30px;
     background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
@@ -258,7 +262,7 @@ footer {
 .button-ForwardRight::before {
     content: "";
     display: inline-block;
-    width: 30px; 
+    width: 30px;
     height: 30px;
     background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
@@ -267,7 +271,7 @@ footer {
 .button-ForwardLeft::before{
     content: "";
     display: inline-block;
-    width: 30px; 
+    width: 30px;
     height: 30px;
     background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
@@ -276,7 +280,7 @@ footer {
 .button-BackRight::before {
     content: "";
     display: inline-block;
-    width: 30px; 
+    width: 30px;
     height: 30px;
     background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
@@ -285,7 +289,7 @@ footer {
 .button-BackLeft::before{
     content: "";
     display: inline-block;
-    width: 30px; 
+    width: 30px;
     height: 30px;
     background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
     background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
@@ -335,7 +339,9 @@ left: 160px;
 .row {
     display: flex;
     justify-content: space-around;
-    margin:25px;
+    /* Remove or reduce margin if it's contributing to overflow */
+    margin: 10px; /* Adjusted from 25px to reduce potential overflow */
+    box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
 }
 .column {
     margin: 5px;
@@ -347,5 +353,3 @@ left: 160px;
 .button-container span {
         display: inline-block;
 }
-
-  
