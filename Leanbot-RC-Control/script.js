@@ -271,7 +271,7 @@ function listen() {
     document.getElementById('OpenText').innerText = "Open";
     document.getElementById('CloseText').innerText = "Close";
     document.getElementById('LineCalibrationText').innerHTML = "Calibrate";
-    document.getElementById('LineTrackingText').innerHTML = "Follow";
+    document.getElementById('LineTrackingText').innerHTML = "Tracking";
 }
 function stopListen() {
     annyang.abort();
