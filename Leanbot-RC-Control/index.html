@@ -44,9 +44,14 @@
         <span id="OpenText" ></span>
         </div>
         <div class="button-container">        
-        <button class="button" onclick="hornOff()"><img src="../image/audioOff.png" alt="Horn Off"></button>
-        <br>
-        <span id="MuteText"></span>
+            <button class="button" onclick="hornOff()"><img src="../image/audioOff.png" alt="Horn Off"></button>
+            <br>
+            <span id="MuteText"></span>
+        </div>
+        <div class="button-container">
+            <button class="button" onclick="LineTracking()"><img src="../image/LineTracking.png" alt="Line Tracking"></button>
+            <br>
+            <span id="Line Tracking"></span>
         </div>
     </div>
     <div class="row" style="margin:0px;">
@@ -64,6 +69,11 @@
         <button class="button" onclick="hornOn()"><img src="../image/audioOn.png" alt="Horn On"></button>
         <br>
         <span id="UnmuteText"></span>
+        </div>
+         <div class="button-container">
+            <button class="button" onclick="LineCalibration()"><img src="../image/LineCalibration.png" alt="Line Calibration"></button>
+            <br>
+            <span id="Line Calibration"></span>
         </div>
     </div>
     </div>
@@ -97,10 +107,10 @@
         </div>
     </div>
     <!-- <br> -->
-    <div class="row">
+    <!-- <div class="row">
        <button class="button btn_Line" id ="lineTracking" onclick = "LineTracking()">Line Tracking</button>
        <button class="button btn_Line" onclick = "LineCalibration()">Line Calibration</button>
-    </div>
+    </div> -->
     <!-- <p id="OpenlinkCode"><a href="https://git.pythaverse.space/leanbot/Examples/blob/master/02_Demo/Leanbot_demo_v3_Bluetooth.ino">Leanbot Code</a></p> -->
 </body>
 <script src="//cdnjs.cloudflare.com/ajax/libs/annyang/2.4.0/annyang.min.js"></script>
