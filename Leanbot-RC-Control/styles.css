@@ -2,7 +2,7 @@ body {
     height: 100vh; /* 100% of the viewport height */
     margin: 0; /* Remove default body margin */
     padding: 0; /* Remove default body padding */
-    overflow: hidden; /* This will hide any overflow, preventing scrollbars */
+    overflow-x: hidden;
 }
 p {
    font-weight: bold;
