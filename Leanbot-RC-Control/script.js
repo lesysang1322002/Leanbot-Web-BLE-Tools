@@ -260,7 +260,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var speed = speedSlider.value;
         speedValue.innerText = speed;
         // Thực hiện các công việc khác tương ứng với giá trị speed
-        send(speed);
+        if (speed == 10) send("q");
+        else send(speed);
 });
 function listen() {
     annyang.start({ continuous: true });
