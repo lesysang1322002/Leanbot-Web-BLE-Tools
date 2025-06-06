@@ -335,7 +335,7 @@ const commands = {
     'sound off': hornOff,
     'stop': Stop,
     'calibrate': LineCalibration,
-    'follow': LineTracking,
+    'tracking': LineTracking,
 };
 
 annyang.addCallback('result', function(phrases) {
