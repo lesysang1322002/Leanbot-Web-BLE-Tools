@@ -270,6 +270,8 @@ function listen() {
     document.getElementById('UnmuteText').innerText = "Sound on";
     document.getElementById('OpenText').innerText = "Open";
     document.getElementById('CloseText').innerText = "Close";
+    document.getElementById('LineCalibrationText').innerHTML = "Calibrate";
+    document.getElementById('LineTrackingText').innerHTML = "Follow";
 }
 function stopListen() {
     annyang.abort();
@@ -280,6 +282,8 @@ function stopListen() {
     document.getElementById('OpenText').innerText = "";
     document.getElementById('CloseText').innerText = "";
     document.getElementById('spokenCommand').innerHTML = "";
+    document.getElementById('LineCalibrationText').innerHTML = "";
+    document.getElementById('LineTrackingText').innerHTML = "";
 }
 
 function moveForward(distance) {
@@ -329,7 +333,9 @@ const commands = {
     'backward': Backward,
     'sound on': hornOn,
     'sound off': hornOff,
-    'stop': Stop
+    'stop': Stop,
+    'calibrate': LineCalibration,
+    'follow': LineTracking,
 };
 
 annyang.addCallback('result', function(phrases) {
