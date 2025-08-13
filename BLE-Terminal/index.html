@@ -84,12 +84,14 @@
         }
         .input {
             width: 100%;
+            border-radius: 5px; 
         }
         .btsend {
             width: 8%;
             margin-left: 2%;
         }
         #textareaNotification {
+            width: 100%;
             background: #ffffff;
             font-size: 12px; 
             padding: 0;
@@ -107,7 +109,7 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/autosize@5.0.0/dist/autosize.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-        <!-- <link rel="manifest" href="manifest.json" /> -->
+    <!-- <link rel="manifest" href="manifest.json" /> -->
     <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700">
     <!-- Sử dụng Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
@@ -133,8 +135,8 @@
         </div>
     </nav>
     <hr style="margin:0">
-    <div class="row">
-        <div class="form-check form-check-inline ml-3">
+    <div class="row" style="margin: 0px;">
+        <div class="form-check form-check-inline">
             <input type="checkbox" class="form-check-input" id="Checkauto" onchange="Checkautoscroll()">
             <label class="form-check-label" for="myCheckbox">Autoscroll</label>
         </div>
@@ -144,23 +146,21 @@
         </div>
         <div class="ml-auto">
             <button class="mr-1 btn-primary" onclick="clearTextarea()">Clear</button>
-            <button class="mr-3 btn-primary" onclick="copyToClipboard()">Copy</button>
+            <button class="btn-primary" onclick="copyToClipboard()">Copy</button>
         </div>
     </div> 
-    <div class="row">
-        <div class="col"  style="padding-right: 0;">
-            <textarea  class="form-control monospace" id="textareaNotification" readonly="" style="height: 570px"></textarea>
-        </div>
-    </div>
+    
+    <textarea  class="form-control monospace" id="textareaNotification" readonly="" style="height: 580px"></textarea>
+    
     <div class="footer">
-            <div class="row" style="display: flex; align-items: center;">
-                <input id="input" type="text" class="input ml-3" placeholder="Send Message ->..." style="flex: 1;">
-                <div class="form-check form-check-inline ml-1 mr-1">
-                    <input type="checkbox" class="form-check-input" id="CheckNL">
-                    <label class="form-check-label">Newline</label>
-                </div>
-                <button class="btn-primary mr-3" id="btsend" onclick="send()">Send</button>
-            </div> 
+        <div class="row" style="display: flex; align-items: center; margin: 0px;">
+            <button class="btn-primary" id="btsend" onclick="send()">Send</button>
+            <input id="input" type="text" class="input ml-1" placeholder="Send Message ->..." style="flex: 1;">
+            <div class="form-check form-check-inline ml-1 mr-1">
+                <input type="checkbox" class="form-check-input" id="CheckNL" checked>
+                <label class="form-check-label">Newline</label>
+            </div>
+        </div> 
     </div>
     <script src="script.js"></script>
 </body>
@@ -224,19 +224,21 @@
             }
 			});
         }}
+
         function disconnect()
 		{
             logstatus("Scan to connect");
             console.log("Đã ngắt kết nối với: " + dev.name);
             return dev.gatt.disconnect();
 		}
+        
         function send()
 		{   const checkNewline = document.getElementById("CheckNL");
 			var data = document.getElementById("input").value;
 			log("You -> " + data + "\n");
             if(checkNewline.checked){
-			gattCharacteristic.writeValue(str2ab(data+"\n"));
-            console.log("Checked newline");
+                gattCharacteristic.writeValue(str2ab(data+"\n"));
+                console.log("Checked newline");
             }
             else{
                 gattCharacteristic.writeValue(str2ab(data)); 
@@ -244,6 +246,7 @@
             }
 			document.getElementById("input").value = "";
 		}
+
         function str2ab(str)
 		{
 			var buf = new ArrayBuffer(str.length);
@@ -253,55 +256,36 @@
 			}
 			return buf;
 		}
+        
         function scrollToBottom() {
             var textarea = document.getElementById("textareaNotification");
             textarea.scrollTop = textarea.scrollHeight;
         }
 
         let checkautoscroll=true;
-            const checkbox = document.getElementById("Checkauto");
-            checkbox.checked=true;
-            function Checkautoscroll() {
-                if (checkbox.checked) {
-                    checkautoscroll=true;
-                } else {
-                    checkautoscroll=false;
-                }
-        }
-        let check=false;
-        function Checkshowtime() {
-            const checkbox = document.getElementById("Checkbox");
+        const checkbox = document.getElementById("Checkauto");
+        checkbox.checked=true;
+
+        function Checkautoscroll() {
             if (checkbox.checked) {
-               check=true;
+                checkautoscroll=true;
             } else {
-               check=false;
+                checkautoscroll=false;
             }
         }
-        function handleChangedValue(event) {
-        // let data = event.target.value;
-        // let i=0;
-        // // console.log('Received data:', data);
-        // // Khởi tạo một mảng để chứa dữ liệu từ mảng uint8_t
-        // let dataArray = new Uint8Array(data.buffer);
-        // // Khởi tạo chuỗi để chứa dữ liệu từ mảng uint8_t
-        // let valueString = '';
-        // // Lặp qua mảng để trích xuất dữ liệu từng phần tử
-        // let n=dataArray.length;
-        // // let kytu=String.fromCharCode(dataArray[n-1]);
-        // for (let i = 0; i < dataArray.length; i++) {
-        //     let char = String.fromCharCode(dataArray[i]);
-        //     valueString += String.fromCharCode(dataArray[i]);
-        //     if(char.charCodeAt(0)==10) {
-        //         break;
-        //     }
-        //     console.log(char.charCodeAt(0)); // In ra mã ASCII của từng ký tự
-        // }
+    
+    let check=false;
 
-        // valueString = valueString.replace(/(\r)/gm, '');
-        // console.log('Convert2Str:',valueString);
-        // log(valueString);
-        // if(checkautoscroll) scrollToBottom();
-        //test
+    function Checkshowtime() {
+        const checkbox = document.getElementById("Checkbox");
+        if (checkbox.checked) {
+            check=true;
+        } else {
+            check=false;
+        }
+    }
+    
+    function handleChangedValue(event) {
         let data = event.target.value;
         console.log('Received data:', data);
         let dataArray = new Uint8Array(data.buffer);
@@ -314,15 +298,16 @@
         if (checkautoscroll) scrollToBottom();
     }
     //Hiển thị văn bản
-    let nextlsNewline=true;
+    let nextlsNewline = true;
+
     function log(text) {
-        if(nextlsNewline==true){
-            text='\n'+text;
-            nextlsNewline=false;
+        if (nextlsNewline == true) {
+            text = '\n' + text;
+            nextlsNewline = false;
         }
         if (text.endsWith('\n')) {
-        text = text.slice(0, -1); // Loại bỏ ký tự cuối cùng
-        nextlsNewline=true;
+            text = text.slice(0, -1); // Loại bỏ ký tự cuối cùng
+            nextlsNewline = true;
         }
         const now = new Date();
         const hours = ('0' + now.getHours()).slice(-2);

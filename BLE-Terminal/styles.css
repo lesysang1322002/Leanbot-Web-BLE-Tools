@@ -41,31 +41,31 @@ footer {
   color: #fff;
 }
 .input-container {
-display: inline-block;
-align-items: center;
+  display: inline-block;
+  align-items: center;
 }
 #infoButton {
-background-color: #343a40;;
-color: white;
-border: none;
-font-size: 14px;
-cursor: pointer;
+  background-color: #343a40;;
+  color: white;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
 }
 .info-content {
-display: none;
-position: absolute;
-top: 5px; 
-left: 5px;
-background-color: #f1f1f1;
-padding: 2px;
-border-radius: 5px;
-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-z-index: 1;
-white-space: pre-line; /* Hiển thị thông tin theo hàng dòng */
-line-height: 0.1;
+  display: none;
+  position: absolute;
+  top: 5px; 
+  left: 5px;
+  background-color: #f1f1f1;
+  padding: 2px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  white-space: pre-line; /* Hiển thị thông tin theo hàng dòng */
+  line-height: 0.1;
 }
 .input {
-  width: 82%;
+  width: 100%;
 }
 
 .btsend {
@@ -76,11 +76,11 @@ line-height: 0.1;
   font-size: 12px; 
 }
 #navbarTitle {
-margin: 0 auto; /* Căn giữa văn bản "Not Connected" */
+  margin: 0 auto; /* Căn giữa văn bản "Not Connected" */
 }
 .send-button {
-background: none;
-border: none;
-cursor: pointer;
-font-size: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
 }
