@@ -17,7 +17,7 @@ function requestBluetoothDevice() {
     })         
     .then(device => {
         device.addEventListener('gattserverdisconnected', onDisconnected);
-        dev=device;
+        dev = device;
         logstatus("Connect to " + dev.name);
         console.log('Connecting to', dev);
         return device.gatt.connect();
