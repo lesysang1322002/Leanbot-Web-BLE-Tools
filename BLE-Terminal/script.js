@@ -134,19 +134,27 @@ let nextIsNewline = true;
 function showTerminalMessage(text) {
     const textarea = document.getElementById("textareaNotification");
 
+    // Goal: Replace the Leanbot initialization message sequence
+    // "\nAT+NAME\nLB999999\n" with "\n>>> Leanbot ready >>>\n"
     if (text == "AT+NAME\n") return;
 
     if (text == "LB999999\n") {
-        textarea.value += ">>> Leanbot ready >>>";
+        // Add "\n" before last line (works with TimestampPrefix too)
+        let lines = textarea.value.split('\n');
+        lines[lines.length - 1] = "\n" + lines[lines.length - 1];
+        textarea.value = lines.join('\n');
+
+        textarea.value += ">>> Leanbot ready >>>\n";
         return;
     }
+    // ================================================
 
     if (nextIsNewline) {
         text = '\n' + text;
         nextIsNewline = false;
     }
     if (text.endsWith('\n')) {
-        text = text.slice(0, -1);
+        text = text.slice(0, -1); // Skipped "\n", Leanbot initialization message = "AT+NAME\nLB999999\n"
         nextIsNewline = true;
     }
     
@@ -156,7 +164,6 @@ function showTerminalMessage(text) {
 
     textarea.value += text;
 }
-
 
 let lastTimestamp = null;
 
