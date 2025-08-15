@@ -1,57 +1,57 @@
-    var deviceName = 'JDY-33-BLE';
-    var bleService = '0000ffe0-0000-1000-8000-00805f9b34fb';
-    var bleCharacteristic = '0000ffe1-0000-1000-8000-00805f9b34fb';
-    var gattCharacteristic;
-    var bluetoothDeviceDetected;
-    function isWebBluetoothEnabled() {
-        if (!navigator.bluetooth) {
-        console.log('Web Bluetooth API is not available in this browser!');
-        // log('Web Bluetooth API is not available in this browser!');
-        return false
-        }
-
-        return true
+var deviceName = 'JDY-33-BLE';
+var bleService = '0000ffe0-0000-1000-8000-00805f9b34fb';
+var bleCharacteristic = '0000ffe1-0000-1000-8000-00805f9b34fb';
+var gattCharacteristic;
+var bluetoothDeviceDetected;
+function isWebBluetoothEnabled() {
+    if (!navigator.bluetooth) {
+    console.log('Web Bluetooth API is not available in this browser!');
+    // log('Web Bluetooth API is not available in this browser!');
+    return false
     }
-    function requestBluetoothDevice() {
-        if(isWebBluetoothEnabled){
-    logstatus('Finding...');
-    navigator.bluetooth.requestDevice({
-        filters: [{
-            services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] }] 
-        })         
-    .then(device => {
-        dev=device;
-        logstatus("Connect to " + dev.name);
-        console.log('Đang kết nối với', dev);
-        return device.gatt.connect();
+
+    return true
+}
+function requestBluetoothDevice() {
+    if(isWebBluetoothEnabled){
+logstatus('Finding...');
+navigator.bluetooth.requestDevice({
+    filters: [{
+        services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] }] 
+    })         
+.then(device => {
+    dev=device;
+    logstatus("Connect to " + dev.name);
+    console.log('Đang kết nối với', dev);
+    return device.gatt.connect();
+})
+.then(server => {
+        console.log('Getting GATT Service...');
+        logstatus('Getting Service...');
+        return server.getPrimaryService(bleService);
     })
-    .then(server => {
-            console.log('Getting GATT Service...');
-            logstatus('Getting Service...');
-            return server.getPrimaryService(bleService);
-        })
-        .then(service => {
-            console.log('Getting GATT Characteristic...');
-            logstatus('Geting Characteristic...');
-            return service.getCharacteristic(bleCharacteristic);
-        })
-        .then(characteristic => {
-            logstatus(dev.name);
-            document.getElementById("buttonText").innerText = "Rescan";
-        gattCharacteristic = characteristic
-        gattCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue)
-        return gattCharacteristic.startNotifications()
+    .then(service => {
+        console.log('Getting GATT Characteristic...');
+        logstatus('Geting Characteristic...');
+        return service.getCharacteristic(bleCharacteristic);
     })
-    .catch(error => {
-        if (error instanceof DOMException && error.name === 'NotFoundError' && error.message === 'User cancelled the requestDevice() chooser.') {
-        console.log("Người dùng đã hủy yêu cầu kết nối thiết bị.");
-        logstatus("Scan to connect");
-        } else {
-        console.log("Không thể kết nối với thiết bị: " + error);
-        logstatus("ERROR");
-        }
-        });
-    }}
+    .then(characteristic => {
+        logstatus(dev.name);
+        document.getElementById("buttonText").innerText = "Rescan";
+    gattCharacteristic = characteristic
+    gattCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue)
+    return gattCharacteristic.startNotifications()
+})
+.catch(error => {
+    if (error instanceof DOMException && error.name === 'NotFoundError' && error.message === 'User cancelled the requestDevice() chooser.') {
+    console.log("Người dùng đã hủy yêu cầu kết nối thiết bị.");
+    logstatus("Scan to connect");
+    } else {
+    console.log("Không thể kết nối với thiết bị: " + error);
+    logstatus("ERROR");
+    }
+    });
+}}
 
 function disconnect()
 {
@@ -90,26 +90,26 @@ function scrollToBottom() {
     textarea.scrollTop = textarea.scrollHeight;
 }
 
-let checkAutoscroll=true;
+let checkAutoscroll = true;
 const checkbox = document.getElementById("Checkauto");
-checkbox.checked=true;
+checkbox.checked = true;
 
 function Checkautoscroll() {
     if (checkbox.checked) {
-        checkAutoscroll=true;
+        checkAutoscroll = true;
     } else {
-        checkAutoscroll=false;
+        checkAutoscroll = false;
     }
 }
 
-let isShowTimestamp =false;
+let isShowTimestamp = false;
 
 function Checkshowtime() {
     const checkbox = document.getElementById("Checkbox");
     if (checkbox.checked) {
         isShowTimestamp = true;
     } else {
-        isShowTimestamp =false;
+        isShowTimestamp = false;
     }
 }
 
@@ -130,6 +130,7 @@ function handleChangedValue(event) {
 // ----------
 
 let nextIsNewline = true;
+let lastTimestamp = null;
 
 function showTerminalMessage(text) {
     const textarea = document.getElementById("textareaNotification");
@@ -157,32 +158,43 @@ function showTerminalMessage(text) {
         text = text.slice(0, -1); // Skipped "\n", Leanbot initialization message = "AT+NAME\nLB999999\n"
         nextIsNewline = true;
     }
-    
-    if (isShowTimestamp) {
-        text = text.replace(/\n/g, '\n' + getTimestampPrefix());
-    }
 
-    textarea.value += text;
-}
-
-let lastTimestamp = null;
-
-function getTimestampPrefix() {
     let now = new Date();
-    const hours        = String(now.getHours()).padStart(2, '0');
-    const minutes      = String(now.getMinutes()).padStart(2, '0');
-    const seconds      = String(now.getSeconds()).padStart(2, '0');
-    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-
     let gap = 0;
     if (lastTimestamp) {
         gap = (now - lastTimestamp) / 1000;
     }
     lastTimestamp = now;
 
-    const gapStr = `(+${gap.toFixed(3)})`;
-    return `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> `;
+    if (isShowTimestamp) {
+        const hours        = String(now.getHours()).padStart(2, '0');
+        const minutes      = String(now.getMinutes()).padStart(2, '0');
+        const seconds      = String(now.getSeconds()).padStart(2, '0');
+        const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+        const gapStr = `(+${gap.toFixed(3)})`;
+        const prefix = `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> `;
+        text = text.replace(/\n/g, '\n' + prefix);
+    }
+
+    textarea.value += text;
 }
+
+// function getTimestampPrefix() {
+//     let now = new Date();
+//     const hours        = String(now.getHours()).padStart(2, '0');
+//     const minutes      = String(now.getMinutes()).padStart(2, '0');
+//     const seconds      = String(now.getSeconds()).padStart(2, '0');
+//     const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+
+//     let gap = 0;
+//     if (lastTimestamp) {
+//         gap = (now - lastTimestamp) / 1000;
+//     }
+//     lastTimestamp = now;
+
+//     const gapStr = `(+${gap.toFixed(3)})`;
+//     return `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> `;
+// }
 
 const button = document.getElementById("toggleButton");
 function toggleFunction() {
@@ -209,11 +221,8 @@ function copyToClipboard() {
     var textarea = document.getElementById('textareaNotification');
     textarea.select();
     document.execCommand('copy');
-    // alert('Text copied to clipboard');
 }
-// if ('serviceWorker' in navigator) {
-// navigator.serviceWorker.register('office.js');
-// }
+
 document.addEventListener('DOMContentLoaded', function () {
   var infoButton = document.getElementById('infoButton');
   var infoContent = document.getElementById('infoContent');
