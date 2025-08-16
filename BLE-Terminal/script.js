@@ -8,6 +8,7 @@ let bluetoothDeviceDetected;
 // ================== State ==================
 let nextIsNewline   = true;
 let lastTimestamp   = null;
+let isFromWeb       = false;
 
 // ================== DOM Elements ==================
 function UI(id) {
@@ -71,6 +72,7 @@ function disconnect() {
 
 function send() {
     const MsgSend = UI("input");
+    isFromWeb = true;
     showTerminalMessage("    You -> " + MsgSend.value + "\n");
 
     const newline = checkboxNewline.checked ? "\n" : "";
@@ -118,20 +120,36 @@ function showTerminalMessage(text) {
 
     let now = new Date();
     let gap = 0;
-    if (lastTimestamp) {
+    if (!isFromWeb && lastTimestamp) {
         gap = (now - lastTimestamp) / 1000;
+        console.log("Gap:", gap.toFixed(3), "seconds");
     }
-    lastTimestamp = now;
+    if (!isFromWeb) lastTimestamp = now;
 
     if (checkboxTimestamp.checked) {
         const hours        = String(now.getHours()).padStart(2, '0');
         const minutes      = String(now.getMinutes()).padStart(2, '0');
         const seconds      = String(now.getSeconds()).padStart(2, '0');
         const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-        const gapStr = `(+${gap.toFixed(3)})`;
+        const gapStr = !isFromWeb ? `(+${gap.toFixed(3)})` : "(      )";
         const prefix = `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> `;
-        text = text.replace(/\n/g, '\n' + prefix);
+        // text = text.replace(/\n/g, '\n' + prefix);
+
+        text = text.split('\n').map((line, idx) => {
+            if (idx === 0) {
+                // Keep the first line unchanged
+                return line;
+            } else if (idx === 1) {
+                // Second line -> use the actual gapStr
+                return `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> ${line}`;
+            } else {
+                // From the third line onward -> force gap = 0
+                return `${hours}:${minutes}:${seconds}.${milliseconds} (+0.000) -> ${line}`;
+            }
+        }).join('\n');
     }
+
+    if (isFromWeb)  isFromWeb = false;
 
     textArea.value += text;
 }
