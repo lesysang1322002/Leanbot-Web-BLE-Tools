@@ -73,7 +73,9 @@ function disconnect() {
 function send() {
     const MsgSend = UI("input");
     isFromWeb = true;
+    textArea.value += "\n";
     showTerminalMessage("    You -> " + MsgSend.value + "\n");
+    textArea.value += "\n";
 
     const newline = checkboxNewline.checked ? "\n" : "";
     gattCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
@@ -131,7 +133,7 @@ function showTerminalMessage(text) {
         const minutes      = String(now.getMinutes()).padStart(2, '0');
         const seconds      = String(now.getSeconds()).padStart(2, '0');
         const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-        const gapStr = !isFromWeb ? `(+${gap.toFixed(3)})` : "(      )";
+        const gapStr = !isFromWeb ? `(+${gap.toFixed(3)})` : "        ";
         const prefix = `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> `;
         // text = text.replace(/\n/g, '\n' + prefix);
 
