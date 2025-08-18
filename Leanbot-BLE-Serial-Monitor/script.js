@@ -66,10 +66,6 @@ function requestBluetoothDevice() {
 function disconnect() {
     if (dev?.gatt.connected) {
         dev.gatt.disconnect();
-        logstatus("SCAN to connect");
-        isFromWeb = false;
-        lastTimestamp = null;
-        nextIsNewline = true;
         console.log("Đã ngắt kết nối với:", dev.name);
     }
 }
@@ -82,13 +78,10 @@ function onDisconnected(event) {
 }
 
 function resetPage() {
-    textArea.value = "";
+    // textArea.value = "";
     isFromWeb = false;
     lastTimestamp = null;
     nextIsNewline = true;
-    checkboxAutoScroll.checked = true;
-    checkboxTimestamp.checked = false;
-    checkboxNewline.checked = true;
 }
 
 function send() {
