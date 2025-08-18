@@ -118,7 +118,13 @@ footer {
 #navbarTitle {
   margin-right: 32px; /* Căn giữa văn bản "Scan to connect" */
   font-size: 16px; 
+  font-weight: bold; /* Làm đậm văn bản */
 }
+
+#buttonText{
+  font-weight: bold; /* Làm đậm văn bản */
+}
+
 .send-button {
   background: none;
   border: none;

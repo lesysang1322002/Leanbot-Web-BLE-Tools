@@ -36,6 +36,7 @@ function requestBluetoothDevice() {
     logstatus('Finding...');
     navigator.bluetooth.requestDevice({ filters: [{ services: [bleService] }] })
         .then(device => {
+            device.addEventListener('gattserverdisconnected', onDisconnected);
             dev = device;
             logstatus("Connect to " + dev.name);
             return device.gatt.connect();
@@ -65,9 +66,29 @@ function requestBluetoothDevice() {
 function disconnect() {
     if (dev?.gatt.connected) {
         dev.gatt.disconnect();
-        logstatus("Scan to connect");
+        logstatus("SCAN to connect");
+        isFromWeb = false;
+        lastTimestamp = null;
+        nextIsNewline = true;
         console.log("Đã ngắt kết nối với:", dev.name);
     }
+}
+
+function onDisconnected(event) {
+    logstatus("SCAN to connect");
+    buttonTextScan.innerText = "Scan";
+    resetPage();
+    console.log(`Device ${dev.name} is disconnected.`);
+}
+
+function resetPage() {
+    textArea.value = "";
+    isFromWeb = false;
+    lastTimestamp = null;
+    nextIsNewline = true;
+    checkboxAutoScroll.checked = true;
+    checkboxTimestamp.checked = false;
+    checkboxNewline.checked = true;
 }
 
 function send() {
