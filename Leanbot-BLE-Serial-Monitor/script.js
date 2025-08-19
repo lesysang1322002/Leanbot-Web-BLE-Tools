@@ -87,9 +87,9 @@ function resetPage() {
 function send() {
     const MsgSend = UI("input");
     isFromWeb = true;
-    textArea.value += "\n";
+    logBuffer += "\n";
     showTerminalMessage("    You -> " + MsgSend.value + "\n");
-    textArea.value += "\n";
+    logBuffer += "\n";
 
     const newline = checkboxNewline.checked ? "\n" : "";
     gattCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
@@ -100,6 +100,18 @@ function send() {
 function str2ab(str) {
     return new TextEncoder().encode(str).buffer;
 }
+
+let logBuffer = "";
+
+setInterval(() => {
+    if (logBuffer) {
+        textArea.value += logBuffer;
+        logBuffer = "";
+        if (checkboxAutoScroll.checked) {
+            textArea.scrollTop = textArea.scrollHeight;
+        }
+    }
+}, 50); // update mỗi 50ms
 
 // ================== UI Handlers ==================
 function handleChangedValue(event) {
@@ -120,7 +132,7 @@ function showTerminalMessage(text) {
         lines[lines.length - 1] = "\n" + lines[lines.length - 1];
         textArea.value = lines.join('\n');
 
-        textArea.value += ">>> Leanbot ready >>>\n";
+        logBuffer += ">>> Leanbot ready >>>\n";
         return;
     }
     // ================================================
@@ -167,7 +179,7 @@ function showTerminalMessage(text) {
 
     if (isFromWeb)  isFromWeb = false;
 
-    textArea.value += text;
+    logBuffer += text;
 }
 
 function toggleFunction() {
