@@ -95,7 +95,6 @@ async function send() {
 
     for (let i = 0; i < lines.length; i++) {
         let cmd = lines[i];
-        if (cmd === "") continue;
 
         const newline = checkboxNewline.checked ? "\n" : "";
         await gattCharacteristic?.writeValue(str2ab(cmd + newline));
