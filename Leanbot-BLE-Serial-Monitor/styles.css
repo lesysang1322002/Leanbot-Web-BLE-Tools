@@ -110,6 +110,7 @@ footer {
   width: 100%;
   border-radius: 5px; 
   font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
 }
 .btsend {
   width: 8%;
