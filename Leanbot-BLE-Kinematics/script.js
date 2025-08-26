@@ -84,18 +84,25 @@ function resetPage() {
     nextIsNewline = true;
 }
 
-function send() {
+async function send() {
     const MsgSend = UI("input");
-    isFromWeb = true;
-    logBuffer += "\n";
-    showTerminalMessage("    You -> " + MsgSend.value + "\n");
-    logBuffer += "\n";
+    let lines = MsgSend.value.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
 
-    const newline = checkboxNewline.checked ? "\n" : "";
-    gattCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
+    if (!lines.includes("END")) {
+        lines.push("END");
+        MsgSend.value += (MsgSend.value.endsWith("\n") ? "" : "\n") + "END";
+    }
 
-    MsgSend.value = "";
+    for (let i = 0; i < lines.length; i++) {
+        let cmd = lines[i];
+
+        const newline = checkboxNewline.checked ? "\n" : "";
+        await gattCharacteristic?.writeValue(str2ab(cmd + newline));
+
+        await new Promise(r => setTimeout(r, 5)); // delay 5ms
+    }
 }
+
 
 function str2ab(str) {
     return new TextEncoder().encode(str).buffer;

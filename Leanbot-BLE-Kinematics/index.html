@@ -29,35 +29,37 @@
                     </div>
                 </div>
             </nav>
-            <hr style="margin:0">
-            <div class="row" style="margin: 0px;">
-                <div class="form-check form-check-inline">
-                    <input type="checkbox" class="form-check-input" id="CheckAutoScroll"  checked>
-                    <label class="form-check-label" for="CheckAutoScroll">Autoscroll</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input type="checkbox" class="form-check-input" id="CheckTimestamp">
-                    <label class="form-check-label" for="CheckTimestamp">Timestamp</label>
-                </div>
-                <div class="ml-auto">
-                    <button class="mr-1 btn-primary" onclick="clearTextarea()">Clear</button>
-                    <button class="btn-primary" onclick="copyToClipboard()">Copy</button>
-                </div>
-            </div>
         </div>
 
-        <textarea  class="form-control monospace" id="textareaNotification" readonly ></textarea>
-        
         <div class="footer">
             <div class="row" style="display: flex; align-items: center; margin: 0px;">
                 <button class="btn-primary" id="btsend" onclick="send()">Send</button>
-                <input id="input" type="text" class="input ml-1" placeholder="Send Message ->..." style="flex: 1;">
+                <textarea id="input" class="input ml-1" placeholder="Send Message ->..." style="flex: 1;"></textarea>
                 <div class="form-check form-check-inline ml-1 mr-1">
                     <input type="checkbox" class="form-check-input" id="CheckNL" checked>
                     <label class="form-check-label">Newline</label>
                 </div>
             </div> 
         </div>
+
+        <hr style="margin:0">
+        <div class="row" style="margin: 0px;">
+            <div class="form-check form-check-inline">
+                <input type="checkbox" class="form-check-input" id="CheckAutoScroll"  checked>
+                <label class="form-check-label" for="CheckAutoScroll">Autoscroll</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input type="checkbox" class="form-check-input" id="CheckTimestamp">
+                <label class="form-check-label" for="CheckTimestamp">Timestamp</label>
+            </div>
+            <div class="ml-auto">
+                <button class="mr-1 btn-primary" onclick="clearTextarea()">Clear</button>
+                <button class="btn-primary" onclick="copyToClipboard()">Copy</button>
+            </div>
+        </div>
+
+        <textarea  class="form-control monospace" id="textareaNotification" readonly ></textarea>
+    
     </div>
 </body>
     <script src="script.js"></script>

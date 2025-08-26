@@ -77,9 +77,11 @@ body h6 {
   overflow-x: auto; /* Sử dụng thanh cuộn ngang khi nội dung vượt quá kích thước */
   white-space: nowrap; /* Ngăn chặn xuống dòng khi dòng quá dài */
 }
-footer {
-  background-color: #343a40;
-  color: #fff;
+.footer {
+  /* background-color: #343a40;
+  color: #fff; */
+  border: 1px solid #ccc; 
+  border-radius: 3px; 
 }
 .input-container {
   display: inline-block;
@@ -108,7 +110,9 @@ footer {
 }
 .input {
   width: 100%;
-  border-radius: 5px; 
+  border-radius: 5px;
+  height: 200px;
+  font-family: 'Roboto Mono', monospace;
 }
 .btsend {
   width: 8%;
