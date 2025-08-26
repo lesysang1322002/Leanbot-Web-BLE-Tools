@@ -86,16 +86,16 @@ function resetPage() {
 
 async function send() {
     const MsgSend = UI("input");
-    const lines = MsgSend.value.split(/\r?\n/);  // tách nhiều dòng
+    let lines = MsgSend.value.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
+
+    if (!lines.includes("END")) {
+        lines.push("END");
+        MsgSend.value += (MsgSend.value.endsWith("\n") ? "" : "\n") + "END";
+    }
 
     for (let i = 0; i < lines.length; i++) {
-        let cmd = lines[i].trim();
+        let cmd = lines[i];
         if (cmd === "") continue;
-        isFromWeb = true;
-
-        logBuffer += "\n";
-        showTerminalMessage("You -> " + cmd + "\n");
-        logBuffer += "\n";
 
         const newline = checkboxNewline.checked ? "\n" : "";
         await gattCharacteristic?.writeValue(str2ab(cmd + newline));
@@ -103,6 +103,7 @@ async function send() {
         await new Promise(r => setTimeout(r, 5)); // delay 5ms
     }
 }
+
 
 function str2ab(str) {
     return new TextEncoder().encode(str).buffer;
