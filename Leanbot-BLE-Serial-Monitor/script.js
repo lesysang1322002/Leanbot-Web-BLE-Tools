@@ -111,7 +111,7 @@ setInterval(() => {
             textArea.scrollTop = textArea.scrollHeight;
         }
     }
-}, 50); // update mỗi 50ms
+}, 20); // update mỗi 20ms
 
 // ================== UI Handlers ==================
 function handleChangedValue(event) {
