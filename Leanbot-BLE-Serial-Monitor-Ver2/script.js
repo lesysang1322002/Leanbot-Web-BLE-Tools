@@ -87,7 +87,6 @@ function resetPage() {
 async function send() {
     const MsgSend = UI("input");
     const lines = MsgSend.value.split(/\r?\n/);  // tách nhiều dòng
-    isFromWeb = true;
 
     for (let i = 0; i < lines.length; i++) {
         let cmd = lines[i].trim();
