@@ -105,7 +105,7 @@ body {
 
 #navbarTitleA,
 #navbarTitleB {
-  margin-right: 32px;
+  /* margin-right: 32px; */
   font-size: 16px;
   font-weight: bold;
 }
