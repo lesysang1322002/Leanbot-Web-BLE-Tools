@@ -277,8 +277,8 @@ async function sendAB() {
       await gattCharacteristicB.writeValue(str2ab(line));
     }
 
-    // Delay nhỏ giữa các dòng (200ms)
-    await new Promise(r => setTimeout(r, 200));
+    // Delay nhỏ giữa các dòng (5ms)
+    await new Promise(r => setTimeout(r, 5));
   }
 
   msgBox.value = "";
