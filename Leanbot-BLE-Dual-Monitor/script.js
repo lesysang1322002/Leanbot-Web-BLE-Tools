@@ -118,16 +118,40 @@ function handleChangedValueA(event) {
 }
 
 function showTerminalMessageA(text) {
+  // Bỏ qua chuỗi init
+  if (text === "AT+NAME\n") return;
+  if (text === "LB999999\n") {
+    logBufferA += "\n>>> Leanbot ready >>>\n";
+    return;
+  }
+
   if (nextIsNewlineA) { text = "\n" + text; nextIsNewlineA = false; }
   if (text.endsWith("\n")) { text = text.slice(0, -1); nextIsNewlineA = true; }
 
   if (checkboxTimestamp.checked) {
     const now = new Date();
-    const gap = lastTimestampA ? (now - lastTimestampA) / 1000 : 0;
-    lastTimestampA = now;
-    const timeStr = now.toLocaleTimeString() + "." + String(now.getMilliseconds()).padStart(3,'0');
-    text = `${timeStr} (+${gap.toFixed(3)}) -> ${text}`;
+    let gap = 0;
+    if (!isFromWebA && lastTimestampA) {
+      gap = (now - lastTimestampA) / 1000;
+    }
+    if (!isFromWebA) lastTimestampA = now;
+
+    const hours        = String(now.getHours()).padStart(2, '0');
+    const minutes      = String(now.getMinutes()).padStart(2, '0');
+    const seconds      = String(now.getSeconds()).padStart(2, '0');
+    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+    const gapStr = !isFromWebA ? `(+${gap.toFixed(3)})` : "        ";
+    const prefix = `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> `;
+
+    // Thêm prefix cho từng dòng
+    text = text.split('\n').map((line, idx) => {
+      if (idx === 0) return line; // dòng đầu giữ nguyên
+      else if (idx === 1) return prefix + line; // dòng 2 tính gap thật
+      else return `${hours}:${minutes}:${seconds}.${milliseconds} (+0.000) -> ${line}`;
+    }).join('\n');
   }
+
+  if (isFromWebA) isFromWebA = false;
 
   logBufferA += text;
 }
@@ -216,16 +240,40 @@ function handleChangedValueB(event) {
 }
 
 function showTerminalMessageB(text) {
+  // Bỏ qua chuỗi init
+  if (text === "AT+NAME\n") return;
+  if (text === "LB999999\n") {
+    logBufferB += "\n>>> Leanbot ready >>>\n";
+    return;
+  }
+
   if (nextIsNewlineB) { text = "\n" + text; nextIsNewlineB = false; }
   if (text.endsWith("\n")) { text = text.slice(0, -1); nextIsNewlineB = true; }
 
   if (checkboxTimestamp.checked) {
     const now = new Date();
-    const gap = lastTimestampB ? (now - lastTimestampB) / 1000 : 0;
-    lastTimestampB = now;
-    const timeStr = now.toLocaleTimeString() + "." + String(now.getMilliseconds()).padStart(3,'0');
-    text = `${timeStr} (+${gap.toFixed(3)}) -> ${text}`;
+    let gap = 0;
+    if (!isFromWebB && lastTimestampB) {
+      gap = (now - lastTimestampB) / 1000;
+    }
+    if (!isFromWebB) lastTimestampB = now;
+
+    const hours        = String(now.getHours()).padStart(2, '0');
+    const minutes      = String(now.getMinutes()).padStart(2, '0');
+    const seconds      = String(now.getSeconds()).padStart(2, '0');
+    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+    const gapStr = !isFromWebB ? `(+${gap.toFixed(3)})` : "        ";
+    const prefix = `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> `;
+
+    // Thêm prefix cho từng dòng
+    text = text.split('\n').map((line, idx) => {
+      if (idx === 0) return line; // dòng đầu giữ nguyên
+      else if (idx === 1) return prefix + line; // dòng 2 tính gap thật
+      else return `${hours}:${minutes}:${seconds}.${milliseconds} (+0.000) -> ${line}`;
+    }).join('\n');
   }
+
+  if (isFromWebB) isFromWebB = false;
 
   logBufferB += text;
 }
