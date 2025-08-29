@@ -1,0 +1,222 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Arial', sans-serif;
+  box-sizing: border-box;
+}
+
+/* Giữ lại cuộn nếu cần, không ẩn overflow toàn trang */
+body {
+  overflow: auto;
+}
+
+.config-container {
+  border: 2px solid #ccc;
+  border-radius: 5px;
+  margin-top: 5px;
+}
+
+/* Bố cục 2 cột cho Leanbot A và B */
+.dual-container {
+  display: flex;
+  height: calc(100vh - 160px); /* trừ chỗ để send chung + config */
+}
+
+/* Mỗi cột */
+.dual-container .left,
+.dual-container .right {
+  flex: 1;
+  padding: 3px;
+  border: 2px solid #ccc;
+  border-radius: 5px;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* cho phép textarea co */
+}
+
+/* Khung send chung */
+.send-container {
+  border: 2px solid #ccc;
+  border-radius: 5px;
+  padding: 5px;
+  margin-top: 5px;
+  background: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.send-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  margin: 0;
+}
+
+.send-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.send-row .form-check {
+  flex-shrink: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.send-buttons {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.btn-primary {
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: 14px;
+  color: #000 !important;
+  background-color: #fff !important;
+  border: 1px solid #000 !important;
+}
+
+/* Container chính */
+.main-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Thanh trên */
+.top-controls {
+  flex-shrink: 0;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#navbarTitleA,
+#navbarTitleB {
+  margin-right: 32px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Nút scan */
+.btn-primary-scan {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+  color: #ffffff !important;
+  background-color: #2c5f85 !important;
+  border-color: #000000 !important;
+}
+
+.btn-primary-scan img {
+  padding-bottom: 2px;
+  width: 22px;
+  height: auto;
+}
+
+#buttonTextA,
+#buttonTextB {
+  font-weight: bold;
+}
+
+/* Textarea log */
+#textareaNotificationA,
+#textareaNotificationB {
+  flex: 1;
+  min-height: 0; /* quan trọng: cho phép co */
+  resize: none;
+  width: 100%;
+  background: #ffffff;
+  font-size: 12px;
+  padding: 0;
+  font-family: 'Roboto Mono', monospace;
+  overflow-y: auto;
+}
+
+/* Footer */
+.footer {
+  flex-shrink: 0;
+}
+
+/* Input chung */
+.input {
+  width: 100%;
+  border-radius: 5px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+}
+
+.btsend {
+  width: 8%;
+  margin-left: 2%;
+}
+
+/* Info popup */
+#infoButtonA, #infoButtonB {
+  margin: 5px 0;
+  background: #ffffff;
+  color: rgb(38, 15, 15);
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+#infoContentA, #infoContentB {
+  display: none;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  white-space: pre-line;
+  line-height: 0.1;
+}
+
+.monospace {
+  font-family: 'Roboto Mono', monospace;
+}
+
+.alert-info {
+  background-color: #17a2b8;
+  color: #fff;
+}
+
+body h6 {
+  font-size: 12px;
+}
+
+.text-log {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+footer {
+  background-color: #343a40;
+  color: #fff;
+}
+
+.input-container {
+  display: inline-block;
+  align-items: center;
+}
+
+.send-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+}
