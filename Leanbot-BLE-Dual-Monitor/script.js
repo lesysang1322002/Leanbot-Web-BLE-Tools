@@ -103,7 +103,9 @@ function sendA() {
   if (!text) return;
 
   isFromWebA = true;
+  logBufferA += "\n";
   showTerminalMessageA("    You -> " + text + "\n");
+  logBufferA += "\n";
 
   const newline = UI("CheckNL").checked ? "\n" : "";
   gattCharacteristicA?.writeValue(str2ab(text + newline));
@@ -235,7 +237,9 @@ function sendB() {
   if (!text) return;
 
   isFromWebB = true;
+  logBufferB += "\n";
   showTerminalMessageB("    You -> " + text + "\n");
+  logBufferB += "\n";
 
   const newline = UI("CheckNL").checked ? "\n" : "";
   gattCharacteristicB?.writeValue(str2ab(text + newline));
@@ -333,6 +337,11 @@ async function sendAB() {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] + newline;
 
+    if (i === 0) {
+      if (gattCharacteristicA) logBufferA += "\n";
+      if (gattCharacteristicB) logBufferB += "\n";
+    }
+
     // Gửi tới A
     if (gattCharacteristicA) {
       showTerminalMessageA("    You -> " + lines[i] + "\n");
@@ -343,6 +352,11 @@ async function sendAB() {
     if (gattCharacteristicB) {
       showTerminalMessageB("    You -> " + lines[i] + "\n");
       await gattCharacteristicB.writeValue(str2ab(line));
+    }
+
+    if (i === lines.length - 1) {
+      if (gattCharacteristicA) logBufferA += "\n";
+      if (gattCharacteristicB) logBufferB += "\n";
     }
 
     // Delay nhỏ giữa các dòng (5ms)
