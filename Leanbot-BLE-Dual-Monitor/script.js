@@ -131,7 +131,9 @@ function handleChangedValueA(event) {
       gattCharacteristicB.writeValue(str2ab(line + "\n"));
       isFromWebB = true;
 
+      logBufferB += "\n";
       showTerminalMessageB("    From A -> " + line + "\n");
+      logBufferB += "\n";
       await new Promise(r => setTimeout(r, 5));
     }
   });
@@ -282,8 +284,9 @@ function handleChangedValueB(event) {
     if (UI("CheckForward").checked && gattCharacteristicA) {
       gattCharacteristicA.writeValue(str2ab(line + "\n"));
       isFromWebA = true;
-
+      logBufferA += "\n";
       showTerminalMessageA("    From B -> " + line + "\n");
+      logBufferA += "\n";
       await new Promise(r => setTimeout(r, 5));
     }
   });
@@ -370,34 +373,38 @@ async function sendAB() {
   const lines = text.split(/\r?\n/);
   const newline = UI("CheckNL").checked ? "\n" : "";
 
+  if (gattCharacteristicA) {
+    logBufferA += "\n";
+    console.log("Add newline to A");
+  }
+  if (gattCharacteristicB) {
+    logBufferB += "\n";
+    console.log("Add newline to B");
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] + newline;
 
-    if (i === 0) {
-      if (gattCharacteristicA) logBufferA += "\n";
-      if (gattCharacteristicB) logBufferB += "\n";
-    }
-
     // Gửi tới A
     if (gattCharacteristicA) {
+      isFromWebA = true;
       showTerminalMessageA("    You -> " + lines[i] + "\n");
       await gattCharacteristicA.writeValue(str2ab(line));
     }
 
     // Gửi tới B
     if (gattCharacteristicB) {
+      isFromWebB = true;
       showTerminalMessageB("    You -> " + lines[i] + "\n");
       await gattCharacteristicB.writeValue(str2ab(line));
     }
 
-    if (i === lines.length - 1) {
-      if (gattCharacteristicA) logBufferA += "\n";
-      if (gattCharacteristicB) logBufferB += "\n";
-    }
-
     // Delay nhỏ giữa các dòng (5ms)
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 5));
   }
+
+  if (gattCharacteristicA) logBufferA += "\n";
+  if (gattCharacteristicB) logBufferB += "\n";
 
   msgBox.value = "";
 }
