@@ -113,10 +113,28 @@ function sendA() {
   msgBox.value = "";
 }
 
+let recvBufferA = "";
+
 function handleChangedValueA(event) {
   const value = new TextDecoder('utf-8').decode(event.target.value).replace(/\r/g, '');
   showTerminalMessageA(value);
   if (checkboxAutoScroll.checked) textAreaA.scrollTop = textAreaA.scrollHeight;
+
+  recvBufferA += value;
+
+  // Tách từng dòng khi gặp newline
+  let lines = recvBufferA.split("\n");
+  recvBufferA = lines.pop(); // giữ lại phần dư chưa có \n
+
+  lines.forEach(async line => {
+    if (UI("CheckForward").checked && gattCharacteristicB) {
+      gattCharacteristicB.writeValue(str2ab(line + "\n"));
+      isFromWebB = true;
+
+      showTerminalMessageB("    From A -> " + line + "\n");
+      await new Promise(r => setTimeout(r, 5));
+    }
+  });
 }
 
 function showTerminalMessageA(text) {
@@ -247,10 +265,28 @@ function sendB() {
   msgBox.value = "";
 }
 
+let recvBufferB = "";
+
 function handleChangedValueB(event) {
   const value = new TextDecoder('utf-8').decode(event.target.value).replace(/\r/g, '');
   showTerminalMessageB(value);
   if (checkboxAutoScroll.checked) textAreaB.scrollTop = textAreaB.scrollHeight;
+
+  recvBufferB += value;
+
+  // Tách từng dòng khi gặp newline
+  let lines = recvBufferB.split("\n");
+  recvBufferB = lines.pop(); // giữ lại phần dư chưa có \n
+
+  lines.forEach(async line => {
+    if (UI("CheckForward").checked && gattCharacteristicA) {
+      gattCharacteristicA.writeValue(str2ab(line + "\n"));
+      isFromWebA = true;
+
+      showTerminalMessageA("    From B -> " + line + "\n");
+      await new Promise(r => setTimeout(r, 5));
+    }
+  });
 }
 
 function showTerminalMessageB(text) {
@@ -360,7 +396,7 @@ async function sendAB() {
     }
 
     // Delay nhỏ giữa các dòng (5ms)
-    await new Promise(r => setTimeout(r, 5));
+    await new Promise(r => setTimeout(r, 50));
   }
 
   msgBox.value = "";
