@@ -16,21 +16,10 @@
           <div class="top-controls">
               <nav class="navbar" style="padding: 0px 0px;">
                   <button class="btn btn-primary-scan" id="toggleButtonA" onclick="toggleFunctionA()">
-                      <img src="../image/ble_logo.png" alt="Scan Icon"><span id="buttonTextA">Scan A</span>  
+                        <span id="buttonTextA">Connect A</span>  
                   </button>
-                  <a class="navbar-brand" href="#" id="navbarTitleA" style="color: rgb(218, 79, 79)">SCAN A to connect</a>
-                  <!-- <div class="info-container">
-                      <button id="infoButtonA"><i class="fas fa-info-circle"></i></button>
-                      <!-- <div class="info-content" id="infoContentA">
-                          <h6><strong>Web BLE Terminal</strong></h6>
-                          <h6><strong>Device: JDY-33 (Leanbot A)</strong></h6>
-                          <h6>Service UUID: 0000ffe0-0000-1000-8000-00805f9b34fb</h6>
-                          <h6>Characteristic UUID: 0000ffe1-0000-1000-8000-00805f9b34fb</h6>
-                          <footer class="text-center py-2" style="color: rgb(218, 79, 79)">
-                              &copy; DTT
-                          </footer>
-                      </div> -->
-                  <!-- </div> -->
+                  <a class="navbar-brand" href="#" id="navbarTitleA" style="color: rgb(218, 79, 79)"></a>
+                  <button class="btn-primary" onclick="copyToClipboardA()">Copy A</button>
               </nav>
               <hr style="margin:0">
           </div>
@@ -45,21 +34,10 @@
           <div class="top-controls">
               <nav class="navbar" style="padding: 0px 0px;">
                   <button class="btn btn-primary-scan" id="toggleButtonB" onclick="toggleFunctionB()">
-                      <img src="../image/ble_logo.png" alt="Scan Icon"><span id="buttonTextB">Scan B</span>  
+                    <span id="buttonTextB">Connect B</span>  
                   </button>
-                  <a class="navbar-brand" href="#" id="navbarTitleB" style="color: rgb(218, 79, 79)">SCAN B to connect</a>
-                  <!-- <div class="info-container">
-                      <button id="infoButtonB"><i class="fas fa-info-circle"></i></button>
-                      <div class="info-content" id="infoContentB">
-                          <h6><strong>Web BLE Terminal</strong></h6>
-                          <h6><strong>Device: JDY-33 (Leanbot B)</strong></h6>
-                          <h6>Service UUID: 0000ffe0-0000-1000-8000-00805f9b34fb</h6>
-                          <h6>Characteristic UUID: 0000ffe1-0000-1000-8000-00805f9b34fb</h6>
-                          <footer class="text-center py-2" style="color: rgb(218, 79, 79)">
-                              &copy; DTT
-                          </footer>
-                      </div>
-                  </div> -->
+                  <a class="navbar-brand" href="#" id="navbarTitleB" style="color: rgb(218, 79, 79)"></a>
+                  <button class="btn-primary" onclick="copyToClipboardB()">Copy B</button>                 
               </nav>
               <hr style="margin:0">
           </div>
@@ -81,16 +59,15 @@
               <label class="form-check-label" for="CheckTimestamp">Timestamp</label>
           </div>
           <div class="form-check form-check-inline">
-                <input type="checkbox" class="form-check-input" id="CheckForward">
-                <label class="form-check-label" for="CheckForward">Forward Msg</label>
-          </div>
-          <div class="form-check form-check-inline">
-                <input type="checkbox" class="form-check-input" id="CheckShowSend" checked>
-                <label class="form-check-label" for="CheckShowSend">Show Send Msg</label>
+                <input type="checkbox" class="form-check-input" id="CheckShowSend">
+                <label class="form-check-label" for="CheckShowSend">Show Send Info</label>
           </div>
           <div class="ml-auto">
+              <div class="form-check form-check-inline">
+                <input type="checkbox" class="form-check-input" id="CheckForward" checked>
+                <label class="form-check-label" for="CheckForward">Forward @ Lines</label>
+              </div>
               <button class="mr-1 btn-primary" onclick="clearTextareaAll()">Clear</button>
-              <button class="btn-primary" onclick="copyToClipboardAll()">Copy</button>
           </div>
       </div>
     </div>

@@ -44,7 +44,7 @@ function copyToClipboardAll() {
         // Sau 400ms highlight B
         textB.focus();
         textB.select();
-      }, 400);
+      }, 100);
 
       // Bỏ chọn sau 1 giây
       setTimeout(() => {
@@ -68,13 +68,13 @@ const buttonTextScanA = UI("buttonTextA");
 
 function requestBluetoothDeviceA() {
   if (!isWebBluetoothEnabled()) return;
-  logstatusA('Finding A ...');
+  // logstatusA('Finding A ...');
 
   navigator.bluetooth.requestDevice({ filters: [{ services: [bleService] }] })
     .then(device => {
       device.addEventListener('gattserverdisconnected', onDisconnectedA);
       devA = device;
-      logstatusA("Connect to " + device.name);
+      logstatusA(device.name);
       return device.gatt.connect();
     })
     .then(server => server.getPrimaryService(bleService))
@@ -84,7 +84,7 @@ function requestBluetoothDeviceA() {
       gattCharacteristicA.addEventListener('characteristicvaluechanged', handleChangedValueA);
       return gattCharacteristicA.startNotifications();
     })
-    .then(() => buttonTextScanA.innerText = "Rescan A")
+    .then(() => buttonTextScanA.innerText = "Reconnect A")
     .catch(err => console.error("A error:", err));
 }
 
@@ -93,8 +93,8 @@ function disconnectA() {
 }
 
 function onDisconnectedA() {
-  logstatusA("SCAN A to connect");
-  buttonTextScanA.innerText = "Scan A";
+  // logstatusA("SCAN A to connect");
+  buttonTextScanA.innerText = "Connect A";
 }
 
 function sendA() {
@@ -115,6 +115,13 @@ function sendA() {
   msgBox.value = "";
 }
 
+function copyToClipboardA() {
+  textAreaA.select();
+  navigator.clipboard.writeText(textAreaA.value)
+      .then(() => console.log("Copied!"))
+      .catch(err => console.error("Copy failed:", err));
+}
+
 let recvBufferA = "";
 
 function handleChangedValueA(event) {
@@ -130,7 +137,7 @@ function handleChangedValueA(event) {
 
   lines.forEach(async line => {
     if (UI("CheckForward").checked && gattCharacteristicB && line.startsWith("@")) {
-      gattCharacteristicB.writeValue(str2ab(line + "\n"));
+      gattCharacteristicB.writeValue(str2ab("A" + line + "\n"));
       if (UI("CheckShowSend").checked) {
         isFromWebB = true;
         logBufferB += "\n";
@@ -162,7 +169,7 @@ function showTerminalMessageA(text) {
   let gap = 0;
   if (!isFromWebA && lastTimestampA) {
       gap = (now - lastTimestampA) / 1000;
-      console.log("Gap A:", gap.toFixed(3), "seconds");
+      // console.log("Gap A:", gap.toFixed(3), "seconds");
   }
   if (!isFromWebA) lastTimestampA = now;
 
@@ -202,10 +209,10 @@ setInterval(() => {
 function logstatusA(text) { UI("navbarTitleA").textContent = text; }
 
 function toggleFunctionA() {
-  if (buttonTextScanA.innerText === "Scan A") {
+  if (buttonTextScanA.innerText === "Connect A") {
     requestBluetoothDeviceA();
   } else {
-    buttonTextScanA.innerText = "Scan A";
+    buttonTextScanA.innerText = "Connect A";
     disconnectA();
     requestBluetoothDeviceA();
     nextIsNewlineA = true;
@@ -225,13 +232,13 @@ const buttonTextScanB = UI("buttonTextB");
 
 function requestBluetoothDeviceB() {
   if (!isWebBluetoothEnabled()) return;
-  logstatusB('Finding B ...');
+  // logstatusB('Finding B ...');
 
   navigator.bluetooth.requestDevice({ filters: [{ services: [bleService] }] })
     .then(device => {
       device.addEventListener('gattserverdisconnected', onDisconnectedB);
       devB = device;
-      logstatusB("Connect to " + device.name);
+      logstatusB(device.name);
       return device.gatt.connect();
     })
     .then(server => server.getPrimaryService(bleService))
@@ -241,7 +248,7 @@ function requestBluetoothDeviceB() {
       gattCharacteristicB.addEventListener('characteristicvaluechanged', handleChangedValueB);
       return gattCharacteristicB.startNotifications();
     })
-    .then(() => buttonTextScanB.innerText = "Rescan B")
+    .then(() => buttonTextScanB.innerText = "Reconnect B")
     .catch(err => console.error("B error:", err));
 }
 
@@ -250,8 +257,8 @@ function disconnectB() {
 }
 
 function onDisconnectedB() {
-  logstatusB("SCAN B to connect");
-  buttonTextScanB.innerText = "Scan B";
+  // logstatusB("SCAN B to connect");
+  buttonTextScanB.innerText = "Connect B";
 }
 
 function sendB() {
@@ -272,6 +279,13 @@ function sendB() {
   msgBox.value = "";
 }
 
+function copyToClipboardB() {
+  textAreaB.select();
+  navigator.clipboard.writeText(textAreaB.value)
+      .then(() => console.log("Copied!"))
+      .catch(err => console.error("Copy failed:", err));
+}
+
 let recvBufferB = "";
 
 function handleChangedValueB(event) {
@@ -287,7 +301,7 @@ function handleChangedValueB(event) {
 
   lines.forEach(async line => {
     if (UI("CheckForward").checked && gattCharacteristicA && line.startsWith("@")) {
-      gattCharacteristicA.writeValue(str2ab(line + "\n"));
+      gattCharacteristicA.writeValue(str2ab("B" + line + "\n"));
       if (UI("CheckShowSend").checked) {
         isFromWebA = true;
         logBufferA += "\n";
@@ -319,7 +333,7 @@ function showTerminalMessageB(text) {
   let gap = 0;
   if (!isFromWebB && lastTimestampB) {
       gap = (now - lastTimestampB) / 1000;
-      console.log("Gap B:", gap.toFixed(3), "seconds");
+      // console.log("Gap B:", gap.toFixed(3), "seconds");
   }
   if (!isFromWebB) lastTimestampB = now;
 
@@ -359,10 +373,10 @@ setInterval(() => {
 function logstatusB(text) { UI("navbarTitleB").textContent = text; }
 
 function toggleFunctionB() {
-  if (buttonTextScanB.innerText === "Scan B") {
+  if (buttonTextScanB.innerText === "Connect B") {
     requestBluetoothDeviceB();
   } else {
-    buttonTextScanB.innerText = "Scan B";
+    buttonTextScanB.innerText = "Connect B";
     disconnectB();
     requestBluetoothDeviceB();
     nextIsNewlineB = true;
@@ -371,6 +385,7 @@ function toggleFunctionB() {
 // ==================================================
 // ============== Gửi đồng thời A & B =============
 // ==================================================
+
 async function sendAB() {
   const msgBox = UI("inputMsg");
   let text = msgBox.value.trim();
@@ -382,28 +397,32 @@ async function sendAB() {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] + newline;
 
-    // Gửi tới A
-    if (gattCharacteristicA) {
+    console.log("=== Parallel ===");
+    let t1 = performance.now();
+
+    if (gattCharacteristicA && gattCharacteristicB) {
       if (UI("CheckShowSend").checked) {
         isFromWebA = true;
-        if (i === 0) logBufferA += "\n";
-        showTerminalMessageA("    You -> " + lines[i] + "\n");
-        if (i === lines.length - 1) logBufferA += "\n";
-      }
-      await gattCharacteristicA.writeValue(str2ab(line));
-    }
-
-    // Gửi tới B
-    if (gattCharacteristicB) {
-      if (UI("CheckShowSend").checked) {
         isFromWebB = true;
-        if (i === 0) logBufferB += "\n";
+        if (i === 0) {
+          logBufferA += "\n";
+          logBufferB += "\n";
+        }
+        showTerminalMessageA("    You -> " + lines[i] + "\n");
         showTerminalMessageB("    You -> " + lines[i] + "\n");
-        if (i === lines.length - 1) logBufferB += "\n";
+        if (i === lines.length - 1) {
+          logBufferA += "\n";
+          logBufferB += "\n";
+        }
       }
-      await gattCharacteristicB.writeValue(str2ab(line));
+      Promise.all([
+        gattCharacteristicA.writeValue(str2ab(line)),
+        gattCharacteristicB.writeValue(str2ab(line))
+      ]);
     }
 
+    let t2 = performance.now();
+    console.log("Parallel elapsed:", (t2 - t1).toFixed(2), "ms");
     // Delay nhỏ giữa các dòng (5ms)
     await new Promise(r => setTimeout(r, 5));
   }
