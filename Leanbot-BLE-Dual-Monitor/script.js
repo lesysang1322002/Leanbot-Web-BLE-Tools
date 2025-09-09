@@ -103,9 +103,11 @@ function sendA() {
   if (!text) return;
 
   isFromWebA = true;
-  logBufferA += "\n";
-  showTerminalMessageA("    You -> " + text + "\n");
-  logBufferA += "\n";
+  if (UI("CheckShowSend").checked) {
+    logBufferA += "\n";
+    showTerminalMessageA("    You -> " + text + "\n");
+    logBufferA += "\n";
+  }
 
   const newline = UI("CheckNL").checked ? "\n" : "";
   gattCharacteristicA?.writeValue(str2ab(text + newline));
@@ -130,10 +132,11 @@ function handleChangedValueA(event) {
     if (UI("CheckForward").checked && gattCharacteristicB && line.startsWith("@")) {
       gattCharacteristicB.writeValue(str2ab(line + "\n"));
       isFromWebB = true;
-
-      logBufferB += "\n";
-      showTerminalMessageB("    From A -> " + line + "\n");
-      logBufferB += "\n";
+      if (UI("CheckShowSend").checked) {
+        logBufferB += "\n";
+        showTerminalMessageB("    From A -> " + line + "\n");
+        logBufferB += "\n";
+      }
       await new Promise(r => setTimeout(r, 5));
     }
   });
@@ -257,9 +260,11 @@ function sendB() {
   if (!text) return;
 
   isFromWebB = true;
-  logBufferB += "\n";
-  showTerminalMessageB("    You -> " + text + "\n");
-  logBufferB += "\n";
+  if (UI("CheckShowSend").checked) {
+    logBufferB += "\n";
+    showTerminalMessageB("    You -> " + text + "\n");
+    logBufferB += "\n";
+  }
 
   const newline = UI("CheckNL").checked ? "\n" : "";
   gattCharacteristicB?.writeValue(str2ab(text + newline));
@@ -284,9 +289,12 @@ function handleChangedValueB(event) {
     if (UI("CheckForward").checked && gattCharacteristicA && line.startsWith("@")) {
       gattCharacteristicA.writeValue(str2ab(line + "\n"));
       isFromWebA = true;
-      logBufferA += "\n";
-      showTerminalMessageA("    From B -> " + line + "\n");
-      logBufferA += "\n";
+
+      if (UI("CheckShowSend").checked) {
+        logBufferA += "\n";
+        showTerminalMessageA("    From B -> " + line + "\n");
+        logBufferA += "\n";
+      }
       await new Promise(r => setTimeout(r, 5));
     }
   });
@@ -378,18 +386,23 @@ async function sendAB() {
     // Gửi tới A
     if (gattCharacteristicA) {
       isFromWebA = true;
-      if (i === 0) logBufferA += "\n";
-      showTerminalMessageA("    You -> " + lines[i] + "\n");
-      if (i === lines.length - 1) logBufferA += "\n";
+
+      if (UI("CheckShowSend").checked) {
+        if (i === 0) logBufferA += "\n";
+        showTerminalMessageA("    You -> " + lines[i] + "\n");
+        if (i === lines.length - 1) logBufferA += "\n";
+      }
       await gattCharacteristicA.writeValue(str2ab(line));
     }
 
     // Gửi tới B
     if (gattCharacteristicB) {
       isFromWebB = true;
-      if (i === 0) logBufferB += "\n";
-      showTerminalMessageB("    You -> " + lines[i] + "\n");
-      if (i === lines.length - 1) logBufferB += "\n";
+      if (UI("CheckShowSend").checked) {
+        if (i === 0) logBufferB += "\n";
+        showTerminalMessageB("    You -> " + lines[i] + "\n");
+        if (i === lines.length - 1) logBufferB += "\n";
+      }
       await gattCharacteristicB.writeValue(str2ab(line));
     }
 
