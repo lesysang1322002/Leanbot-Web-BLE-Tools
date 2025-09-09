@@ -102,8 +102,8 @@ function sendA() {
   let text = msgBox.value.trim();
   if (!text) return;
 
-  isFromWebA = true;
   if (UI("CheckShowSend").checked) {
+    isFromWebA = true;
     logBufferA += "\n";
     showTerminalMessageA("    You -> " + text + "\n");
     logBufferA += "\n";
@@ -131,8 +131,8 @@ function handleChangedValueA(event) {
   lines.forEach(async line => {
     if (UI("CheckForward").checked && gattCharacteristicB && line.startsWith("@")) {
       gattCharacteristicB.writeValue(str2ab(line + "\n"));
-      isFromWebB = true;
       if (UI("CheckShowSend").checked) {
+        isFromWebB = true;
         logBufferB += "\n";
         showTerminalMessageB("    From A -> " + line + "\n");
         logBufferB += "\n";
@@ -259,8 +259,8 @@ function sendB() {
   let text = msgBox.value.trim();
   if (!text) return;
 
-  isFromWebB = true;
   if (UI("CheckShowSend").checked) {
+    isFromWebB = true;
     logBufferB += "\n";
     showTerminalMessageB("    You -> " + text + "\n");
     logBufferB += "\n";
@@ -288,9 +288,8 @@ function handleChangedValueB(event) {
   lines.forEach(async line => {
     if (UI("CheckForward").checked && gattCharacteristicA && line.startsWith("@")) {
       gattCharacteristicA.writeValue(str2ab(line + "\n"));
-      isFromWebA = true;
-
       if (UI("CheckShowSend").checked) {
+        isFromWebA = true;
         logBufferA += "\n";
         showTerminalMessageA("    From B -> " + line + "\n");
         logBufferA += "\n";
@@ -385,9 +384,8 @@ async function sendAB() {
 
     // Gửi tới A
     if (gattCharacteristicA) {
-      isFromWebA = true;
-
       if (UI("CheckShowSend").checked) {
+        isFromWebA = true;
         if (i === 0) logBufferA += "\n";
         showTerminalMessageA("    You -> " + lines[i] + "\n");
         if (i === lines.length - 1) logBufferA += "\n";
@@ -397,8 +395,8 @@ async function sendAB() {
 
     // Gửi tới B
     if (gattCharacteristicB) {
-      isFromWebB = true;
       if (UI("CheckShowSend").checked) {
+        isFromWebB = true;
         if (i === 0) logBufferB += "\n";
         showTerminalMessageB("    You -> " + lines[i] + "\n");
         if (i === lines.length - 1) logBufferB += "\n";
