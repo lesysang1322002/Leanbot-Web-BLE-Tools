@@ -127,7 +127,7 @@ function handleChangedValueA(event) {
   recvBufferA = lines.pop(); // giữ lại phần dư chưa có \n
 
   lines.forEach(async line => {
-    if (UI("CheckForward").checked && gattCharacteristicB) {
+    if (UI("CheckForward").checked && gattCharacteristicB && line.startsWith("@")) {
       gattCharacteristicB.writeValue(str2ab(line + "\n"));
       isFromWebB = true;
 
@@ -281,7 +281,7 @@ function handleChangedValueB(event) {
   recvBufferB = lines.pop(); // giữ lại phần dư chưa có \n
 
   lines.forEach(async line => {
-    if (UI("CheckForward").checked && gattCharacteristicA) {
+    if (UI("CheckForward").checked && gattCharacteristicA && line.startsWith("@")) {
       gattCharacteristicA.writeValue(str2ab(line + "\n"));
       isFromWebA = true;
       logBufferA += "\n";
@@ -361,9 +361,8 @@ function toggleFunctionB() {
     nextIsNewlineB = true;
   }
 }
-
 // ==================================================
-// ============== Send to A + B =====================
+// ============== Gửi đồng thời A & B =============
 // ==================================================
 async function sendAB() {
   const msgBox = UI("inputMsg");
@@ -373,29 +372,24 @@ async function sendAB() {
   const lines = text.split(/\r?\n/);
   const newline = UI("CheckNL").checked ? "\n" : "";
 
-  if (gattCharacteristicA) {
-    logBufferA += "\n";
-    console.log("Add newline to A");
-  }
-  if (gattCharacteristicB) {
-    logBufferB += "\n";
-    console.log("Add newline to B");
-  }
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] + newline;
 
     // Gửi tới A
     if (gattCharacteristicA) {
       isFromWebA = true;
+      if (i === 0) logBufferA += "\n";
       showTerminalMessageA("    You -> " + lines[i] + "\n");
+      if (i === lines.length - 1) logBufferA += "\n";
       await gattCharacteristicA.writeValue(str2ab(line));
     }
 
     // Gửi tới B
     if (gattCharacteristicB) {
       isFromWebB = true;
+      if (i === 0) logBufferB += "\n";
       showTerminalMessageB("    You -> " + lines[i] + "\n");
+      if (i === lines.length - 1) logBufferB += "\n";
       await gattCharacteristicB.writeValue(str2ab(line));
     }
 
@@ -403,32 +397,29 @@ async function sendAB() {
     await new Promise(r => setTimeout(r, 5));
   }
 
-  if (gattCharacteristicA) logBufferA += "\n";
-  if (gattCharacteristicB) logBufferB += "\n";
-
   msgBox.value = "";
 }
 
 // ==================================================
 // ============== Info popup ========================
 // ==================================================
-document.addEventListener('DOMContentLoaded', () => {
-    const infoButtonA  = UI('infoButtonA');
-    const infoContentA = UI('infoContentA');
-    const infoButtonB  = UI('infoButtonB');
-    const infoContentB = UI('infoContentB');
+// document.addEventListener('DOMContentLoaded', () => {
+//     const infoButtonA  = UI('infoButtonA');
+//     const infoContentA = UI('infoContentA');
+//     const infoButtonB  = UI('infoButtonB');
+//     const infoContentB = UI('infoContentB');
 
-    infoButtonA.addEventListener('click', e => {
-        e.stopPropagation();
-        infoContentA.style.display = infoContentA.style.display === 'block' ? 'none' : 'block';
-    });
-    infoButtonB.addEventListener('click', e => {
-        e.stopPropagation();
-        infoContentB.style.display = infoContentB.style.display === 'block' ? 'none' : 'block';
-    });
+//     infoButtonA.addEventListener('click', e => {
+//         e.stopPropagation();
+//         infoContentA.style.display = infoContentA.style.display === 'block' ? 'none' : 'block';
+//     });
+//     infoButtonB.addEventListener('click', e => {
+//         e.stopPropagation();
+//         infoContentB.style.display = infoContentB.style.display === 'block' ? 'none' : 'block';
+//     });
 
-    document.addEventListener('click', () => {
-        infoContentA.style.display = 'none';
-        infoContentB.style.display = 'none';
-    });
-});
+//     document.addEventListener('click', () => {
+//         infoContentA.style.display = 'none';
+//         infoContentB.style.display = 'none';
+//     });
+// });
