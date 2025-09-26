@@ -1,0 +1,356 @@
+body {
+    height: 100vh; /* 100% of the viewport height */
+    margin: 0; /* Remove default body margin */
+    padding: 0; /* Remove default body padding */
+    overflow-x: hidden;
+}
+p {
+   font-weight: bold;
+}
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+#navbarTitle {
+    /* margin-left:65px; */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0 auto;
+    font-size: 15px;
+}
+.btn-primary-scan {
+    display: flex;
+    align-items: center;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    color:  #ffffff!important;
+    background-color: #2c5f85 !important;
+    border-color:  #000000 !important;
+    width: 80px; /* Đảm bảo kích thước tối đa không vượt quá kích thước của phần tử cha */
+    height: auto;
+}
+.btn-primary-scan img {
+    padding-bottom: 2px;
+    width: 22px; /* Đặt kích thước chiều rộng mong muốn */
+    height: auto;
+}
+#infoButton {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding: 0 0 px;
+    background: #ffffff;
+    color: rgb(38, 15, 15);
+    border: none;
+    font-size: 17px;
+    cursor: pointer;
+    padding-left: 0px;
+    padding-right: 0px;
+}
+.info-content {
+    display: none;
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background-color: #f1f1f1;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    white-space: pre-line; /* Hiển thị thông tin theo hàng dòng */
+    line-height: 0.1;
+}
+.alert-info {
+    background-color: #17a2b8;
+    color: #fff;
+}
+body h6 {
+    font-size: 12px;
+}
+footer {
+    background-color: #343a40;
+    color: #fff;
+}
+.center-text {
+    text-align: center;
+    color: #333; /* Màu sắc văn bản tùy chọn */
+    font-size: 24px; /* Kích thước font tùy chọn */
+}
+
+.button {
+    padding: 10px;
+    background-color: #f00c0c;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
+    height: 55px;
+}
+
+.btnLine{
+    width: 135px;
+    height: 55px;
+}
+
+@media screen and (orientation: landscape) {
+    .control-buttons {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin-right: 87px;
+    }
+    .on-off{
+        width: 50%;
+    }
+    .container {
+        display: flex;
+        width: 100%;
+    }
+    .speed{
+        width:50%;
+        /* margin-left:auto;  */
+        margin-top:20px;
+    }
+    .mic{
+        width:50%;
+        margin-right: 15px;
+    }
+    .no-influence {
+        /* position: fixed; */
+        width:50%;
+        margin-bottom: 90px;
+    }
+    .speed-value{
+        margin-bottom:9px
+    }
+    #OpenlinkCode {
+        margin-top:10px;
+        text-align: center;
+        bottom: 0px;
+        /* margin-bottom: 50px; */
+    }
+}
+
+/* Media query cho chế độ dọc */
+@media screen and (orientation: portrait) {
+    .control-buttons {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto;
+        margin-top:35px;
+    }
+    .on-off{
+        width: 100%;
+    }
+    .speed{
+        width:100%;
+        display: flex;
+        justify-content: center;
+        margin-top:35px;
+    }
+    .mic{
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    .no-influence {
+        /* position: fixed; */
+        /* bottom: 80px; */
+        position: relative;
+        margin-bottom: 15px;
+    }
+    #OpenlinkCode {
+        margin-top:30px;
+        text-align: center;
+        bottom: 0px;
+    }
+    .speed-value{
+        margin-top:3px;
+    }
+}
+.control-button {
+    position: absolute;
+    width: 45px;
+    height: 45px;
+    border: none;
+    border-radius: 50%;
+    background-color: #f00c0c;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+.control-button:hover {
+    background-color: #8a6867;
+}
+.button img {
+    width: 30px; /* Điều chỉnh kích thước ảnh theo nhu cầu */
+    height: 30px; /* Điều chỉnh kích thước ảnh theo nhu cầu */
+    margin-bottom: 5px;
+}
+#image {
+    max-width: 30;
+    max-height: 30px; /* Điều chỉnh chiều cao tối đa theo nhu cầu */
+    margin-bottom: 12px;
+    margin-left:20px;
+    /* padding-right: 20px; */
+}
+.container {
+    text-align: center;
+}
+
+#speed-slider {
+    width: 200px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#display-speed {
+    padding-top: 3px;
+    display: inline-block;
+    vertical-align: middle;
+}
+.button-Left::before {
+    content: "";
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
+    transform: rotate(180deg)
+}
+
+.button-Right::before {
+    content: "";
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
+}
+
+.button-Forward::before {
+    content: "";
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
+    transform: rotate(-90deg)
+}
+
+.button-Backward::before {
+    content: "";
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
+    transform: rotate(90deg)
+}
+.button-Stop::before {
+    content: "";
+}
+.button-ForwardRight::before {
+    content: "";
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
+    transform: rotate(-45deg)
+}
+.button-ForwardLeft::before{
+    content: "";
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
+    transform: rotate(-135deg)
+}
+.button-BackRight::before {
+    content: "";
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
+    transform: rotate(45deg)
+}
+.button-BackLeft::before{
+    content: "";
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background-image: url('../image/arrow.png'); /* Đặt đường dẫn đến hình ảnh của bạn */
+    background-size: cover; /* Điều này giúp ảnh kích thước đầy đủ trong phần đối tượng */
+    transform: rotate(135deg)
+}
+
+.control-button:nth-child(1) {
+    top: 0;
+    left: 80px;
+}
+
+.control-button:nth-child(2) {
+    bottom: 0;
+    left: 80px;
+}
+
+.control-button:nth-child(3) {
+    top: 80px;
+    left: 160px;
+}
+
+.control-button:nth-child(4) {
+    top: 80px;
+    right: 160px;
+}
+.control-button:nth-child(5) {
+    background-color: #17a2b8;
+    top: 80px;
+    left: 80px;
+}
+.control-button:nth-child(6) {
+top: 0px;
+left: 160px;
+}
+.control-button:nth-child(7) {
+top: 0px;
+right: 160px;
+}
+.control-button:nth-child(8) {
+bottom: 0px;
+right: 160px;
+}
+.control-button:nth-child(9) {
+bottom: 0px;
+left: 160px;
+}
+.row {
+    display: flex;
+    justify-content: space-around;
+    /* Remove or reduce margin if it's contributing to overflow */
+    margin: 10px; /* Adjusted from 25px to reduce potential overflow */
+    box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
+}
+.column {
+    margin: 5px;
+    /* display: flex; */
+}
+.button-container{
+    text-align: center;
+}
+.button-container span {
+        display: inline-block;
+}
