@@ -363,7 +363,6 @@ function updateMicImage() {
 }
 
 // Custom button functionality
-
 document.addEventListener("DOMContentLoaded", () => {
     for (let i = 1; i <= 4; i++) {
         let btn = document.getElementById("customBtn" + i);
@@ -393,8 +392,8 @@ function setupCustomButton(btn, index) {
         }
     });
 
-    // Hold 2 seconds: change name + value
-    btn.addEventListener("mousedown", () => {
+    // Start hold (PC: mousedown, Mobile: touchstart)
+    function startPress() {
         pressTimer = setTimeout(() => {
             let newName = prompt("Enter new button name:", btn.textContent || "");
             if (newName !== null && newName.trim() !== "") {
@@ -411,11 +410,21 @@ function setupCustomButton(btn, index) {
                 name: btn.textContent,
                 value: btn.getAttribute("data-value")
             }));
+        }, 2000); // 2s hold
+    }
 
-        }, 2000); // 2 seconds hold
-    });
+    // Cancel hold (PC: mouseup, Mobile: touchend/cancel)
+    function cancelPress() {
+        clearTimeout(pressTimer);
+    }
 
-    // Cancel if released before 2 seconds
-    btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
-    btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+    // PC
+    btn.addEventListener("mousedown", startPress);
+    btn.addEventListener("mouseup", cancelPress);
+    btn.addEventListener("mouseleave", cancelPress);
+
+    // Mobile
+    btn.addEventListener("touchstart", startPress);
+    btn.addEventListener("touchend", cancelPress);
+    btn.addEventListener("touchcancel", cancelPress);
 }
