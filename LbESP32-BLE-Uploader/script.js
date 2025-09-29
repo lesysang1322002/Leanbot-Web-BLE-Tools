@@ -71,5 +71,5 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
     }
   }
 
-  alert("Send complete! ESP32 will process the HEX file.");
+  alert("Send complete! LbESP32 will process the HEX file.");
 });
