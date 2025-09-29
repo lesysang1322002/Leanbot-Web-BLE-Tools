@@ -235,6 +235,22 @@ function LineCalibration(){
     send("C");
 }
 
+function Custom1(){
+    send("Custom 1");
+}
+
+function Custom2(){
+    send("Custom 2");
+}
+
+function Custom3(){
+    send("Custom 3");
+}
+
+function Custom4(){
+    send("Custom 4");
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     var infoButton = document.getElementById('infoButton');
     var infoContent = document.getElementById('infoContent');
@@ -337,6 +353,10 @@ const commands = {
     'stop': Stop,
     'calibrate': LineCalibration,
     'tracking': LineTracking,
+    'custom one': Custom1,
+    'custom two': Custom2,
+    'custom three': Custom3,
+    'custom four': Custom4
 };
 
 annyang.addCallback('result', function(phrases) {
