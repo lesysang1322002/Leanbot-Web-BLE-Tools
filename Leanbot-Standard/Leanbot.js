@@ -94,14 +94,14 @@ async function send(data) {
     let start = 0;
     const dataLength = data.length;
     while (start < dataLength) {
-        let subStr = data.substring(start, start + 16);
+        let subStr = data.substring(start, start + 20);
         try {
             await gattCharacteristic.writeValue(str2ab(subStr));
         } catch (error) {
             console.error("Error writing to characteristic:", error);
             break;
         }
-        start += 16;
+        start += 20;
     }
 }
 
