@@ -44,8 +44,14 @@ dropZone.addEventListener("drop", (e) => {
   e.preventDefault();
   dropZone.classList.remove("dragover");
   if (e.dataTransfer.files.length > 0) {
-    selectedFile = e.dataTransfer.files[0];
-    previewFile(selectedFile);
+    const file = e.dataTransfer.files[0];
+    if (file.name.toLowerCase().endsWith(".hex")) {
+      selectedFile = file;
+      previewFile(selectedFile);
+      document.getElementById("fileName").textContent = "Selected file: " + file.name;
+    } else {
+      alert("Please drop a valid HEX File (.hex)");
+    }
   }
 });
 
