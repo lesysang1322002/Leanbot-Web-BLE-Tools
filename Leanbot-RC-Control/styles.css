@@ -352,5 +352,9 @@ left: 160px;
     text-align: center;
 }
 .button-container span {
-        display: inline-block;
+    display: inline-block;
+}
+
+.custom-btn {
+    background-color: #15ab51;
 }
