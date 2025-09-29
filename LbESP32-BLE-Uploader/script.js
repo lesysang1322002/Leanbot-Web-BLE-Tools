@@ -68,6 +68,7 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
   for (let line of lines) {
     if (line.trim().length > 0) {
       await send(line);
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
   }
 
