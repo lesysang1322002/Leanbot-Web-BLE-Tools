@@ -56,6 +56,25 @@ dropZone.addEventListener("drop", (e) => {
 });
 
 // Upload bằng hàm send()
+// document.getElementById("uploadBtn").addEventListener("click", async () => {
+//   if (!selectedFile) {
+//     alert("No file selected!");
+//     return;
+//   }
+
+//   const text = await selectedFile.text();
+//   const lines = text.split(/\r?\n/);
+
+//   for (let line of lines) {
+//     if (line.trim().length > 0) {
+//       await send(line);
+//       await new Promise(resolve => setTimeout(resolve, 10));
+//     }
+//   }
+
+//   alert("Send complete! LbESP32 will process the HEX file.");
+// });
+
 document.getElementById("uploadBtn").addEventListener("click", async () => {
   if (!selectedFile) {
     alert("No file selected!");
@@ -65,12 +84,24 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
   const text = await selectedFile.text();
   const lines = text.split(/\r?\n/);
 
+  let totalStart = performance.now();  // bắt đầu tính tổng thời gian
+  let totalLines = 0;
+
   for (let line of lines) {
     if (line.trim().length > 0) {
       await send(line);
       await new Promise(resolve => setTimeout(resolve, 10));
+      totalLines++;
     }
   }
 
-  alert("Send complete! LbESP32 will process the HEX file.");
+  let totalEnd = performance.now();
+  let totalTime = totalEnd - totalStart;
+  let avgLineTime = totalTime / totalLines;
+
+  let report = `Lines sent: ${totalLines}\nTotal time: ${totalTime.toFixed(2)} ms\nAverage per line: ${avgLineTime.toFixed(2)} ms`;
+
+  alert("Send complete! LbESP32 will process the HEX file.\n\n" + report);
+  console.log(report);
 });
+
