@@ -89,7 +89,7 @@ async function sendBLE(data) {
     try {
         let ByteStart = performance.now();
         await gattCharacteristic.writeValueWithoutResponse(str2ab(subStr));
-        await new Promise(resolve => setTimeout(resolve, 10)); // Thêm độ trễ nhỏ để tránh quá tải
+        // await new Promise(resolve => setTimeout(resolve, 10)); // Thêm độ trễ nhỏ để tránh quá tải
         let ByteEnd = performance.now();
         let ByteTime = ByteEnd - ByteStart;
         console.log(`Time ${subStr.length} bytes: ${ByteTime.toFixed(2)} ms`);
