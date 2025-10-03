@@ -8,7 +8,7 @@ function resetVariable(){
 }
 
 function handleSerialLine(line) {
-    
+  console.log("Device -> " + line);
 }
 
 let device, server, service, characteristic;
@@ -107,6 +107,10 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
     return;
   }
 
+  await send("START SEND HEX LINES"); // Gửi lệnh bắt đầu
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
+  
+
   const text = await selectedFile.text();
   const lines = text.split(/\r?\n/);
 
@@ -117,6 +121,7 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
     if (line.trim().length > 0) {
       let lineStart = performance.now();
       await sendBLE(line);
+      await new Promise(resolve => setTimeout(resolve, 10)); // Độ trễ nhỏ giữa các dòng
       let lineEnd = performance.now();
       let lineTime = lineEnd - lineStart;
       console.log(`Time line: ${lineTime.toFixed(2)} ms`);
