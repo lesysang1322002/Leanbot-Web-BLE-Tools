@@ -234,6 +234,55 @@ dropZone.addEventListener("drop", (e) => {
   }
 });
 
+<<<<<<< HEAD
+=======
+// Upload bằng hàm send()
+// document.getElementById("uploadBtn").addEventListener("click", async () => {
+//   if (!selectedFile) {
+//     alert("No file selected!");
+//     return;
+//   }
+
+//   const text = await selectedFile.text();
+//   const lines = text.split(/\r?\n/);
+
+//   for (let line of lines) {
+//     if (line.trim().length > 0) {
+//       await send(line);
+//       await new Promise(resolve => setTimeout(resolve, 10));
+//     }
+//   }
+
+//   alert("Send complete! LbESP32 will process the HEX file.");
+// });
+
+async function sendBLE(data) {
+  if (!gattCharacteristic) {
+      console.log("GATT Characteristic not found.");
+      return;
+  }
+  data += '\n';  // Append newline character to data
+  console.log("You -> " + data);
+  let start = 0;
+  const dataLength = data.length;
+  while (start < dataLength) {
+    let subStr = data.substring(start, start + 20);
+    try {
+        let ByteStart = performance.now();
+        await gattCharacteristic.writeValueWithoutResponse(str2ab(subStr));
+        // await new Promise(resolve => setTimeout(resolve, 10)); // Thêm độ trễ nhỏ để tránh quá tải
+        let ByteEnd = performance.now();
+        let ByteTime = ByteEnd - ByteStart;
+        console.log(`Time ${subStr.length} bytes: ${ByteTime.toFixed(2)} ms`);
+    } catch (error) {
+        console.error("Error writing to characteristic:", error);
+        break;
+    }
+    start += 20;
+  }
+}
+
+>>>>>>> 8e5ed5c89556633008cd760a51f12507a951bc18
 document.getElementById("uploadBtn").addEventListener("click", async () => {
   console.log("Upload button clicked");
   if (!selectedFile) {
@@ -255,7 +304,11 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
     if (line.trim().length > 0) {
       let lineStart = performance.now();
       await sendBLE(line);
+<<<<<<< HEAD
       await new Promise(resolve => setTimeout(resolve, 50)); // Độ trễ nhỏ giữa các dòng
+=======
+      await new Promise(resolve => setTimeout(resolve, 100)); // Độ trễ nhỏ giữa các dòng
+>>>>>>> 8e5ed5c89556633008cd760a51f12507a951bc18
       let lineEnd = performance.now();
       let lineTime = lineEnd - lineStart;
       console.log(`Time line: ${lineTime.toFixed(2)} ms`);
