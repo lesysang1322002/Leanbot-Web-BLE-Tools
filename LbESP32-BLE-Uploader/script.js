@@ -255,7 +255,7 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
     if (line.trim().length > 0) {
       let lineStart = performance.now();
       await sendBLE(line);
-      await new Promise(resolve => setTimeout(resolve, 5)); // Độ trễ nhỏ giữa các dòng
+      await new Promise(resolve => setTimeout(resolve, 10)); // Độ trễ nhỏ giữa các dòng
       let lineEnd = performance.now();
       let lineTime = lineEnd - lineStart;
       console.log(`Time line: ${lineTime.toFixed(2)} ms`);
