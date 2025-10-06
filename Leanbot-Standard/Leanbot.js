@@ -1,5 +1,10 @@
 let gattCharacteristic;
 let timeoutCheckMessage;
+let SERVICE_UUID        = '0000ffe0-0000-1000-8000-00805f9b34fb';
+let CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
+let UPLOAD_TX_UUID      = '0000ffe2-0000-1000-8000-00805f9b34fb'; 
+let UPLOAD_RX_UUID      = '0000ffe3-0000-1000-8000-00805f9b34fb';
 
 function isWebBluetoothEnabled() {
     if (! navigator.bluetooth) {
@@ -13,7 +18,7 @@ function requestBluetoothDevice() {
     if (isWebBluetoothEnabled()){
         logstatus('Finding...');
         navigator.bluetooth.requestDevice({
-        filters: [{ services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] }] 
+        filters: [{ services: SERVICE_UUID }], 
     })         
     .then(device => {
         device.addEventListener('gattserverdisconnected', onDisconnected);
@@ -25,12 +30,12 @@ function requestBluetoothDevice() {
     .then(server => {
         console.log('Getting GATT Service...');
         logstatus('Getting Service...');
-        return server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+        return server.getPrimaryService(SERVICE_UUID);
     })
     .then(service => {
         console.log('Getting GATT Characteristic...');
         logstatus('Geting Characteristic...');
-        return service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+        return service.getCharacteristic(CHARACTERISTIC_UUID);
     })
     .then(characteristic => {
         logstatusWebName(dev.name);
@@ -96,7 +101,11 @@ async function send(data) {
     while (start < dataLength) {
         let subStr = data.substring(start, start + 20);
         try {
+            let ByteStart = performance.now();
             await gattCharacteristic.writeValue(str2ab(subStr));
+            let ByteEnd = performance.now();
+            let ByteTime = ByteEnd - ByteStart;
+            console.log(`Sent 20 bytes in ${ByteTime.toFixed(2)} ms: ${subStr}`);
         } catch (error) {
             console.error("Error writing to characteristic:", error);
             break;
