@@ -101,11 +101,7 @@ async function send(data) {
     while (start < dataLength) {
         let subStr = data.substring(start, start + 20);
         try {
-            let ByteStart = performance.now();
             await gattCharacteristic.writeValue(str2ab(subStr));
-            let ByteEnd = performance.now();
-            let ByteTime = ByteEnd - ByteStart;
-            console.log(`Sent 20 bytes in ${ByteTime.toFixed(2)} ms: ${subStr}`);
         } catch (error) {
             console.error("Error writing to characteristic:", error);
             break;
