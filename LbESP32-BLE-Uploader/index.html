@@ -9,20 +9,13 @@
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-    <!-- <div class="info-popup" id="infopopup" style="display:none;">
-        <h6><strong>Incorrect data from Leanbot.</strong></h6>
-        <h6><strong> Please upload the following code to Leanbot:</strong></h6>
-        <a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Testing/Leanbot_IoT/code/Leanbot_IOT_test.ino">https://git.pythaverse.space/quang.dinh/
-            LeanbotDistributors/blob/master/Leanbot_Testing/
-            Leanbot_IoT/code/Leanbot_IOT_test.ino</a>
-    </div> -->
+     <!-- ===== NAVBAR ===== -->
     <nav class="navbar" style="padding: 0px 0px;">
         <button class="btn btn-primary-scan" id="toggleButton" onclick="toggleFunction()" style="padding: 0px 0px">
             <img src="../image/ble_logo.png" alt="Scan Icon"><span id="buttonText">Scan</span>  
         </button>
         <a class="navbar-brand center-text" href="#" id="navbarTitle" style="color: red; font-weight: bold;">SCAN to connect</a>
         <div class="info-container">
-            <a href="https://git.pythaverse.space/quang.dinh/LeanbotDistributors/blob/master/Leanbot_Testing/Leanbot_IoT/code/Leanbot_IOT_test.ino"><strong>Leanbot code</strong></a>
             <button id="infoButton"><i class="fas fa-info-circle"></i></button>
             <div class="info-content" id="infoContent">
                 <h6><strong>Leanbot IoT</strong></h6>
@@ -36,37 +29,75 @@
         </div>
     </nav>
 
-   <div style="text-align: center;">
-        <!-- Drop zone -->
-        <div style="margin-bottom: 20px;">
-            <div id="dropZone" style="display: inline-block;">
-            <!-- Choose file -->
-            <label for="fileInput" class="custom-file-upload">
-                Choose HEX File
-            </label>
-            <div>
-                <input type="file" id="fileInput" accept=".hex" hidden/>
+    <div class="split-container">
+        <div class="left-panel">
+            <!-- --- Phần trên: các nút điều khiển --- -->
+            <div class="top-controls">
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" id="CheckAutoScroll" checked>
+                    <label class="form-check-label" for="CheckAutoScroll">Autoscroll</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" id="CheckTimestamp">
+                    <label class="form-check-label" for="CheckTimestamp">Timestamp</label>
+                </div>
+                <div class="ml-auto">
+                    <button class="btn-primary" onclick="clearTextarea()">Clear</button>
+                    <button class="btn-primary" onclick="copyToClipboard()">Copy</button>
+                </div>
             </div>
 
-            <p style="margin:5px 0;">or drop HEX File here</p>
+            <!-- --- Phần giữa: Textarea --- -->
+            <div class="middle-text">
+                <textarea class="form-control monospace" id="textareaNotification" readonly></textarea>
+            </div>
 
-            <div id="fileName" style="margin-top:5px; font-weight:bold; color:#333;">No file chosen</div>
+            <!-- --- Phần dưới: gửi dữ liệu --- -->
+            <div class="bottom-controls">
+                <button class="btn-primary" id="btsend" onclick="send()">Send</button>
+                <input id="input" type="text" class="input monospace" placeholder="Send Message ->...">
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" id="CheckNL" checked>
+                    <label class="form-check-label" for="CheckNL">Newline</label>
+                </div>
             </div>
         </div>
 
-        <!-- Upload button -->
-        <div style="margin-bottom: 30px;">
-            <button id="uploadBtn">Send to LbESP32</button>
-        </div>
 
-        <!-- File content block -->
-        <div style="text-align: left; display: inline-block; width: 80%;">
-            <h3 style="text-align: center;">File Content:</h3>
-            <pre id="fileContent" style="border: 1px solid #ccc; padding: 10px; max-height: 300px; overflow-y: auto;"></pre>
+        <div class="right-panel">
+            <div style="text-align: center;">
+                <div style="text-align: left; display: inline-block; width: 80%;">
+                    <h3 style="text-align: center;">Uploader Status</h3>
+                    <pre id="UploaderStatus" style="border: 1px solid #ccc; padding: 10px; max-height: 300px; overflow-y: auto;"></pre>
+                </div>
+        
+                <!-- Drop zone -->
+                <div style="margin-bottom: 20px;">
+                    <div id="dropZone" style="display: inline-block;">
+                    <!-- Choose file -->
+                    <label for="fileInput" class="custom-file-upload">
+                        Choose HEX File
+                    </label>
+                    <div>
+                        <input type="file" id="fileInput" accept=".hex" hidden/>
+                    </div>
+
+                    <p style="margin:5px 0;">or drop HEX File here</p>
+
+                    <div id="fileName" style="margin-top:5px; font-weight:bold; color:#333;">No file chosen</div>
+                    </div>
+                </div>
+
+                <!-- Upload button -->
+                <div style="margin-bottom: 30px;">
+                    <button id="uploadBtn">Send to LbESP32</button>
+                </div>
+            </div>
         </div>
     </div>
 
 </body>
     <!-- <script src="https://lesysang1322002.github.io/Leanbot-Web-BLE-Tools/Leanbot-Standard/Leanbot.js"></script> -->
+    <script src="https://lesysang1322002.github.io/Leanbot-Web-BLE-Tools/Leanbot-BLE-Serial-Monitor/script.js"></script>
     <script src="script.js"></script>
 </html>

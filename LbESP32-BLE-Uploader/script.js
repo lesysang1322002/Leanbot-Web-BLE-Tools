@@ -1,6 +1,4 @@
-let LeanbotCharacteristic, WebTxCharacteristic, WebRxCharacteristic;
-let dev;
-let timeoutCheckMessage;
+let Device, LeanbotCharacteristic, WebTxCharacteristic, WebRxCharacteristic;
 
 let SERVICE_UUID        = '0000ffe0-0000-1000-8000-00805f9b34fb';
 let LEANBOT_UUID        = '0000ffe1-0000-1000-8000-00805f9b34fb';
@@ -23,9 +21,9 @@ function requestBluetoothDevice() {
       })         
       .then(device => {
           device.addEventListener('gattserverdisconnected', onDisconnected);
-          dev = device;
-          logstatus("Connect to " + dev.name);
-          console.log('Connecting to', dev);
+          Device = device;
+          logstatus("Connect to " + Device.name);
+          console.log('Connecting to', Device);
           return device.gatt.connect();
       })
       .then(server => {
@@ -43,7 +41,7 @@ function requestBluetoothDevice() {
           ]);
       })
       .then(characteristics => {
-          logstatusWebName(dev.name);
+          logstatusWebName(Device.name);
           UI("buttonText").innerText = "Rescan";
 
           // Serial Monitor characteristic
@@ -91,15 +89,14 @@ function handleUploadRxChangedValue(event) {
     });
 }
 
-function handleChangedValue(event) {
-  
-}
-
-async function sendBLE(data) {
+async function sendHEXFile(data) {
   if (!WebTxCharacteristic) {
       console.log("GATT Characteristic not found.");
       return;
   }
+
+  UI("UploaderStatus").textContent = "Web -> " + data ; // Hiển thị dòng hiện tại
+
   data += '\n';  // Append newline character to data
   console.log("You -> " + data);
   let start = 0;
@@ -120,74 +117,55 @@ async function sendBLE(data) {
   }
 }
 
-function checkMessageWithin5Seconds() {
-    // Thiết lập hàm setTimeout để kết thúc sau 5 giây
-    timeoutCheckMessage = setTimeout(function() {
-    console.log("5 seconds timeout, message incorrect.");
-    // Hiển thị info box
-    UI('infopopup').style.display = "block";
-    document.addEventListener("click", function(event) {
-        if (! infoBox.contains(event.target)) {
-            infoBox.style.display = "none";
-        }
-    });
-    }, 5000);
-}
-
 function logstatus(text){
-    UI('navbarTitle').textContent = text;
+  UI('navbarTitle').textContent = text;
 }
 
 function disconnect()
 {
-    logstatus("SCAN to connect");
-    console.log("Disconnected from: " + dev.name);
-    return dev.gatt.disconnect();
+  logstatus("SCAN to connect");
+  console.log("Disconnected from: " + Device.name);
+  return Device.gatt.disconnect();
 }
 
 function onDisconnected(event) {
-    const device = event.target;
-    logstatus("SCAN to connect");
-    resetVariable();
-    UI('buttonText').innerText = "Scan";
-    console.log(`Device ${device.name} is disconnected.`);
+  const device = event.target;
+  logstatus("SCAN to connect");
+  UI('buttonText').innerText = "Scan";
+  console.log(`Device ${device.name} is disconnected.`);
 }
 
 function str2ab(str)
 {
-    var buf = new ArrayBuffer(str.length);
-    var bufView = new Uint8Array(buf);
-    for (var i = 0, l = str.length; i < l; i++) {
-        bufView[i] = str.charCodeAt(i);
-    }
-    return buf;
+  var buf = new ArrayBuffer(str.length);
+  var bufView = new Uint8Array(buf);
+  for (var i = 0, l = str.length; i < l; i++) {
+      bufView[i] = str.charCodeAt(i);
+  }
+  return buf;
 }
 
 function toggleFunction() {
-    if (UI('toggleButton').innerText == "Scan") {
-        requestBluetoothDevice();
-        return;
-    } 
-    disconnect();
-    requestBluetoothDevice();
-    resetVariable();
+  if (UI('toggleButton').innerText == "Scan") {
+      requestBluetoothDevice();
+      return;
+  } 
+  disconnect();
+  requestBluetoothDevice();
 }
 
 function UI(elmentID) {
-    return document.getElementById(elmentID);
+  return document.getElementById(elmentID);
 }
-
-clearTimeout(timeoutCheckMessage);
 
 function logstatusWebName(text){
-    logstatus(text + " - Uploader");
-}
-
-function resetVariable(){
+  logstatus(text + " - Uploader");
+  console.log("Connected to", text);
 }
 
 function handleSerialLine(line) {
   console.log("Device -> " + line);
+  UI("UploaderStatus").textContent = "Device -> " + line;
 }
 
 let device, server, service, characteristic;
@@ -195,24 +173,28 @@ let selectedFile = null;
 
 // --- Display full file content ---
 function previewFile(file) {
-  document.getElementById("fileName").textContent = selectedFile.name;
+  // Display file name
+  UI("fileName").textContent = selectedFile.name;
+  console.log("Selected file:", file.name);
+
   const reader = new FileReader();
   reader.onload = (e) => {
     const text = new TextDecoder().decode(e.target.result);
     // Show full content (no truncation)
-    document.getElementById("fileContent").textContent = text;
+    // document.getElementById("UploaderStatus").textContent = text;
   };
   reader.readAsArrayBuffer(file);
 }
 
 // --- Handle file input selection ---
-document.getElementById("fileInput").addEventListener("change", (e) => {
+UI("fileInput").addEventListener("change", (e) => {
+  console.log("File input changed");
   selectedFile = e.target.files[0];
   if (selectedFile) previewFile(selectedFile);
 });
 
 // --- Drag & Drop ---
-const dropZone = document.getElementById("dropZone");
+const dropZone = UI("dropZone");
 
 dropZone.addEventListener("dragover", (e) => {
   e.preventDefault();
@@ -241,7 +223,7 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
     return;
   }
 
-  await sendBLE("START SEND HEX LINES"); // Gửi lệnh bắt đầu
+  await sendHEXFile("START SEND HEX LINES"); // Gửi lệnh bắt đầu
   await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
   
 
@@ -253,12 +235,7 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
 
   for (let line of lines) {
     if (line.trim().length > 0) {
-      let lineStart = performance.now();
-      await sendBLE(line);
-      // await new Promise(resolve => setTimeout(resolve, 10)); // Độ trễ nhỏ giữa các dòng
-      let lineEnd = performance.now();
-      let lineTime = lineEnd - lineStart;
-      console.log(`Time line: ${lineTime.toFixed(2)} ms`);
+      await sendHEXFile(line);
       totalLines++;
     }
   }
@@ -269,6 +246,20 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
 
   let report = `Lines sent: ${totalLines}\nTotal time: ${totalTime.toFixed(2)} ms\nAverage per line: ${avgLineTime.toFixed(2)} ms`;
 
-  alert("Send complete! LbESP32 will process the HEX file.\n\n" + report);
+  // alert("Send complete! LbESP32 will process the HEX file.\n\n" + report);
+  UI("UploaderStatus").textContent = "Send complete!";
   console.log(report);
 });
+
+function send() {
+  const MsgSend = UI("input");
+  isFromWeb = true;
+  logBuffer += "\n";
+  showTerminalMessage("    You -> " + MsgSend.value + "\n");
+  logBuffer += "\n";
+
+  const newline = checkboxNewline.checked ? "\n" : "";
+  LeanbotCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
+
+  MsgSend.value = "";
+}

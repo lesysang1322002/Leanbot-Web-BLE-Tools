@@ -2,52 +2,64 @@ body {
   height: 100vh;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
 }
+
+/* ==== NAVBAR ==== */
 .navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
 }
+
 #navbarTitle {
-    /* margin-left:65px; */
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    margin: 0 auto;
-    font-size: 15px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0 auto;
+  font-size: 15px;
 }
+
+.btn-primary {
+  border-radius: 5px;
+  color: #000 !important; /* Chữ màu đen */
+  background-color: #fff !important; /* Nền trắng */
+  border-color: #000 !important; /* Màu đen cho viền */
+}
+
 .btn-primary-scan {
   display: flex;
   align-items: center;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  margin: 5px 0;
   color: #ffffff !important;
   background-color: #2c5f85 !important;
   border-color: #000000 !important;
   width: 80px;
   height: auto;
 }
+
 .btn-primary-scan img {
   padding-bottom: 2px;
   width: 22px;
   height: auto;
 }
+
 #buttonText {
   font-weight: bold;
 }
+
 #infoButton {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    padding: 0 0 px;
-    background: #ffffff;
-    color: rgb(38, 15, 15);
-    border: none;
-    font-size: 17px;
-    cursor: pointer;
-    padding-left: 0px;
-    padding-right: 0px;
+  margin: 5px 0;
+  background: #ffffff;
+  color: rgb(38, 15, 15);
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
 }
+
+/* ==== INFO PANEL ==== */
 .info-content {
   display: none;
   position: absolute;
@@ -60,311 +72,91 @@ body {
   white-space: pre-line;
   line-height: 0.1;
 }
-.info-popup {
-  display: none;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: #f1f1f1;
-  border-radius: 5px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  padding: 20px;
-  z-index: 1;
-  white-space: pre-line;
-  line-height: 1;
-}
+
 body h6 {
   font-size: 12px;
 }
-footer {
-  background-color: #343a40;
-  color: #fff;
-}
-.center-text {
-  text-align: center;
-  color: #333;
-  font-size: 24px;
-}
-p {
-  font-size: 15px;
-  margin: 0;
-  font-weight: bold;
-  text-align: center;
-}
-.openLinkCode {
-  position: fixed;
-  bottom: 0;
-  width: 100vw;
-  text-align: center;
-}
-.sensor-name {
-  text-align: center;
-  margin-bottom: 5px;
-}
-.sensor-value {
-  border: 3px solid #ccc;
-  padding: 10px;
-  resize: none;
-  text-align: center;
-  white-space: nowrap;
-  border-radius: 5px;
-  height: 85px;
-}
-.btn-primary-test{
-  display: flex;
-  align-items: center;
-  justify-content: center; /* Căn giữa nội dung trong nút */
-  margin: 5px auto; /* Căn giữa nút theo chiều ngang */
-  color: #ffffff !important;
-  background-color: #1d78bd !important;
-  border-color: #000000 !important;
-  width: 120px;
-  height: auto;
-  margin-top: auto !important;
-}
 
-button:disabled {
-  background-color: #cccccc !important;
-}
-
-#change-image {
-  width: 160px;
-}
-.monospace {
-  font-family: 'Roboto Mono', monospace;
-}
-
-label {
-  font-weight: bold;
-  margin-bottom: 0px;
-  /* font-family: 'Roboto Mono', monospace; */
-  padding-right: 4px;
-}
-.container {
+/* ==== BỐ CỤC CHÍNH: 2 NỬA MÀN HÌNH ==== */
+.split-container {
   display: flex;
-  flex-wrap: wrap;
-  margin: 0px;
-}
-.item {
-  width: calc(33.33% - 20px);
-  margin: 10px;
-  background-color: #f0f0f0;
-  padding: 20px;
-  box-sizing: border-box;
-  border-radius: 5px;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 0px;
-}
-.item.active {
-  background-color: lightblue;
-}
-.form-group {
-  display: flex;
-  align-items: center;
-  justify-content: center; 
-  margin: 0px;
-}
-.form-group label {
-  text-align: right;
-  font-weight: bold;
-  padding-right: 3px;
-  margin-bottom: 0px;
-}
-.form-group textarea {
   flex: 1;
-  height: 30px;
-  width: 90px;
-  resize: none;
-  text-align: center;
-  font-size: 12px;
-  border: 2px solid #ccc;
-  border-radius: 3px;
-  padding: 0 3px;
+  min-height: 0; /* tránh overflow */
 }
-.col_tem{
-  padding-left: 10px;
-  padding-right: 5px;
+
+.left-panel,
+.right-panel {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
 }
-.row{
-  padding-top: 5px;
+
+/* ===== LEFT PANEL LAYOUT ===== */
+.left-panel {
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
+  /* background-color: #f5f5f5; */
+  border-right: 2px solid #ccc;
+  padding: 10px;
 }
 
-.row_WiFi{
-  display: flex;
-  align-items: left;
-  /* margin-top: 3px; */
-}
-
-#SoilMoisture_TextArea, #BME280_TextArea, #MAX30102_TextArea, #OLED_TextArea, #HCSR501_TextArea{
-  font-size: 12px;
-}
-
-#WiFi_TextArea_SSIDfromWeb, #WiFi_TextArea_PasswordfromWeb, #WiFi_TextArea_LocalTime, #WiFi_TextArea_BrowserTimeZone, #WiFi_TextArea_UTCTime{
-  height: 20px;
-  font-size: 10px;
-  padding: 0;
-  border: 2px solid #ccc;
-  border-radius: 3px;
-  text-align: left;
-  margin-right: 10px;
-  padding: 0 3px;
-}
-
-#BME280_TextArea_Tem, #BME280_TextArea_Hum, #BME280_TextArea_Pres, #BME280_TextArea_RelAlt, #MAX30102_TextArea_Beat,
-#MAX30102_TextArea_BPM, #SoilMoisture_TextArea_Min, #SoilMoisture_TextArea_Max, #SoilMoisture_TextArea_Range{
-  height: 20px;
-  width: 70px;
-  font-size: 10px;
-  border: 2px solid #ccc;
-  border-radius: 3px;
-  text-align: right;
-  margin-right: 10px;
-  resize: none;
-  padding: 0 3px;
-}
-
-#MAX30102_TextArea_Beat, #MAX30102_TextArea_BPM, #SoilMoisture_TextArea_Min, #SoilMoisture_TextArea_Max, #SoilMoisture_TextArea_Range{
-  width: 40px;
-}
-
-.bme{
+/* --- Phần trên cùng --- */
+.top-controls {
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.bme label{
-  text-align: right;
-  font-weight: bold;
-  padding-right: 3px;
-  margin-bottom: 0px;
-}
-
-#WiFi_TextArea_BrowserTimeZone{
-  width: 40px;
-}
-
-#WiFi_TextArea_LocalTime, #WiFi_TextArea_UTCTime{
-  width: 125px !important;
-  resize: none;
-}
-
-#WiFi_TextArea_SSIDfromWeb, #WiFi_TextArea_PasswordfromWeb{
-  width: 105px;
-}
-
-#WiFi_TextArea{
-  overflow: auto;
-  white-space: pre;
-  text-align: left;
-  height: 85px !important;
-  font-size: 12px;
-  resize: none;
-}
-
-#ESP-button{
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 8px;
+  margin-left: 5px;
+} 
+
+/* --- Phần giữa (textarea chiếm toàn bộ khoảng trống còn lại) --- */
+.middle-text {
+  flex: 1;
+  display: flex;
 }
 
-#HC-SR501-button, #OLED-button, #MAX30102-button{
-  margin-top: 10px;
-}
-
-#HCSR501_Square, #MAX30102_Square{
-  width: 100px;
-  height: auto;
-  margin: 5px auto;
-  margin-top: 10px;
-  border-radius: 5px;
-  border: 2px solid #ccc;
-  height: 35px;
+.middle-text textarea {
+  flex: 1;
   resize: none;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
 }
 
-#SoilMoisture_Progress{
+#textareaNotification {
+  flex: 1;
+  resize: none;
   width: 100%;
-  height: 20px;
-  margin-top: 5px;
+  background: #ffffff;
+  font-size: 12px; 
+  padding: 0;
+  overflow-x: auto;
 }
 
-#wifi-box{
-  height: 30px;
-  font-size: 12px;
-  margin-top: 3px;
-  resize: none;
-  border: 2px solid #ccc;
-  border-radius: 3px;
-  padding-left: 10px;
-}
-
-#Block_WiFi{
-  height: auto;
-  margin-top: auto !important;
-}
-
-.utc{
+/* --- Phần dưới --- */
+.bottom-controls {
   display: flex;
   align-items: center;
-}
-
-.column_alignRight{
-  display: flex;
-  flex-direction: column;
-  text-align: right;
   justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 2px;
 }
 
-.column_alignLeft{
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+.input {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 5px;
+  margin: 0 5px;
 }
 
-.column_alignLeft textarea{
-  margin-top: 4px;
+.right-panel {
+  background-color: #ffffff;
 }
 
-.column_alignLeft input{
-  margin-top: 4px;
-}
-
-.column_alignRight label{
-  font-weight: bold;
-  padding-right: 3px;
-  margin-bottom: 0px;
-}
-
-.LinkWeb {
-  display: flex;
-  height: 10px;
-  margin: 0px 10px;
-  justify-content: center;
-  font-weight: bold;
-  text-decoration: underline;
-}
-
-@media screen and (orientation: landscape) {
-  .item{
-    width: calc(33.33% - 20px);
-    height: 42vh;
-  }
-  .LinkWeb {
-    width: calc(33.33% - 20px);
-  }
-}
-@media screen and (orientation: portrait) {
-  .item,.LinkWeb {
-      width: calc(100% - 20px);
-  }
-  #navbarTitle {
-      font-size: 12px;
-  }
-}
-
+/* ==== DROPZONE VÀ FILE UPLOAD ==== */
 #dropZone {
   width: 300px;
   height: 150px;
@@ -376,22 +168,10 @@ label {
   color: #666;
   margin-bottom: 10px;
 }
+
 #dropZone.dragover {
   background-color: #eef;
   border-color: #00f;
-}
-#fileContent {
-  width: 100%;
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  padding: 5px;
-  font-family: monospace;
-  white-space: pre-wrap;
-}
-
-#fileInput, #uploadBtn {
-  border-radius: 5px;
 }
 
 .custom-file-upload {
@@ -405,3 +185,48 @@ label {
   transition: all 0.2s ease;
   margin-top: 10px;
 }
+
+#UploaderStatus {
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 5px;
+  font-family: monospace;
+  white-space: pre-wrap;
+}
+
+/* ==== TEXT & BUTTONS ==== */
+
+#uploadBtn{
+  margin-top: 10px;
+  background: #1d78bd;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+label {
+  font-weight: bold;
+}
+
+.monospace {
+  font-family: 'Roboto Mono', monospace;
+}
+
+p {
+  font-size: 15px;
+  margin: 0;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* ==== RESPONSIVE ==== */
+@media screen and (orientation: portrait) {
+  #navbarTitle {
+    font-size: 12px;
+  }
+}
+
