@@ -2,7 +2,7 @@
 const bleService        = '0000ffe0-0000-1000-8000-00805f9b34fb';
 const bleCharacteristic = '0000ffe1-0000-1000-8000-00805f9b34fb';
 
-let dev, LeanbotCharacteristic;
+let dev, gattCharacteristic;
 let bluetoothDeviceDetected;
 
 // ================== State ==================
@@ -44,9 +44,9 @@ function requestBluetoothDevice() {
         .then(server => server.getPrimaryService(bleService))
         .then(service => service.getCharacteristic(bleCharacteristic))
         .then(characteristic => {
-            LeanbotCharacteristic = characteristic;
-            LeanbotCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue);
-            return LeanbotCharacteristic.startNotifications();
+            gattCharacteristic = characteristic;
+            gattCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue);
+            return gattCharacteristic.startNotifications();
         })
         .then(() => {
             logstatus(dev.name);
@@ -92,7 +92,7 @@ function send() {
     logBuffer += "\n";
 
     const newline = checkboxNewline.checked ? "\n" : "";
-    LeanbotCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
+    gattCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
 
     MsgSend.value = "";
 }
