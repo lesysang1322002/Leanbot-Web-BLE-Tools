@@ -64,35 +64,38 @@
         </div>
 
 
-        <div class="right-panel">
-            <div style="text-align: center;">
-                <div style="text-align: left; display: inline-block; width: 80%;">
-                    <h3 style="text-align: center;">Uploader Status</h3>
-                    <pre id="UploaderStatus" style="border: 1px solid #ccc; padding: 10px; max-height: 300px; overflow-y: auto;"></pre>
-                </div>
-        
-                <!-- Drop zone -->
-                <div style="margin-bottom: 20px;">
-                    <div id="dropZone" style="display: inline-block;">
-                    <!-- Choose file -->
-                    <label for="fileInput" class="custom-file-upload">
-                        Choose HEX File
-                    </label>
-                    <div>
-                        <input type="file" id="fileInput" accept=".hex" hidden/>
-                    </div>
+        <div class="right-panel" style="text-align: center;">
+            <div class="status-block">
+                <h5>Web → ESP (HEX Lines)</h5>
+                <pre id="UploaderSendLog" class="status-box"></pre>
+            </div>
 
-                    <p style="margin:5px 0;">or drop HEX File here</p>
-
-                    <div id="fileName" style="margin-top:5px; font-weight:bold; color:#333;">No file chosen</div>
-                    </div>
+            <div class="status-block">
+                <h5>ESP → Web (Status / Progress)</h5>
+                <pre id="UploaderRecvLog" class="status-box"></pre>
+            </div>
+    
+            <!-- Drop zone -->
+            <div class="drop-zone" style="margin-bottom: 5px;">
+                <div id="dropZone" style="display: inline-block;">
+                <!-- Choose file -->
+                <label for="fileInput" class="custom-file-upload">
+                    Choose HEX File
+                </label>
+                <div>
+                    <input type="file" id="fileInput" accept=".hex" hidden/>
                 </div>
 
-                <!-- Upload button -->
-                <div style="margin-bottom: 30px;">
-                    <button id="uploadBtn">Send to LbESP32</button>
+                <p style="margin:5px 0;">or drop HEX File here</p>
+
+                <div id="fileName" style="margin-top:5px; font-weight:bold; color:#333;">No file chosen</div>
                 </div>
             </div>
+
+            <!-- Upload button -->
+            <div>
+                <button id="uploadBtn">Send to LbESP32</button>
+            </div>        
         </div>
     </div>
 

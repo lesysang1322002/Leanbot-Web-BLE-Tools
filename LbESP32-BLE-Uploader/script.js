@@ -95,7 +95,7 @@ async function sendHEXFile(data) {
       return;
   }
 
-  UI("UploaderStatus").textContent = "Web -> " + data ; // Hiển thị dòng hiện tại
+  UI("UploaderSendLog").textContent += data + "\n"; // Hiển thị dòng hiện tại
 
   data += '\n';  // Append newline character to data
   console.log("You -> " + data);
@@ -164,8 +164,7 @@ function logstatusWebName(text){
 }
 
 function handleSerialLine(line) {
-  console.log("Device -> " + line);
-  UI("UploaderStatus").textContent = "Device -> " + line;
+  UI("UploaderRecvLog").textContent += line + "\n";
 }
 
 let device, server, service, characteristic;
@@ -259,7 +258,7 @@ function send() {
   logBuffer += "\n";
 
   const newline = checkboxNewline.checked ? "\n" : "";
-  LeanbotCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
+  LeanbotCharacteristic.writeValue(str2ab(MsgSend.value + newline));
 
   MsgSend.value = "";
 }

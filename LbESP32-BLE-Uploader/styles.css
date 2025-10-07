@@ -125,7 +125,6 @@ body h6 {
 }
 
 #textareaNotification {
-  flex: 1;
   resize: none;
   width: 100%;
   background: #ffffff;
@@ -152,23 +151,75 @@ body h6 {
   margin: 0 5px;
 }
 
+/* ==== RIGHT PANEL: layout tổng thể ==== */
 .right-panel {
-  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  /* height: calc(100vh - 50px); trừ chiều cao navbar */
+  padding: 10px;
+  overflow: hidden;
+  text-align: center;
 }
 
-/* ==== DROPZONE VÀ FILE UPLOAD ==== */
-#dropZone {
-  width: 300px;
-  height: 150px;
-  border: 2px dashed #888;
-  border-radius: 10px;
+/* ==== MỖI KHỐI LOG (Web→ESP và ESP→Web) ==== */
+.status-block {
+  flex: 1; /* chia đều chiều cao */
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
+  flex-direction: column;
+  min-height: 0; /* bắt buộc để scroll hoạt động */
+  margin-bottom: 8px;
+}
+
+.status-block h5 {
+  flex-shrink: 0;
+  margin: 4px 0;
+  /* color: #1d78bd; */
+  text-align: left;
+  font-size: 20px;
+  font-weight: bold;
   margin-bottom: 10px;
 }
 
+/* ==== Ô log cuộn độc lập ==== */
+.status-box {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fafafa;
+  padding: 6px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  text-align: left;
+}
+
+/* ==== DROP ZONE + BUTTON nằm cố định cuối ==== */
+.drop-zone {
+  flex-shrink: 0;
+  margin-top: auto; /* đẩy xuống cuối */
+  text-align: center;
+}
+
+#dropZone {
+  width: 100%;
+  border: 2px dashed #888;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 0 auto 10px auto;
+  background: #fff;
+}
+
+#uploadBtn {
+  background: #1d78bd;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* ==== DROPZONE VÀ FILE UPLOAD ==== */
 #dropZone.dragover {
   background-color: #eef;
   border-color: #00f;
@@ -186,28 +237,7 @@ body h6 {
   margin-top: 10px;
 }
 
-#UploaderStatus {
-  width: 100%;
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  padding: 5px;
-  font-family: monospace;
-  white-space: pre-wrap;
-}
-
 /* ==== TEXT & BUTTONS ==== */
-
-#uploadBtn{
-  margin-top: 10px;
-  background: #1d78bd;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-
 label {
   font-weight: bold;
 }
@@ -229,4 +259,3 @@ p {
     font-size: 12px;
   }
 }
-
