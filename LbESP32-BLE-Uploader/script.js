@@ -96,6 +96,7 @@ async function sendHEXFile(data) {
   }
 
   UI("UploaderSendLog").textContent += data + "\n"; // Hiển thị dòng hiện tại
+  UI("UploaderSendLog").scrollTop = UI("UploaderSendLog").scrollHeight;
 
   data += '\n';  // Append newline character to data
   console.log("You -> " + data);
@@ -165,6 +166,7 @@ function logstatusWebName(text){
 
 function handleSerialLine(line) {
   UI("UploaderRecvLog").textContent += line + "\n";
+  UI("UploaderRecvLog").scrollTop = UI("UploaderRecvLog").scrollHeight; 
 }
 
 let device, server, service, characteristic;
