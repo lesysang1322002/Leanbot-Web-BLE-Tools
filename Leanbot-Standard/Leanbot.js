@@ -1,10 +1,5 @@
-let Web_Characteristic;
+let gattCharacteristic;
 let timeoutCheckMessage;
-let SERVICE_UUID        = '0000ffe0-0000-1000-8000-00805f9b34fb';
-let CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
-
-let UPLOAD_TX_UUID      = '0000ffe2-0000-1000-8000-00805f9b34fb'; 
-let UPLOAD_RX_UUID      = '0000ffe3-0000-1000-8000-00805f9b34fb';
 
 function isWebBluetoothEnabled() {
     if (! navigator.bluetooth) {
@@ -18,7 +13,7 @@ function requestBluetoothDevice() {
     if (isWebBluetoothEnabled()){
         logstatus('Finding...');
         navigator.bluetooth.requestDevice({
-        filters: [{ services: SERVICE_UUID }], 
+        filters: [{ services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] }] 
     })         
     .then(device => {
         device.addEventListener('gattserverdisconnected', onDisconnected);
@@ -30,20 +25,20 @@ function requestBluetoothDevice() {
     .then(server => {
         console.log('Getting GATT Service...');
         logstatus('Getting Service...');
-        return server.getPrimaryService(SERVICE_UUID);
+        return server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
     })
     .then(service => {
         console.log('Getting GATT Characteristic...');
         logstatus('Geting Characteristic...');
-        return service.getCharacteristic(CHARACTERISTIC_UUID);
+        return service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
     })
     .then(characteristic => {
         logstatusWebName(dev.name);
         checkMessageWithin5Seconds();
         UI("buttonText").innerText = "Rescan";
-        Web_Characteristic = characteristic;
-        Web_Characteristic.addEventListener('characteristicvaluechanged', handleChangedValue);   
-        return Web_Characteristic.startNotifications();
+        gattCharacteristic = characteristic;
+        gattCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue);   
+        return gattCharacteristic.startNotifications();
     })
     .catch(error => {
         if (error instanceof DOMException && error.name === 'NotFoundError' && error.message === 'User cancelled the requestDevice() chooser.') {
@@ -90,7 +85,7 @@ function onDisconnected(event) {
 }
 
 async function send(data) {
-    if (!Web_Characteristic) {
+    if (!gattCharacteristic) {
         console.log("GATT Characteristic not found.");
         return;
     }
@@ -101,7 +96,7 @@ async function send(data) {
     while (start < dataLength) {
         let subStr = data.substring(start, start + 20);
         try {
-            await Web_Characteristic.writeValue(str2ab(subStr));
+            await gattCharacteristic.writeValue(str2ab(subStr));
         } catch (error) {
             console.error("Error writing to characteristic:", error);
             break;
