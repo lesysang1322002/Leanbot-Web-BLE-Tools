@@ -2,7 +2,7 @@
 const bleService        = '0000ffe0-0000-1000-8000-00805f9b34fb';
 const bleCharacteristic = '0000ffe1-0000-1000-8000-00805f9b34fb';
 
-let dev, gattCharacteristic;
+let dev, LeanbotCharacteristic;
 let bluetoothDeviceDetected;
 
 // ================== State ==================
@@ -44,9 +44,9 @@ function requestBluetoothDevice() {
         .then(server => server.getPrimaryService(bleService))
         .then(service => service.getCharacteristic(bleCharacteristic))
         .then(characteristic => {
-            gattCharacteristic = characteristic;
-            gattCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue);
-            return gattCharacteristic.startNotifications();
+            LeanbotCharacteristic = characteristic;
+            LeanbotCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue);
+            return LeanbotCharacteristic.startNotifications();
         })
         .then(() => {
             logstatus(dev.name);
@@ -92,7 +92,7 @@ function send() {
     logBuffer += "\n";
 
     const newline = checkboxNewline.checked ? "\n" : "";
-    gattCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
+    LeanbotCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
 
     MsgSend.value = "";
 }
@@ -116,7 +116,6 @@ setInterval(() => {
 // ================== UI Handlers ==================
 function handleChangedValue(event) {
     const valueString = new TextDecoder('utf-8').decode(event.target.value).replace(/\r/g, '');
-    console.log("Nano >", valueString);
     showTerminalMessage(valueString);
     if (checkboxAutoScroll.checked) textArea.scrollTop = textArea.scrollHeight;
 }
