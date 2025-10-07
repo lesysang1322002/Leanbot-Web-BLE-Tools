@@ -1,6 +1,9 @@
 let gattCharacteristic;
 let timeoutCheckMessage;
 
+let SERVICE_UUID        = '0000ffe0-0000-1000-8000-00805f9b34fb';
+let LEANBOT_UUID        = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
 function isWebBluetoothEnabled() {
     if (! navigator.bluetooth) {
         console.log('Web Bluetooth API is not available in this browser!');
@@ -13,7 +16,7 @@ function requestBluetoothDevice() {
     if (isWebBluetoothEnabled()){
         logstatus('Finding...');
         navigator.bluetooth.requestDevice({
-        filters: [{ services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] }] 
+        filters: [{ services: [SERVICE_UUID] }], 
     })         
     .then(device => {
         device.addEventListener('gattserverdisconnected', onDisconnected);
@@ -25,12 +28,12 @@ function requestBluetoothDevice() {
     .then(server => {
         console.log('Getting GATT Service...');
         logstatus('Getting Service...');
-        return server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+        return server.getPrimaryService(SERVICE_UUID);
     })
     .then(service => {
         console.log('Getting GATT Characteristic...');
         logstatus('Geting Characteristic...');
-        return service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+        return service.getCharacteristic(LEANBOT_UUID);
     })
     .then(characteristic => {
         logstatusWebName(dev.name);
