@@ -100,22 +100,24 @@ async function sendHEXFile(data) {
 
   data += '\n';  // Append newline character to data
   console.log("You -> " + data);
-  let start = 0;
-  const dataLength = data.length;
-  while (start < dataLength) {
-    let subStr = data.substring(start, start + 45); // Gửi từng phần 24 bytes
-    try {
-        let ByteStart = performance.now();
-        await WebTxCharacteristic.writeValueWithoutResponse(str2ab(subStr));
-        let ByteEnd = performance.now();
-        let ByteTime = ByteEnd - ByteStart;
-        console.log(`Time ${subStr.length} bytes: ${ByteTime.toFixed(2)} ms`);
-    } catch (error) {
-        console.error("Error writing to characteristic:", error);
-        break;
-    }
-    start += 45;
-  }
+
+  await WebTxCharacteristic.writeValueWithoutResponse(str2ab(data));
+  // let start = 0;
+  // const dataLength = data.length;
+  // while (start < dataLength) {
+  //   let subStr = data.substring(start, start + 45); // Gửi từng phần 24 bytes
+  //   try {
+  //       let ByteStart = performance.now();
+  //       await WebTxCharacteristic.writeValueWithoutResponse(str2ab(subStr));
+  //       let ByteEnd = performance.now();
+  //       let ByteTime = ByteEnd - ByteStart;
+  //       console.log(`Time ${subStr.length} bytes: ${ByteTime.toFixed(2)} ms`);
+  //   } catch (error) {
+  //       console.error("Error writing to characteristic:", error);
+  //       break;
+  //   }
+  //   start += 45;
+  // }
 }
 
 function logstatus(text){
