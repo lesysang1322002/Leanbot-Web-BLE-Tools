@@ -103,7 +103,7 @@ async function sendHEXFile(data) {
   let start = 0;
   const dataLength = data.length;
   while (start < dataLength) {
-    let subStr = data.substring(start, start + 24); // Gửi từng phần 24 bytes
+    let subStr = data.substring(start, start + 45); // Gửi từng phần 24 bytes
     try {
         let ByteStart = performance.now();
         await WebTxCharacteristic.writeValueWithoutResponse(str2ab(subStr));
@@ -114,7 +114,7 @@ async function sendHEXFile(data) {
         console.error("Error writing to characteristic:", error);
         break;
     }
-    start += 24;
+    start += 45;
   }
 }
 
