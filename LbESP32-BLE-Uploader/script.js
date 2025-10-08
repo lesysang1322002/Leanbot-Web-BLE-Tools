@@ -224,10 +224,17 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
     return;
   }
 
+  if (!WebTxCharacteristic) {
+    alert("Device not connected!");
+    return;
+  }
+
+  UI("UploaderSendLog").textContent = ""; // Clear previous log
+  UI("UploaderRecvLog").textContent = ""; // Clear previous log
+
   await sendHEXFile("START SEND HEX LINES"); // Gửi lệnh bắt đầu
   await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
   
-
   const text = await selectedFile.text();
   const lines = text.split(/\r?\n/);
 
