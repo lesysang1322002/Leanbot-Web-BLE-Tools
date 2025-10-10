@@ -95,10 +95,10 @@ async function sendHEXFile(data) {
       return;
   }
 
-  UI("UploaderSendLog").textContent += data + "\n"; // Hiển thị dòng hiện tại
+  UI("UploaderSendLog").textContent += data ; // Hiển thị dòng hiện tại
   UI("UploaderSendLog").scrollTop = UI("UploaderSendLog").scrollHeight;
 
-  data += '\n';  // Append newline character to data
+  // data += '\n';  // Append newline character to data
   console.log("You -> " + data);
 
   await WebTxCharacteristic.writeValueWithoutResponse(str2ab(data));
@@ -234,19 +234,30 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
   UI("UploaderSendLog").textContent = ""; // Clear previous log
   UI("UploaderRecvLog").textContent = ""; // Clear previous log
 
-  await sendHEXFile("START SEND HEX LINES"); // Gửi lệnh bắt đầu
+  await sendHEXFile("START SEND HEX LINES" + "\n"); // Gửi lệnh bắt đầu
   await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
   
   const text = await selectedFile.text();
   const lines = text.split(/\r?\n/);
 
-  let totalStart = performance.now();  // bắt đầu tính tổng thời gian
+  let totalStart = performance.now();
   let totalLines = 0;
 
-  for (let line of lines) {
-    if (line.trim().length > 0) {
-      await sendHEXFile(line);
+  for (let i = 0; i < lines.length; i += 2) {
+    // Ghép 2 dòng lại thành 1 block
+    let block = "";
+
+    if (lines[i].trim().length > 0) {
+      block += lines[i].trim() + "\n";
       totalLines++;
+    }
+    if (i + 1 < lines.length && lines[i + 1].trim().length > 0) {
+      block += lines[i + 1].trim() + "\n";
+      totalLines++;
+    }
+
+    if (block.length > 0) {
+      await sendHEXFile(block);  // Gửi 2 dòng 1 lần
     }
   }
 
@@ -255,9 +266,6 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
   let avgLineTime = totalTime / totalLines;
 
   let report = `Lines sent: ${totalLines}\nTotal time: ${totalTime.toFixed(2)} ms\nAverage per line: ${avgLineTime.toFixed(2)} ms`;
-
-  // alert("Send complete! LbESP32 will process the HEX file.\n\n" + report);
-  UI("UploaderStatus").textContent = "Send complete!";
   console.log(report);
 });
 
