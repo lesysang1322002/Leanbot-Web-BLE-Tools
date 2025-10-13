@@ -261,7 +261,7 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
   // await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
   
   // Số dòng bạn muốn ghép mỗi lần gửi (ví dụ: 2, 4, 8...)
-  const LINES_PER_BLOCK = 2;
+  const LINES_PER_BLOCK = 4;
 
   // Đọc nội dung file
   const text = await selectedFile.text();
