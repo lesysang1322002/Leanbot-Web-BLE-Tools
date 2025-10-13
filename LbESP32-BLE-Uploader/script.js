@@ -89,6 +89,28 @@ function handleUploadRxChangedValue(event) {
     });
 }
 
+function hexLineToBytes(block) {
+  // Tách block thành từng dòng, loại bỏ dòng trống và khoảng trắng
+  const lines = block.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+  const bytes = [];
+
+  for (const line of lines) {
+    // Mỗi dòng Intel HEX bắt đầu bằng dấu ':', loại bỏ nếu có
+    let hex = line.startsWith(":") ? line.slice(1) : line;
+
+    // Duyệt từng cặp ký tự hex trong dòng
+    for (let i = 0; i < hex.length; i += 2) {
+      const byte = parseInt(hex.substr(i, 2), 16);
+      if (!isNaN(byte)) bytes.push(byte);
+    }
+  }
+
+  // Trả về mảng Uint8Array gồm tất cả bytes của các dòng trong block
+  return new Uint8Array(bytes);
+}
+
+
 async function sendHEXFile(data) {
   if (!WebTxCharacteristic) {
       console.log("GATT Characteristic not found.");
@@ -101,7 +123,8 @@ async function sendHEXFile(data) {
   // data += '\n';  // Append newline character to data
   console.log("You -> " + data);
 
-  await WebTxCharacteristic.writeValueWithoutResponse(str2ab(data));
+  const bytes = hexLineToBytes(data);
+  await WebTxCharacteristic.writeValueWithoutResponse(bytes);
   // let start = 0;
   // const dataLength = data.length;
   // while (start < dataLength) {
@@ -234,39 +257,37 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
   UI("UploaderSendLog").textContent = ""; // Clear previous log
   UI("UploaderRecvLog").textContent = ""; // Clear previous log
 
-  await sendHEXFile("START SEND HEX LINES" + "\n"); // Gửi lệnh bắt đầu
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
+  // await WebTxCharacteristic.writeValueWithoutResponse(str2ab("START SEND HEX LINES" + "\n")); // Gửi lệnh vào chế độ lập trình
+  // await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
   
+  // Số dòng bạn muốn ghép mỗi lần gửi (ví dụ: 2, 4, 8...)
+  const LINES_PER_BLOCK = 1;
+
+  // Đọc nội dung file
   const text = await selectedFile.text();
   const lines = text.split(/\r?\n/);
 
-  let totalStart = performance.now();
-  let totalLines = 0;
-
-  for (let i = 0; i < lines.length; i += 2) {
-    // Ghép 2 dòng lại thành 1 block
+  // Duyệt qua file theo từng block (mỗi block = LINES_PER_BLOCK dòng)
+  for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
     let block = "";
 
-    if (lines[i].trim().length > 0) {
-      block += lines[i].trim() + "\n";
-      totalLines++;
-    }
-    if (i + 1 < lines.length && lines[i + 1].trim().length > 0) {
-      block += lines[i + 1].trim() + "\n";
-      totalLines++;
+    // Ghép các dòng trong block
+    for (let j = 0; j < LINES_PER_BLOCK; j++) {
+      const lineIndex = i + j;
+      if (lineIndex < lines.length) {
+        const line = lines[lineIndex].trim();
+        if (line.length > 0) {
+          block += line + "\n"; // giữ ký tự xuống dòng giữa các line
+        }
+      }
     }
 
+    // Nếu block có nội dung thì gửi đi
     if (block.length > 0) {
-      await sendHEXFile(block);  // Gửi 2 dòng 1 lần
+      await sendHEXFile(block);  // Gửi 1 block (gồm 4, 8,... dòng)
     }
   }
 
-  let totalEnd = performance.now();
-  let totalTime = totalEnd - totalStart;
-  let avgLineTime = totalTime / totalLines;
-
-  let report = `Lines sent: ${totalLines}\nTotal time: ${totalTime.toFixed(2)} ms\nAverage per line: ${avgLineTime.toFixed(2)} ms`;
-  console.log(report);
 });
 
 function send() {
