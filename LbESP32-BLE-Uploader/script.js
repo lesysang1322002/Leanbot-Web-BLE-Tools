@@ -260,8 +260,8 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
   // await WebTxCharacteristic.writeValueWithoutResponse(str2ab("START SEND HEX LINES" + "\n")); // Gửi lệnh vào chế độ lập trình
   // await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
   
-  // Số dòng bạn muốn ghép mỗi lần gửi (ví dụ: 2, 4, 8...)
-  const LINES_PER_BLOCK = 4;
+  // Số dòng bạn muốn ghép mỗi lần gửi (2, 4, 8...)
+  const LINES_PER_BLOCK = 8;
 
   // Đọc nội dung file
   const text = await selectedFile.text();
@@ -277,12 +277,11 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
       if (lineIndex < lines.length) {
         const line = lines[lineIndex].trim();
         if (line.length > 0) {
-          block += line + "\n"; // giữ ký tự xuống dòng giữa các line
+          block += line + "\n"; // giữ ký tự xuống dòng giữa các line cho việc hiển thị
         }
       }
     }
 
-    // Nếu block có nội dung thì gửi đi
     if (block.length > 0) {
       await sendHEXFile(block);  // Gửi 1 block (gồm 4, 8,... dòng)
     }
