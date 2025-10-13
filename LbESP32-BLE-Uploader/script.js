@@ -271,15 +271,13 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
   for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
     let block = "";
 
-    if (i === 0) await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
-
     // Ghép các dòng trong block
     for (let j = 0; j < LINES_PER_BLOCK; j++) {
       const lineIndex = i + j;
       if (lineIndex < lines.length) {
         const line = lines[lineIndex].trim();
         if (line.length > 0) {
-          block += line + "\n"; // giữ ký tự xuống dòng giữa các line
+          block += line; // giữ ký tự xuống dòng giữa các line
         }
       }
     }
