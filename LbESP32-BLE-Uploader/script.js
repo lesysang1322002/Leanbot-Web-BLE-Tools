@@ -277,7 +277,7 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
       if (lineIndex < lines.length) {
         const line = lines[lineIndex].trim();
         if (line.length > 0) {
-          block += line; // giữ ký tự xuống dòng giữa các line
+          block += line + "\n"; // giữ ký tự xuống dòng giữa các line
         }
       }
     }
