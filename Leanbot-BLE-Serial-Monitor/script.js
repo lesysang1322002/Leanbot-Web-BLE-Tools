@@ -84,7 +84,18 @@ function resetPage() {
     nextIsNewline = true;
 }
 
-function send() {
+let writing = false;
+let writeTimeout = null;
+
+async function send() {
+    if ( !gattCharacteristic ) {
+        console.log("No device connected.");
+        return;
+    }
+
+    writing = true; // Đặt writing thành true khi bắt đầu gửi
+    clearTimeout(writeTimeout); // Xóa timeout trước đó nếu có
+
     const MsgSend = UI("input");
     isFromWeb = true;
     logBuffer += "\n";
@@ -92,9 +103,13 @@ function send() {
     logBuffer += "\n";
 
     const newline = checkboxNewline.checked ? "\n" : "";
-    gattCharacteristic?.writeValue(str2ab(MsgSend.value + newline));
+    await gattCharacteristic.writeValue(str2ab(MsgSend.value + newline));
 
     MsgSend.value = "";
+
+    writeTimeout = setTimeout(() => {
+        writing = false; 
+    }, 3);
 }
 
 function str2ab(str) {
@@ -115,6 +130,8 @@ setInterval(() => {
 
 // ================== UI Handlers ==================
 function handleChangedValue(event) {
+    if (writing) return; // Bỏ qua nếu event do Web ghi -> ESP
+
     const valueString = new TextDecoder('utf-8').decode(event.target.value).replace(/\r/g, '');
     showTerminalMessage(valueString);
     if (checkboxAutoScroll.checked) textArea.scrollTop = textArea.scrollHeight;
