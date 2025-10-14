@@ -55,10 +55,8 @@ function requestBluetoothDevice() {
           WebRxCharacteristic = characteristics[2];
           WebRxCharacteristic.addEventListener('characteristicvaluechanged', handleUploadRxChangedValue);
 
-          return Promise.all([
-              LeanbotCharacteristic.startNotifications(),
-              WebRxCharacteristic.startNotifications()
-          ]);
+          return LeanbotCharacteristic.startNotifications()
+            .then(() => WebRxCharacteristic.startNotifications());
       })
       .catch(error => {
           if (error instanceof DOMException && error.name === 'NotFoundError' && error.message === 'User cancelled the requestDevice() chooser.') {
