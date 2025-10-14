@@ -84,6 +84,25 @@ function resetPage() {
     nextIsNewline = true;
 }
 
+async function sendTestData(N) {
+  if (!gattCharacteristic) {
+    console.log("Characteristic chưa sẵn sàng.");
+    return;
+  }
+
+  // Tạo chuỗi test có N ký tự
+  let testString = "";
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for (let i = 0; i < N; i++) {
+    testString += chars[i % chars.length];
+  }
+
+  console.log(`Gửi ${N} byte...`);
+  console.log(testString);
+
+  await gattCharacteristic.writeValue(str2ab(testString));
+}
+
 let writing = false;
 let writeTimeout = null;
 
