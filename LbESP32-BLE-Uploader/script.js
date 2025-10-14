@@ -207,7 +207,7 @@ function previewFile(file) {
   reader.onload = (e) => {
     const text = new TextDecoder().decode(e.target.result);
     // Show full content (no truncation)
-    // document.getElementById("UploaderStatus").textContent = text;
+    // UI("UploaderStatus").textContent = text;
   };
   reader.readAsArrayBuffer(file);
 }
@@ -235,58 +235,11 @@ dropZone.addEventListener("drop", (e) => {
     if (file.name.toLowerCase().endsWith(".hex")) {
       selectedFile = file;
       previewFile(selectedFile);
-      document.getElementById("fileName").textContent = "Selected file: " + file.name;
+      UI("fileName").textContent = "Selected file: " + file.name;
     } else {
       alert("Please drop a valid HEX File (.hex)");
     }
   }
-});
-
-document.getElementById("uploadBtn").addEventListener("click", async () => {
-  console.log("Upload button clicked");
-  if (!selectedFile) {
-    alert("No file selected!");
-    return;
-  }
-
-  if (!WebTxCharacteristic) {
-    alert("Device not connected!");
-    return;
-  }
-
-  UI("UploaderSendLog").textContent = ""; // Clear previous log
-  UI("UploaderRecvLog").textContent = ""; // Clear previous log
-
-  // await WebTxCharacteristic.writeValueWithoutResponse(str2ab("START SEND HEX LINES" + "\n")); // Gửi lệnh vào chế độ lập trình
-  // await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi một chút để thiết bị chuẩn bị
-  
-  // Số dòng bạn muốn ghép mỗi lần gửi (2, 4, 8...)
-  const LINES_PER_BLOCK = 8;
-
-  // Đọc nội dung file
-  const text = await selectedFile.text();
-  const lines = text.split(/\r?\n/);
-
-  // Duyệt qua file theo từng block (mỗi block = LINES_PER_BLOCK dòng)
-  for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
-    let block = "";
-
-    // Ghép các dòng trong block
-    for (let j = 0; j < LINES_PER_BLOCK; j++) {
-      const lineIndex = i + j;
-      if (lineIndex < lines.length) {
-        const line = lines[lineIndex].trim();
-        if (line.length > 0) {
-          block += line + "\n"; // giữ ký tự xuống dòng giữa các line cho việc hiển thị
-        }
-      }
-    }
-
-    if (block.length > 0) {
-      await sendHEXFile(block);  // Gửi 1 block (gồm 4, 8,... dòng)
-    }
-  }
-
 });
 
 function send() {
@@ -301,3 +254,68 @@ function send() {
 
   MsgSend.value = "";
 }
+
+// ==== HÀM GỬI FILE HEX TỔNG QUÁT ====
+async function uploadHexFromText(hexText) {
+  if (!WebTxCharacteristic) {
+    alert("Device not connected!");
+    return;
+  }
+
+  UI("UploaderSendLog").textContent = ""; // Clear previous log
+  UI("UploaderRecvLog").textContent = ""; // Clear previous log
+
+  const LINES_PER_BLOCK = 8; // Số dòng gửi mỗi lần
+  const lines = hexText.split(/\r?\n/);
+
+  for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
+    let block = "";
+    for (let j = 0; j < LINES_PER_BLOCK; j++) {
+      const lineIndex = i + j;
+      if (lineIndex < lines.length) {
+        const line = lines[lineIndex].trim();
+        if (line.length > 0) block += line + "\n";
+      }
+    }
+    if (block.length > 0) {
+      await sendHEXFile(block);
+    }
+  }
+  console.log("✅ Upload completed");
+}
+
+// ==== NÚT UPLOAD FILE ====
+UI("uploadBtn").addEventListener("click", async () => {
+  console.log("Upload button clicked");
+  if (!selectedFile) {
+    alert("No file selected!");
+    return;
+  }
+
+  const text = await selectedFile.text();
+  await uploadHexFromText(text);
+});
+
+// ==== NÚT UPLOAD STANDARD ====
+UI("uploadStandardBtn").addEventListener("click", async () => {
+  try {
+    const res = await fetch("./firmware/standard.hex");
+    const text = await res.text();
+    console.log("Loaded standard.hex");
+    await uploadHexFromText(text);
+  } catch (err) {
+    console.error("Error loading standard.hex:", err);
+  }
+});
+
+// ==== NÚT UPLOAD ADVANCE ====
+UI("uploadAdvanceBtn").addEventListener("click", async () => {
+  try {
+    const res = await fetch("./firmware/advance.hex");
+    const text = await res.text();
+    console.log("Loaded advance.hex");
+    await uploadHexFromText(text);
+  } catch (err) {
+    console.error("Error loading advance.hex:", err);
+  }
+});
