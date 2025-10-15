@@ -83,7 +83,7 @@ function handleUploadRxChangedValue(event) {
   if (!sendStartTime) sendStartTime = performance.now(); // fallback if RX happens first
   const relTime = (performance.now() - sendStartTime).toFixed(2);
 
-  console.log(`[RX] Data received at +${relTime} ms → "${valueString.replace(/[\r\n]+/g, "\\n")}"`);
+  console.log(`[${relTime}] Web receive "${valueString.replace(/[\r\n]+/g, "\\n")}"`);
 
   string += valueString;
   const lines = string.split(/[\r\n]+/);
@@ -127,23 +127,25 @@ async function sendHEXFile(data) {
     return;
   }
 
+  // Display current line on UI
+  UI("UploaderSendLog").textContent += data;
+  UI("UploaderSendLog").scrollTop = UI("UploaderSendLog").scrollHeight;
+
+  
+
+  const bytes = hexLineToBytes(data);
+
   if (sendCount === 0) {
     sendStartTime = performance.now(); // set reference time
     console.log("[DEBUG] === HEX file transmission started ===");
   }
 
-  sendCount++;
-
-  // Display current line on UI
-  UI("UploaderSendLog").textContent += data;
-  UI("UploaderSendLog").scrollTop = UI("UploaderSendLog").scrollHeight;
-
-  const bytes = hexLineToBytes(data);
-
-  const t0 = performance.now();
+  const t0 = sendCount === 0 ? sendStartTime : performance.now();
   const relStart = (t0 - sendStartTime).toFixed(2);
 
-  console.log(`[SEND #${sendCount}] → Start at +${relStart} ms (${bytes.length} bytes)`);
+  sendCount++;
+
+  console.log(`[${relStart}] Write #${sendCount} begin`);
 
   await WebTxCharacteristic.writeValueWithoutResponse(bytes);
 
@@ -151,7 +153,7 @@ async function sendHEXFile(data) {
   const relEnd = (t1 - sendStartTime).toFixed(2);
   const duration = (t1 - t0).toFixed(2);
 
-  console.log(`[SEND #${sendCount}] ← Done at +${relEnd} ms (took ${duration} ms)`);
+  console.log(`[${relEnd}] Write #${sendCount} done`);
 }
 
 
