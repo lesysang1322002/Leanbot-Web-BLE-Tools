@@ -185,7 +185,7 @@ function showTerminalMessage(text) {
     let gap = 0;
     if (!isFromWeb && lastTimestamp) {
         gap = (now - lastTimestamp) / 1000;
-        console.log("Gap:", gap.toFixed(3), "seconds");
+        // console.log("Gap:", gap.toFixed(3), "seconds");
     }
     if (!isFromWeb) lastTimestamp = now;
 
