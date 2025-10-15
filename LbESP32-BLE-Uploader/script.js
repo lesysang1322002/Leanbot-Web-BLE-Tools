@@ -275,6 +275,8 @@ async function uploadHexFromText(hexText) {
     alert("Device not connected!");
     return;
   }
+  sendCount = 0;
+  sendStartTime = null;
 
   UI("UploaderSendLog").textContent = ""; // Clear previous log
   UI("UploaderRecvLog").textContent = ""; // Clear previous log
