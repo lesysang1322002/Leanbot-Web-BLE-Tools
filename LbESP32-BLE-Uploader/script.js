@@ -5,6 +5,7 @@ let LEANBOT_UUID        = '0000ffe1-0000-1000-8000-00805f9b34fb';
 let WEB_TX_UUID         = '0000ffe2-0000-1000-8000-00805f9b34fb'; 
 let WEB_RX_UUID         = '0000ffe3-0000-1000-8000-00805f9b34fb'; 
 
+
 function isWebBluetoothEnabled() {
   if (!navigator.bluetooth) {
       console.log('Web Bluetooth API is not available in this browser!');
@@ -55,8 +56,10 @@ function requestBluetoothDevice() {
           WebRxCharacteristic = characteristics[2];
           WebRxCharacteristic.addEventListener('characteristicvaluechanged', handleUploadRxChangedValue);
 
-          return LeanbotCharacteristic.startNotifications()
-            .then(() => WebRxCharacteristic.startNotifications());
+          return Promise.all([
+            LeanbotCharacteristic.startNotifications(),
+            WebRxCharacteristic.startNotifications()
+          ]);
       })
       .catch(error => {
           if (error instanceof DOMException && error.name === 'NotFoundError' && error.message === 'User cancelled the requestDevice() chooser.') {
@@ -72,19 +75,25 @@ function requestBluetoothDevice() {
 
 let string = "";
 function handleUploadRxChangedValue(event) {
-    const data = event.target.value;
-    const dataArray = new Uint8Array(data.buffer);
-    const textDecoder = new TextDecoder('utf-8');
-    const valueString = textDecoder.decode(dataArray);
+  const data = event.target.value;
+  const dataArray = new Uint8Array(data.buffer);
+  const textDecoder = new TextDecoder('utf-8');
+  const valueString = textDecoder.decode(dataArray);
 
-    string += valueString;
-    const lines = string.split(/[\r\n]+/);
-    string = lines.pop() || "";
-    lines.forEach(line => {
-        if (line) { 
-            handleSerialLine(line);
-        }
-    });
+  if (!sendStartTime) sendStartTime = performance.now(); // fallback if RX happens first
+  const relTime = (performance.now() - sendStartTime).toFixed(2);
+
+  console.log(`[RX] Data received at +${relTime} ms → "${valueString.replace(/[\r\n]+/g, "\\n")}"`);
+
+  string += valueString;
+  const lines = string.split(/[\r\n]+/);
+  string = lines.pop() || "";
+
+  lines.forEach(line => {
+    if (line) {
+      handleSerialLine(line);
+    }
+  });
 }
 
 function hexLineToBytes(block) {
@@ -109,37 +118,42 @@ function hexLineToBytes(block) {
 }
 
 
+let sendCount = 0;
+let sendStartTime = null; // timestamp of the very first send
+
 async function sendHEXFile(data) {
   if (!WebTxCharacteristic) {
-      console.log("GATT Characteristic not found.");
-      return;
+    console.log("[ERROR] GATT Characteristic not found.");
+    return;
   }
 
-  UI("UploaderSendLog").textContent += data ; // Hiển thị dòng hiện tại
+  if (sendCount === 0) {
+    sendStartTime = performance.now(); // set reference time
+    console.log("[DEBUG] === HEX file transmission started ===");
+  }
+
+  sendCount++;
+
+  // Display current line on UI
+  UI("UploaderSendLog").textContent += data;
   UI("UploaderSendLog").scrollTop = UI("UploaderSendLog").scrollHeight;
 
-  // data += '\n';  // Append newline character to data
-  console.log("You -> " + data);
-
   const bytes = hexLineToBytes(data);
+
+  const t0 = performance.now();
+  const relStart = (t0 - sendStartTime).toFixed(2);
+
+  console.log(`[SEND #${sendCount}] → Start at +${relStart} ms (${bytes.length} bytes)`);
+
   await WebTxCharacteristic.writeValueWithoutResponse(bytes);
-  // let start = 0;
-  // const dataLength = data.length;
-  // while (start < dataLength) {
-  //   let subStr = data.substring(start, start + 45); // Gửi từng phần 24 bytes
-  //   try {
-  //       let ByteStart = performance.now();
-  //       await WebTxCharacteristic.writeValueWithoutResponse(str2ab(subStr));
-  //       let ByteEnd = performance.now();
-  //       let ByteTime = ByteEnd - ByteStart;
-  //       console.log(`Time ${subStr.length} bytes: ${ByteTime.toFixed(2)} ms`);
-  //   } catch (error) {
-  //       console.error("Error writing to characteristic:", error);
-  //       break;
-  //   }
-  //   start += 45;
-  // }
+
+  const t1 = performance.now();
+  const relEnd = (t1 - sendStartTime).toFixed(2);
+  const duration = (t1 - t0).toFixed(2);
+
+  console.log(`[SEND #${sendCount}] ← Done at +${relEnd} ms (took ${duration} ms)`);
 }
+
 
 function logstatus(text){
   UI('navbarTitle').textContent = text;
@@ -282,7 +296,7 @@ async function uploadHexFromText(hexText) {
   console.log("✅ Upload completed");
 }
 
-// ==== NÚT UPLOAD FILE ====
+// ==== NÚT Send to LbESP32 ====
 UI("uploadBtn").addEventListener("click", async () => {
   console.log("Upload button clicked");
   if (!selectedFile) {
@@ -294,7 +308,7 @@ UI("uploadBtn").addEventListener("click", async () => {
   await uploadHexFromText(text);
 });
 
-// ==== NÚT UPLOAD STANDARD ====
+// ==== NÚT Upload Standard ====
 UI("uploadStandardBtn").addEventListener("click", async () => {
   try {
     const res = await fetch("./firmware/standard.hex");
@@ -306,7 +320,7 @@ UI("uploadStandardBtn").addEventListener("click", async () => {
   }
 });
 
-// ==== NÚT UPLOAD ADVANCE ====
+// ==== NÚT Upload Advance ====
 UI("uploadAdvanceBtn").addEventListener("click", async () => {
   try {
     const res = await fetch("./firmware/advance.hex");
