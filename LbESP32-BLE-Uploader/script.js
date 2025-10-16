@@ -70,7 +70,7 @@ function requestBluetoothDevice() {
       });
   }
 }
-let isUploadFail = false;
+
 let string = "";
 function handleUploadRxChangedValue(event) {
   const data = event.target.value;
@@ -82,13 +82,6 @@ function handleUploadRxChangedValue(event) {
   if (!sendStartTime) sendStartTime = performance.now(); // fallback if RX happens first
   const relTime = (performance.now() - sendStartTime).toFixed(2);
   console.log(`[${relTime}] Web receive "${valueString.replace(/[\r\n]+/g, "\\n")}"`);
-
-  // Check for upload failure
-  if (valueString === "eC!") { // "eC!" =  0x65 0x43 0x21
-    isUploadFail = true; 
-    console.log("❌ Upload failed!");
-    return;
-  }
 
   string += valueString;
   const lines = string.split(/[\r\n]+/);
@@ -281,10 +274,13 @@ async function uploadHexFromText(hexText) {
 
   sendCount = 0;
   sendStartTime = null;
-  isUploadFail = false;
 
   UI("UploaderSendLog").textContent = ""; // Clear previous log
   UI("UploaderRecvLog").textContent = ""; // Clear previous log
+
+  const bytes = new Uint8Array([0x65, 0x43, 0x21]);
+  await WebTxCharacteristic.writeValueWithoutResponse(bytes);
+  console.log("✅ Web sent bytes:", Array.from(bytes).map(b => "0x" + b.toString(16).padStart(2, "0")).join(" "));
 
   const LINES_PER_BLOCK = 8; // Số dòng gửi mỗi lần
   const lines = hexText.split(/\r?\n/);
@@ -299,10 +295,6 @@ async function uploadHexFromText(hexText) {
       }
     }
     if (block.length > 0) {
-      if (isUploadFail) {
-        console.log("Upload process stopped due to error.");
-        return;
-      }
       await sendHEXFile(block);
     }
   }
