@@ -155,17 +155,17 @@ function handleChangedValue(event) {
     const byteLength = event.target.value.byteLength;
     countBytes += byteLength;
     console.log('Received ' + byteLength + ' bytes');
-    logBuffer += "\n";
-    showTerminalMessage("Received " + byteLength + " bytes");
-    logBuffer += "\n";
+    // logBuffer += "\n";
+    // showTerminalMessage("Received " + byteLength + " bytes");
+    // logBuffer += "\n";
     const valueString = new TextDecoder('utf-8').decode(event.target.value).replace(/\r/g, '');
-    if (valueString.endsWith('\n')){
-        console.log('Total bytes (excluding \\n): ' + (countBytes - 2));
-        logBuffer += "\n";
-        showTerminalMessage("Total bytes (excluding \\n): " + (countBytes - 2) + "\n");
-        logBuffer += "\n";
-        countBytes = 0; // reset countBytes sau mỗi dòng
-    }
+    // if (valueString.endsWith('\n')){
+    //     console.log('Total bytes (excluding \\n): ' + (countBytes - 2));
+    //     logBuffer += "\n";
+    //     showTerminalMessage("Total bytes (excluding \\n): " + (countBytes - 2) + "\n");
+    //     logBuffer += "\n";
+    //     countBytes = 0; // reset countBytes sau mỗi dòng
+    // }
     showTerminalMessage(valueString);
     if (checkboxAutoScroll.checked) textArea.scrollTop = textArea.scrollHeight;
 }
