@@ -56,10 +56,8 @@ function requestBluetoothDevice() {
           WebRxCharacteristic = characteristics[2];
           WebRxCharacteristic.addEventListener('characteristicvaluechanged', handleUploadRxChangedValue);
 
-          return Promise.all([
-            LeanbotCharacteristic.startNotifications(),
-            WebRxCharacteristic.startNotifications()
-          ]);
+          return LeanbotCharacteristic.startNotifications()
+            .then(() => WebRxCharacteristic.startNotifications());    
       })
       .catch(error => {
           if (error instanceof DOMException && error.name === 'NotFoundError' && error.message === 'User cancelled the requestDevice() chooser.') {
@@ -72,7 +70,7 @@ function requestBluetoothDevice() {
       });
   }
 }
-
+let isUploadFail = false;
 let string = "";
 function handleUploadRxChangedValue(event) {
   const data = event.target.value;
@@ -80,10 +78,16 @@ function handleUploadRxChangedValue(event) {
   const textDecoder = new TextDecoder('utf-8');
   const valueString = textDecoder.decode(dataArray);
 
+  // Log Debug Information
   if (!sendStartTime) sendStartTime = performance.now(); // fallback if RX happens first
   const relTime = (performance.now() - sendStartTime).toFixed(2);
-
   console.log(`[${relTime}] Web receive "${valueString.replace(/[\r\n]+/g, "\\n")}"`);
+
+  // Check for upload failure
+  if (valueString === "eC!") { // "eC!" =  0x65 0x43 0x21
+    isUploadFail = true; 
+    console.log("❌ Upload failed!");
+  }
 
   string += valueString;
   const lines = string.split(/[\r\n]+/);
@@ -131,8 +135,6 @@ async function sendHEXFile(data) {
   UI("UploaderSendLog").textContent += data;
   UI("UploaderSendLog").scrollTop = UI("UploaderSendLog").scrollHeight;
 
-  
-
   const bytes = hexLineToBytes(data);
 
   if (sendCount === 0) {
@@ -148,7 +150,7 @@ async function sendHEXFile(data) {
   console.log(`[${relStart}] Write #${sendCount} begin`);
 
   await WebTxCharacteristic.writeValueWithoutResponse(bytes);
-
+  
   const t1 = performance.now();
   const relEnd = (t1 - sendStartTime).toFixed(2);
   const duration = (t1 - t0).toFixed(2);
@@ -275,8 +277,10 @@ async function uploadHexFromText(hexText) {
     alert("Device not connected!");
     return;
   }
+
   sendCount = 0;
   sendStartTime = null;
+  isUploadFail = false;
 
   UI("UploaderSendLog").textContent = ""; // Clear previous log
   UI("UploaderRecvLog").textContent = ""; // Clear previous log
@@ -285,6 +289,10 @@ async function uploadHexFromText(hexText) {
   const lines = hexText.split(/\r?\n/);
 
   for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
+    if (isUploadFail) {
+      console.log("Upload process stopped due to error.");
+      break;
+    }
     let block = "";
     for (let j = 0; j < LINES_PER_BLOCK; j++) {
       const lineIndex = i + j;
