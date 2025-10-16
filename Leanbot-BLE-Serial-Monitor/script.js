@@ -147,11 +147,19 @@ setInterval(() => {
     }
 }, 20); // update mỗi 20ms
 
+let countBytes = 0;
+
 // ================== UI Handlers ==================
 function handleChangedValue(event) {
     if (writing) return; // Bỏ qua nếu event do Web ghi -> ESP
-
+    const byteLength = event.target.value.byteLength;
+    countBytes += byteLength;
+    console.log('Received ' + byteLength + ' bytes');
     const valueString = new TextDecoder('utf-8').decode(event.target.value).replace(/\r/g, '');
+    if (valueString.endsWith('\n')){
+        console.log('Total bytes (excluding \\n): ' + (countBytes - 2));
+        countBytes = 0; // reset countBytes sau mỗi dòng
+    }
     showTerminalMessage(valueString);
     if (checkboxAutoScroll.checked) textArea.scrollTop = textArea.scrollHeight;
 }
