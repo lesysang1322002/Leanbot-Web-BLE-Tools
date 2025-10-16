@@ -87,6 +87,7 @@ function handleUploadRxChangedValue(event) {
   if (valueString === "eC!") { // "eC!" =  0x65 0x43 0x21
     isUploadFail = true; 
     console.log("❌ Upload failed!");
+    return;
   }
 
   string += valueString;
@@ -150,7 +151,7 @@ async function sendHEXFile(data) {
   console.log(`[${relStart}] Write #${sendCount} begin`);
 
   await WebTxCharacteristic.writeValueWithoutResponse(bytes);
-  
+
   const t1 = performance.now();
   const relEnd = (t1 - sendStartTime).toFixed(2);
   const duration = (t1 - t0).toFixed(2);
@@ -289,10 +290,6 @@ async function uploadHexFromText(hexText) {
   const lines = hexText.split(/\r?\n/);
 
   for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
-    if (isUploadFail) {
-      console.log("Upload process stopped due to error.");
-      break;
-    }
     let block = "";
     for (let j = 0; j < LINES_PER_BLOCK; j++) {
       const lineIndex = i + j;
@@ -302,6 +299,10 @@ async function uploadHexFromText(hexText) {
       }
     }
     if (block.length > 0) {
+      if (isUploadFail) {
+        console.log("Upload process stopped due to error.");
+        return;
+      }
       await sendHEXFile(block);
     }
   }
