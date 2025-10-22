@@ -5,70 +5,98 @@ let LEANBOT_UUID        = '0000ffe1-0000-1000-8000-00805f9b34fb';
 let WEB_TX_UUID         = '0000ffe2-0000-1000-8000-00805f9b34fb'; 
 let WEB_RX_UUID         = '0000ffe3-0000-1000-8000-00805f9b34fb'; 
 
+// ================== DOM Elements ==================
 
 function isWebBluetoothEnabled() {
   if (!navigator.bluetooth) {
-      console.log('Web Bluetooth API is not available in this browser!');
-      return false;
+    console.log('Web Bluetooth API is not available in this browser!');
+    return false;
   }
   return true;
 }
 
-function requestBluetoothDevice() {
-  if (isWebBluetoothEnabled()){
-      logstatus('Finding...');
-      navigator.bluetooth.requestDevice({
-          filters: [{ services: [SERVICE_UUID] }],
-      })         
-      .then(device => {
-          device.addEventListener('gattserverdisconnected', onDisconnected);
-          Device = device;
-          logstatus("Connect to " + Device.name);
-          console.log('Connecting to', Device);
-          return device.gatt.connect();
-      })
-      .then(server => {
-          console.log('Getting GATT Service...');
-          logstatus('Getting Service...');
-          return server.getPrimaryService(SERVICE_UUID);
-      })
-      .then(service => {
-          console.log('Getting GATT Characteristics...');
-          logstatus('Getting Characteristics...');
-          return Promise.all([
-              service.getCharacteristic(LEANBOT_UUID),
-              service.getCharacteristic(WEB_TX_UUID),       
-              service.getCharacteristic(WEB_RX_UUID)        
-          ]);
-      })
-      .then(characteristics => {
-          logstatusWebName(Device.name);
-          UI("buttonText").innerText = "Rescan";
+async function requestBluetoothDevice() {
+  if (!isWebBluetoothEnabled()) return;
 
-          // Serial Monitor characteristic
-          LeanbotCharacteristic = characteristics[0];
-          LeanbotCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue);
+  try {
+    logstatus('Scanning ...');
 
-          // // TX (Write)
-          WebTxCharacteristic = characteristics[1];
+    // --- 1. Quét và chọn thiết bị ---
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [SERVICE_UUID] }]
+    });
 
-          // // RX (Notify)
-          WebRxCharacteristic = characteristics[2];
-          WebRxCharacteristic.addEventListener('characteristicvaluechanged', handleUploadRxChangedValue);
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+    Device = device;
+    dev    = device; // Biến liên kết với trang Leanbot BLE Serial Monitor
 
-          return LeanbotCharacteristic.startNotifications()
-            .then(() => WebRxCharacteristic.startNotifications());    
-      })
-      .catch(error => {
-          if (error instanceof DOMException && error.name === 'NotFoundError' && error.message === 'User cancelled the requestDevice() chooser.') {
-              console.log("User has canceled the device connection request.");
-              logstatus("SCAN to connect");
-          } else {
-              console.log("Unable to connect to device: " + error);
-              logstatus("ERROR");
-          }
-      });
+    // --- 2. Gọi hàm chung để kết nối ---
+    await connectDevice(device);
+
+  } catch (error) {
+    if (error.name === 'NotFoundError') {
+      console.log("User canceled device selection.");
+      logstatus("No Leanbot connected");
+    } else {
+      console.error("Unable to connect to device:", error);
+      logstatus("ERROR");
+    }
   }
+}
+
+async function connectDevice(device) {
+  try {
+    logstatus(`Connecting to ${device.name}...`);
+    console.log('Connecting to', device);
+
+    // --- 1. Kết nối GATT ---
+    const server = await device.gatt.connect();
+    logstatus('Getting Service...');
+    const service = await server.getPrimaryService(SERVICE_UUID);
+
+    // --- 2. Lấy các đặc tính (characteristics) ---
+    logstatus('Getting Characteristics...');
+    const [leanbot, tx, rx] = await Promise.all([
+      service.getCharacteristic(LEANBOT_UUID),
+      service.getCharacteristic(WEB_TX_UUID),
+      service.getCharacteristic(WEB_RX_UUID)
+    ]);
+
+    // --- 3. Lưu & cấu hình ---
+    LeanbotCharacteristic = leanbot;
+    WebTxCharacteristic = tx;
+    WebRxCharacteristic = rx;
+
+    // Event listener
+    LeanbotCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue);
+    WebRxCharacteristic.addEventListener('characteristicvaluechanged', handleUploadRxChangedValue);
+
+    // --- 4. Bật notify ---
+    await LeanbotCharacteristic.startNotifications();
+    await WebRxCharacteristic.startNotifications();
+
+    // --- 5. Cập nhật UI ---
+    logstatusWebName(device.name);
+    UI("buttonText").innerText = "Rescan";
+
+    return true;
+
+  } catch (error) {
+    console.error("❌ GATT connection failed:", error);
+    logstatus("ERROR");
+    return false;
+  }
+}
+
+async function reconnectBLE() {
+  if (!Device) return;
+
+  if (Device.gatt.connected) return;
+
+  logstatus("Reconnecting to " + Device.name + "...");
+
+  const success = await connectDevice(Device);
+  if (success) resetUIReconnectBtn();
 }
 
 let string = "";
@@ -150,48 +178,6 @@ async function sendHEXFile(data) {
   const duration = (t1 - t0).toFixed(2);
 
   console.log(`[${relEnd}] Write #${sendCount} done`);
-}
-
-
-function logstatus(text){
-  UI('navbarTitle').textContent = text;
-}
-
-function disconnect()
-{
-  logstatus("SCAN to connect");
-  console.log("Disconnected from: " + Device.name);
-  return Device.gatt.disconnect();
-}
-
-function onDisconnected(event) {
-  const device = event.target;
-  logstatus("SCAN to connect");
-  UI('buttonText').innerText = "Scan";
-  console.log(`Device ${device.name} is disconnected.`);
-}
-
-function str2ab(str)
-{
-  var buf = new ArrayBuffer(str.length);
-  var bufView = new Uint8Array(buf);
-  for (var i = 0, l = str.length; i < l; i++) {
-      bufView[i] = str.charCodeAt(i);
-  }
-  return buf;
-}
-
-function toggleFunction() {
-  if (UI('toggleButton').innerText == "Scan") {
-      requestBluetoothDevice();
-      return;
-  } 
-  disconnect();
-  requestBluetoothDevice();
-}
-
-function UI(elmentID) {
-  return document.getElementById(elmentID);
 }
 
 function logstatusWebName(text){

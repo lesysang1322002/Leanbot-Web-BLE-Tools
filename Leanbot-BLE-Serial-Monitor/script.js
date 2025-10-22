@@ -71,7 +71,7 @@ function onDisconnected(event) {
     console.log(`Device ${dev.name} is disconnected.`);
     setTimeout(() => {
       enableReconnectBtn();
-    }, 3000);
+    }, 2500);
 }
 
 function enableReconnectBtn() {
