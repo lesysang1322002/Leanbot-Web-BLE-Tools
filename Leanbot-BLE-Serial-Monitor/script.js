@@ -192,7 +192,7 @@ function handleChangedValue(event) {
     if (writing) return; // Bỏ qua nếu event do Web ghi -> ESP
     const byteLength = event.target.value.byteLength;
     countBytes += byteLength;
-    console.log('Received ' + byteLength + ' bytes');
+    // console.log('Received ' + byteLength + ' bytes');
     const valueString = new TextDecoder('utf-8').decode(event.target.value).replace(/\r/g, '');
     showTerminalMessage(valueString);
     if (checkboxAutoScroll.checked) textArea.scrollTop = textArea.scrollHeight;
