@@ -11,22 +11,13 @@
 <body>
      <!-- ===== NAVBAR ===== -->
     <nav class="navbar" style="padding: 0px 0px;">
-        <button class="btn btn-primary-scan" id="toggleButton" onclick="toggleFunction()" style="padding: 0px 0px">
-            <img src="../image/ble_logo.png" alt="Scan Icon"><span id="buttonText">Scan</span>  
+        <button class="btn btn-primary-scan" id="toggleButton" onclick="toggleFunction()">
+            <img src="../image/ble_logo.png" alt="Scan Icon"><span id="buttonText">Connect to Leanbot...</span>  
         </button>
-        <a class="navbar-brand center-text" href="#" id="navbarTitle" style="color: red; font-weight: bold;">SCAN to connect</a>
-        <div class="info-container">
-            <button id="infoButton"><i class="fas fa-info-circle"></i></button>
-            <div class="info-content" id="infoContent">
-                <h6><strong>Leanbot IoT</strong></h6>
-                <h6><strong>Device: JDY-33</strong></h6>
-                <h6>Service UUID: 0000ffe0-0000-1000-8000-00805f9b34fb</h6>
-                <h6>Characteristic UUID: 0000ffe1-0000-1000-8000-00805f9b34fb</h6>
-                <footer class="text-center py-2" style="color: red">
-                    &copy; DTT V.1.1
-                </footer>
-            </div>
-        </div>
+        <a class="navbar-brand" href="#" id="navbarTitle" style="color: rgb(218, 79, 79)">No Leanbot connected</a>
+        <button class="btn" id="BtnReconnect" onclick="reconnectBLE()">
+            Reconnect
+        </button>
     </nav>
 
     <div class="split-container">

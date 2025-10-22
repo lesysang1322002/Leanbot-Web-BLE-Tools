@@ -11,7 +11,6 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: relative;
 }
 
 #navbarTitle {
@@ -20,6 +19,7 @@ body {
   transform: translateX(-50%);
   margin: 0 auto;
   font-size: 15px;
+  font-weight: bold;
 }
 
 .btn-primary {
@@ -36,7 +36,7 @@ body {
   color: #ffffff !important;
   background-color: #2c5f85 !important;
   border-color: #000000 !important;
-  width: 80px;
+  width: auto;
   height: auto;
 }
 
@@ -324,3 +324,10 @@ p {
 #uploadAdvanceBtn:hover {
   background: #1b3c57;
 }
+
+#BtnReconnect{
+  background-color: #6e7173;
+  color: #ffffff;
+  font-weight: bold;
+}
+
