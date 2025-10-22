@@ -30,37 +30,31 @@ function isWebBluetoothEnabled() {
     return true;
 }
 
-function requestBluetoothDevice() {
-    if (!isWebBluetoothEnabled()) return;
+async function requestBluetoothDevice() {
+  if (!isWebBluetoothEnabled()) return;
 
-    logstatus('Finding...');
-    navigator.bluetooth.requestDevice({ filters: [{ services: [bleService] }] })
-        .then(device => {
-            device.addEventListener('gattserverdisconnected', onDisconnected);
-            dev = device;
-            logstatus("Connect to " + dev.name);
-            return device.gatt.connect();
-        })
-        .then(server => server.getPrimaryService(bleService))
-        .then(service => service.getCharacteristic(bleCharacteristic))
-        .then(characteristic => {
-            gattCharacteristic = characteristic;
-            gattCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue);
-            return gattCharacteristic.startNotifications();
-        })
-        .then(() => {
-            logstatus(dev.name);
-            buttonTextScan.innerText = "Rescan";
-        })
-        .catch(error => {
-            if (error.name === 'NotFoundError') {
-                logstatus("Scan to connect");
-                console.log("Người dùng đã hủy yêu cầu kết nối thiết bị.");
-            } else {
-                logstatus("ERROR");
-                console.error("Không thể kết nối với thiết bị:", error);
-            }
-        });
+  logstatus('Scanning...');
+
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [bleService] }]
+    });
+
+    dev = device;
+    dev.addEventListener('gattserverdisconnected', onDisconnected);
+    logstatus("Connecting to " + dev.name);
+
+    await connectDevice(dev);
+
+  } catch (error) {
+    if (error.name === 'NotFoundError') {
+      logstatus("No Leanbot connected");
+      console.log("Người dùng đã hủy yêu cầu kết nối thiết bị.");
+    } else {
+      logstatus("ERROR");
+      console.error("Không thể kết nối với thiết bị:", error);
+    }
+  }
 }
 
 function disconnect() {
@@ -71,10 +65,23 @@ function disconnect() {
 }
 
 function onDisconnected(event) {
-    logstatus("SCAN to connect");
-    buttonTextScan.innerText = "Scan";
+    logstatus("No Leanbot connected");
+    buttonTextScan.innerText = "Connect to Leanbot...";
     resetPage();
     console.log(`Device ${dev.name} is disconnected.`);
+    setTimeout(() => {
+      enableReconnectBtn();
+    }, 3000);
+}
+
+function enableReconnectBtn() {
+    UI('BtnReconnect').textContent = "Reconnect " + dev.name;
+    UI('BtnReconnect').style.backgroundColor = '#4CAF50';
+}
+
+function resetUIReconnectBtn() {
+    UI('BtnReconnect').textContent = "Reconnect";
+    UI('BtnReconnect').style.backgroundColor = '#6e7173';
 }
 
 function resetPage() {
@@ -82,6 +89,37 @@ function resetPage() {
     isFromWeb = false;
     lastTimestamp = null;
     nextIsNewline = true;
+}
+
+async function connectDevice(device) {
+  try {
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService(bleService);
+    const characteristic = await service.getCharacteristic(bleCharacteristic);
+
+    gattCharacteristic = characteristic;
+    gattCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue);
+    await gattCharacteristic.startNotifications();
+
+    logstatus(device.name);
+    buttonTextScan.innerText = "Rescan";
+    return true;
+  } catch (error) {
+    console.error("Không thể kết nối GATT:", error);
+    logstatus("ERROR");
+    return false;
+  }
+}
+
+async function reconnectBLE() {
+  if (!dev) return;
+
+  if (dev.gatt.connected) return;
+
+  logstatus("Reconnecting to " + dev.name + "...");
+
+  const success = await connectDevice(dev);
+  if (success) resetUIReconnectBtn();
 }
 
 async function sendTestData(N) {
@@ -100,7 +138,7 @@ async function sendTestData(N) {
   console.log(`Gửi ${N} byte...`);
   console.log(testString);
 
-  await gattCharacteristic.writeValue(str2ab(testString));
+  await gattCharacteristic.writeValueWithoutResponse(str2ab(testString));
 }
 
 let writing = false;
@@ -147,19 +185,15 @@ setInterval(() => {
     }
 }, 20); // update mỗi 20ms
 
-// let countBytes = 0;
+let countBytes = 0;
 
 // ================== UI Handlers ==================
 function handleChangedValue(event) {
     if (writing) return; // Bỏ qua nếu event do Web ghi -> ESP
-    // const byteLength = event.target.value.byteLength;
-    // countBytes += byteLength;
-    // console.log('Received ' + byteLength + ' bytes');
+    const byteLength = event.target.value.byteLength;
+    countBytes += byteLength;
+    console.log('Received ' + byteLength + ' bytes');
     const valueString = new TextDecoder('utf-8').decode(event.target.value).replace(/\r/g, '');
-    // if (valueString.endsWith('\n')){
-    //     console.log('Total bytes (excluding \\n): ' + (countBytes - 2));
-    //     countBytes = 0; // reset countBytes sau mỗi dòng
-    // }
     showTerminalMessage(valueString);
     if (checkboxAutoScroll.checked) textArea.scrollTop = textArea.scrollHeight;
 }
@@ -226,10 +260,10 @@ function showTerminalMessage(text) {
 }
 
 function toggleFunction() {
-    if (buttonTextScan.innerText === "Scan") {
+    if (buttonTextScan.innerText === "Connect to Leanbot...") {
         requestBluetoothDevice();
     } else {
-        buttonTextScan.innerText = "Scan";
+        buttonTextScan.innerText = "Connect to Leanbot...";
         disconnect();
         requestBluetoothDevice();
         nextIsNewline = true;
@@ -252,14 +286,14 @@ function copyToClipboard() {
 }
 
 // ================== Info popup ==================
-document.addEventListener('DOMContentLoaded', () => {
-    const infoButton  = UI('infoButton');
-    const infoContent = UI('infoContent');
+// document.addEventListener('DOMContentLoaded', () => {
+//     const infoButton  = UI('infoButton');
+//     const infoContent = UI('infoContent');
 
-    infoButton.addEventListener('click', e => {
-        e.stopPropagation();
-        infoContent.style.display = infoContent.style.display === 'block' ? 'none' : 'block';
-    });
+//     infoButton.addEventListener('click', e => {
+//         e.stopPropagation();
+//         infoContent.style.display = infoContent.style.display === 'block' ? 'none' : 'block';
+//     });
 
-    document.addEventListener('click', () => infoContent.style.display = 'none');
-});
+//     document.addEventListener('click', () => infoContent.style.display = 'none');
+// });
