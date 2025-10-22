@@ -282,7 +282,7 @@ async function uploadHexFromText(hexText) {
   await WebTxCharacteristic.writeValueWithoutResponse(bytes);
   console.log("✅ Web sent bytes:", Array.from(bytes).map(b => "0x" + b.toString(16).padStart(2, "0")).join(" "));
 
-  const LINES_PER_BLOCK = 24; // Số dòng gửi mỗi lần
+  const LINES_PER_BLOCK = 8; // Số dòng gửi mỗi lần
   const lines = hexText.split(/\r?\n/);
 
   for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
