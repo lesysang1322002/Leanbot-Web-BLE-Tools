@@ -123,23 +123,12 @@ function handleUploadRxChangedValue(event) {
 }
 
 function hexLineToBytes(block) {
-  // Tách block thành từng dòng, loại bỏ dòng trống và khoảng trắng
-  const lines = block.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-
   const bytes = [];
-
-  for (const line of lines) {
-    // Mỗi dòng Intel HEX bắt đầu bằng dấu ':', loại bỏ nếu có
-    let hex = line.startsWith(":") ? line.slice(1) : line;
-
-    // Duyệt từng cặp ký tự hex trong dòng
-    for (let i = 0; i < hex.length; i += 2) {
-      const byte = parseInt(hex.substr(i, 2), 16);
-      if (!isNaN(byte)) bytes.push(byte);
-    }
+  for (let i = 0; i < block.length; i += 2) {
+    const byte = parseInt(block.substr(i, 2), 16);
+    if (!isNaN(byte)) bytes.push(byte);
   }
 
-  // Trả về mảng Uint8Array gồm tất cả bytes của các dòng trong block
   return new Uint8Array(bytes);
 }
 
@@ -152,10 +141,6 @@ async function sendHEXFile(data) {
     console.log("[ERROR] GATT Characteristic not found.");
     return;
   }
-
-  // Display current line on UI
-  UI("UploaderSendLog").textContent += data;
-  UI("UploaderSendLog").scrollTop = UI("UploaderSendLog").scrollHeight;
 
   const bytes = hexLineToBytes(data);
 
@@ -255,36 +240,85 @@ function send() {
 async function uploadHexFromText(hexText) {
   if (!WebTxCharacteristic) {
     alert("Device not connected!");
+    console.log("Device not connected!");
     return;
   }
 
-  sendCount = 0;
-  sendStartTime = null;
+  sendCount = 0;        // Reset send counters
+  sendStartTime = null; // Reset start time
+  // Clear previous logs
+  UI("UploaderSendLog").textContent = "";
+  UI("UploaderRecvLog").textContent = "";
 
-  UI("UploaderSendLog").textContent = ""; // Clear previous log
-  UI("UploaderRecvLog").textContent = ""; // Clear previous log
+  // ---- 1. Gửi START HEADER ----
+  const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
+  await WebTxCharacteristic.writeValueWithoutResponse(startHeader);
+  console.log("Web sent START header:", Array.from(startHeader).map(b => "0x" + b.toString(16).padStart(2, "0")).join(" "));
 
-  const bytes = new Uint8Array([0x65, 0x43, 0x21]);
-  await WebTxCharacteristic.writeValueWithoutResponse(bytes);
-  console.log("✅ Web sent bytes:", Array.from(bytes).map(b => "0x" + b.toString(16).padStart(2, "0")).join(" "));
+  // ---- 2. Chuẩn bị dữ liệu ----
+  const LINES_PER_BLOCK = 8;
+  const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
 
-  const LINES_PER_BLOCK = 8; // Số dòng gửi mỗi lần
-  const lines = hexText.split(/\r?\n/);
+  let sequence = 0;
 
   for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
     let block = "";
+    let rawPreview = ""; // phần hiển thị lên UI (raw)
+
     for (let j = 0; j < LINES_PER_BLOCK; j++) {
       const lineIndex = i + j;
       if (lineIndex < lines.length) {
-        const line = lines[lineIndex].trim();
-        if (line.length > 0) block += line + "\n";
+        const rawLine = lines[lineIndex].trim();
+
+        // ---- 3. Kiểm tra checksum & record type ----
+        if (!rawLine.startsWith(":")) continue;
+
+        rawPreview += rawLine + "\n";
+
+        const dataBytes = rawLine.slice(1); // bỏ dấu ':'
+
+        const byteCount = parseInt(dataBytes.substr(0, 2), 16);
+        const address = dataBytes.substr(2, 4);
+        const recordType = dataBytes.substr(6, 2);
+        const data = dataBytes.substr(8, byteCount * 2);
+        const checksum = parseInt(dataBytes.substr(8 + byteCount * 2, 2), 16);
+
+        // Tính lại checksum để kiểm tra
+        const allBytes = [];
+        for (let k = 0; k < 4 + byteCount; k++) {
+          allBytes.push(parseInt(dataBytes.substr(k * 2, 2), 16));
+        }
+        const sum = allBytes.reduce((a, b) => a + b, 0);
+        const calcChecksum = ((~sum + 1) & 0xFF);
+
+        if (calcChecksum !== checksum) {
+          console.warn(`Checksum mismatch at line ${lineIndex}: expected ${checksum.toString(16)}, got ${calcChecksum.toString(16)}`);
+          continue; // bỏ qua line lỗi
+        }
+
+        // Bỏ record type và checksum (giữ lại byteCount + address + data)
+        const trimmedLine = dataBytes.substr(0, 6) + data; // còn lại 19 bytes (thay vì 21)
+
+        block += trimmedLine;
       }
     }
+
+     // ---- Hiển thị raw lines trên UI ----
+    UI("UploaderSendLog").textContent += rawPreview;
+    UI("UploaderSendLog").scrollTop = UI("UploaderSendLog").scrollHeight;
+
     if (block.length > 0) {
-      await sendHEXFile(block);
+      // ---- 4. Thêm Sequence Number ----
+      const header = sequence.toString(16).padStart(2, "0").toUpperCase(); // 1 byte
+      const payload = header + block;
+
+      await sendHEXFile(payload);
+
+      sequence++;
     }
   }
-  console.log("✅ Upload completed");
+
+  console.log("Upload completed");
 }
 
 // ==== NÚT Send to LbESP32 ====
