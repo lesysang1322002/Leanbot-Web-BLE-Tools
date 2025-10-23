@@ -236,6 +236,35 @@ function send() {
   MsgSend.value = "";
 }
 
+// ==== Giải mã 1 dòng Intel HEX ====
+function parseHexLine(line) {
+  if (!line.startsWith(":")) return null;
+
+  const hex = line.slice(1); // bỏ dấu ':'
+  const length = parseInt(hex.substr(0, 2), 16);
+  const address = parseInt(hex.substr(2, 4), 16);
+  const recordType = hex.substr(6, 2);
+  const data = hex.substr(8, length * 2);
+  const checksum = parseInt(hex.substr(8 + length * 2, 2), 16);
+
+  return { length, address, recordType, data, checksum, hex };
+}
+
+// ==== Kiểm tra checksum ====
+function verifyChecksum(parsed) {
+  const { hex, length, checksum } = parsed;
+  const allBytes = [];
+
+  for (let i = 0; i < 4 + length; i++) {
+    allBytes.push(parseInt(hex.substr(i * 2, 2), 16));
+  }
+
+  const sum = allBytes.reduce((a, b) => a + b, 0);
+  const calcChecksum = ((~sum + 1) & 0xFF);
+
+  return calcChecksum === checksum;
+}
+
 // ==== HÀM GỬI FILE HEX TỔNG QUÁT ====
 async function uploadHexFromText(hexText) {
   if (!WebTxCharacteristic) {
@@ -244,9 +273,8 @@ async function uploadHexFromText(hexText) {
     return;
   }
 
-  sendCount = 0;        // Reset send counters
-  sendStartTime = null; // Reset start time
-  // Clear previous logs
+  sendCount = 0;        // Reset bộ đếm
+  sendStartTime = null; // Reset thời gian
   UI("UploaderSendLog").textContent = "";
   UI("UploaderRecvLog").textContent = "";
 
@@ -258,67 +286,66 @@ async function uploadHexFromText(hexText) {
   // ---- 2. Chuẩn bị dữ liệu ----
   const LINES_PER_BLOCK = 8;
   const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
-
   let sequence = 0;
 
-  for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
-    let block = "";
-    let rawPreview = ""; // phần hiển thị lên UI (raw)
+  for (let i = 0; i < lines.length;) {
+    const rawLine = lines[i].trim();
+    const parsed = parseHexLine(rawLine);
+    if (!parsed) { i++; continue; }
+    if (!verifyChecksum(parsed)) { console.warn(`Checksum mismatch at line ${i}`); i++; continue; }
 
-    for (let j = 0; j < LINES_PER_BLOCK; j++) {
-      const lineIndex = i + j;
-      if (lineIndex < lines.length) {
-        const rawLine = lines[lineIndex].trim();
+    // Dòng đầu giữ nguyên length + address + data
+    let baseLen = parsed.length;
+    let currentAddr = parsed.address;
+    let block = parsed.hex.substr(0, 6) + parsed.data; // giữ lại length + address + data
+    let rawPreview = lines[i] + "\n";
+    let lineCount = 1;
 
-        // ---- 3. Kiểm tra checksum & record type ----
-        if (!rawLine.startsWith(":")) continue;
+    // ---- Ghép thêm tối đa 7 dòng tiếp theo ----
+    for (let j = i + 1; j < lines.length && lineCount < LINES_PER_BLOCK; j++) {
+      const nextLine = lines[j].trim();
+      const nParsed = parseHexLine(nextLine);
 
-        rawPreview += rawLine + "\n";
-
-        const dataBytes = rawLine.slice(1); // bỏ dấu ':'
-
-        const byteCount = parseInt(dataBytes.substr(0, 2), 16);
-        const address = dataBytes.substr(2, 4);
-        const recordType = dataBytes.substr(6, 2);
-        const data = dataBytes.substr(8, byteCount * 2);
-        const checksum = parseInt(dataBytes.substr(8 + byteCount * 2, 2), 16);
-
-        // Tính lại checksum để kiểm tra
-        const allBytes = [];
-        for (let k = 0; k < 4 + byteCount; k++) {
-          allBytes.push(parseInt(dataBytes.substr(k * 2, 2), 16));
-        }
-        const sum = allBytes.reduce((a, b) => a + b, 0);
-        const calcChecksum = ((~sum + 1) & 0xFF);
-
-        if (calcChecksum !== checksum) {
-          console.warn(`Checksum mismatch at line ${lineIndex}: expected ${checksum.toString(16)}, got ${calcChecksum.toString(16)}`);
-          continue; // bỏ qua line lỗi
-        }
-
-        // Bỏ record type và checksum (giữ lại byteCount + address + data)
-        const trimmedLine = dataBytes.substr(0, 6) + data; // còn lại 19 bytes (thay vì 21)
-
-        block += trimmedLine;
+      if (!nParsed) break;
+      if (!verifyChecksum(nParsed)) { 
+        console.warn(`Checksum mismatch at line ${j}`);
+        j++;
+        continue;
       }
+
+      const expectedAddr = currentAddr + baseLen;
+      const nLen = nParsed.length;
+      const nAddr = nParsed.address;
+
+      // Nếu length khác hoặc address không liền kề → dừng ghép
+      if (nLen !== baseLen || nAddr !== expectedAddr) break;
+
+      // Nối phần data, không gửi lại length + address
+      block += nParsed.data;
+      rawPreview += lines[j] + "\n";
+
+      currentAddr = nAddr;
+      lineCount++;
+      i = j; // dịch i theo j
     }
 
-     // ---- Hiển thị raw lines trên UI ----
+    // Cập nhật i sang dòng tiếp theo
+    i++;
+
+    // ---- Hiển thị log lên UI ----
     UI("UploaderSendLog").textContent += rawPreview;
     UI("UploaderSendLog").scrollTop = UI("UploaderSendLog").scrollHeight;
 
+    // ---- 3. Gửi block qua BLE ----
     if (block.length > 0) {
-      // ---- 4. Thêm Sequence Number ----
-      const header = sequence.toString(16).padStart(2, "0").toUpperCase(); // 1 byte
+      const header = sequence.toString(16).padStart(2, "0").toUpperCase(); // Sequence number
       const payload = header + block;
-
       await sendHEXFile(payload);
-
       sequence++;
     }
   }
 
-  console.log("Upload completed");
+  console.log("Upload completed!");
 }
 
 // ==== NÚT Send to LbESP32 ====
