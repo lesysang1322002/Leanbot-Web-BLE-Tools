@@ -1,5 +1,5 @@
 // leanbot_ble.js
-import { log, delay } from "https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/sdk_leanbot/leanbot_utils.js";
+import { log } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_utils.js";
 
 export class LeanbotBLE {
   constructor() {

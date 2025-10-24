@@ -1,6 +1,6 @@
 // main.js
-import { LeanbotBLE } from "https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/sdk_leanbot/leanbot_ble.js";
-import { log } from "https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/sdk_leanbot/leanbot_utils.js";
+import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
+import { log } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_utils.js";
 
 const bot = new LeanbotBLE();
 
