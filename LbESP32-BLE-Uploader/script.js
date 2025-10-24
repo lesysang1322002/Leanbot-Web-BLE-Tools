@@ -284,7 +284,7 @@ async function uploadHexFromText(hexText) {
   console.log("Web sent START header:", Array.from(startHeader).map(b => "0x" + b.toString(16).padStart(2, "0")).join(" "));
 
   // ---- 2. Chuẩn bị dữ liệu ----
-  const LINES_PER_BLOCK = 8;
+  const LINES_PER_BLOCK = 14;
   const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
   let sequence = 0;
 
