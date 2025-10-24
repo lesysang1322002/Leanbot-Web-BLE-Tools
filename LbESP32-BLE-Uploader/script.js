@@ -297,7 +297,7 @@ async function uploadHexFromText(hexText) {
     // Dòng đầu giữ nguyên length + address + data
     let baseLen = parsed.length;
     let currentAddr = parsed.address;
-    let block = parsed.hex.substr(0, 6) + parsed.data; // giữ lại length + address + data
+    let block = parsed.hex.substr(2, 4) + parsed.data; // giữ lại address + data
     let rawPreview = lines[i] + "\n";
     let lineCount = 1;
 
@@ -341,6 +341,14 @@ async function uploadHexFromText(hexText) {
       const header = sequence.toString(16).padStart(2, "0").toUpperCase(); // Sequence number
       const payload = header + block;
       await sendHEXFile(payload);
+      // const now = new Date().toLocaleTimeString("en-GB", { hour12: false });
+      // console.log(
+      //   `[${now}] Seq=${sequence
+      //     .toString(16)
+      //     .toUpperCase()
+      //     .padStart(2, '0')} (${payload.length / 2} bytes)` // bytes HEX
+      // );
+
       sequence++;
     }
   }
