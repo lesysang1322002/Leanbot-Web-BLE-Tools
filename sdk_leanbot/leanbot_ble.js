@@ -1,5 +1,5 @@
 // leanbot_ble.js
-import { delay, log } from "./leanbot_utils.js";
+import { log, delay } from "https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/sdk_leanbot/leanbot_utils.js";
 
 export class LeanbotBLE {
   constructor() {
@@ -72,45 +72,45 @@ export class LeanbotBLE {
     return this.device ? `${this.device.name} BLE` : "No device connected";
   }
 
-  // ---------------- SERIAL ----------------
-  async #sendSerial(msg) {
-    if (!this.txChar) {
-      log("Serial characteristic not available");
-      return;
-    }
-    const bytes = new TextEncoder().encode(msg);
-    await this.txChar.writeValueWithoutResponse(bytes);
-    log(`[Serial] Sent: ${msg}`);
-  }
+//   // ---------------- SERIAL ----------------
+//   async #sendSerial(msg) {
+//     if (!this.txChar) {
+//       log("Serial characteristic not available");
+//       return;
+//     }
+//     const bytes = new TextEncoder().encode(msg);
+//     await this.txChar.writeValueWithoutResponse(bytes);
+//     log(`[Serial] Sent: ${msg}`);
+//   }
 
-  // ---------------- UPLOADER ----------------
-  async #uploadHEX(hexText) {
-    if (!this.txChar) {
-      log("Upload characteristic not available");
-      return;
-    }
+//   // ---------------- UPLOADER ----------------
+//   async #uploadHEX(hexText) {
+//     if (!this.txChar) {
+//       log("Upload characteristic not available");
+//       return;
+//     }
 
-    const lines = hexText.split(/\r?\n/).filter((l) => l.trim().length > 0);
-    const LINES_PER_BLOCK = 8;
+//     const lines = hexText.split(/\r?\n/).filter((l) => l.trim().length > 0);
+//     const LINES_PER_BLOCK = 8;
 
-    // Gửi header START
-    const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
-    await this.txChar.writeValueWithoutResponse(startHeader);
-    log("⬆️ Upload started");
+//     // Gửi header START
+//     const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
+//     await this.txChar.writeValueWithoutResponse(startHeader);
+//     log("⬆️ Upload started");
 
-    let seq = 0;
-    for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
-      const blockLines = lines.slice(i, i + LINES_PER_BLOCK).join("\n");
-      const blockBytes = new TextEncoder().encode(seq.toString().padStart(2, "0") + ":" + blockLines);
+//     let seq = 0;
+//     for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
+//       const blockLines = lines.slice(i, i + LINES_PER_BLOCK).join("\n");
+//       const blockBytes = new TextEncoder().encode(seq.toString().padStart(2, "0") + ":" + blockLines);
 
-      await this.txChar.writeValueWithoutResponse(blockBytes);
-      if (this.Uploader.OnUploadMessage)
-        this.Uploader.OnUploadMessage(`Sent block #${seq}`);
+//       await this.txChar.writeValueWithoutResponse(blockBytes);
+//       if (this.Uploader.OnUploadMessage)
+//         this.Uploader.OnUploadMessage(`Sent block #${seq}`);
 
-      seq++;
-      await delay(5);
-    }
+//       seq++;
+//       await delay(5);
+//     }
 
-    log("✅ Upload completed");
-  }
+//     log("✅ Upload completed");
+//   }
 }
