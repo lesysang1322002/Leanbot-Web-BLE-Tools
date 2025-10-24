@@ -3,13 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <title>Leanbot BLE Test API</title>
+  <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
   <h2>Leanbot BLE Test API</h2>
-  <button id="connectBtn">Connect</button>
-  <button id="sendBtn">Send Serial</button>
-  <button id="uploadBtn">Upload HEX</button>
-  <pre id="log" style="background:#000;color:#0f0;padding:10px;height:300px;overflow:auto;"></pre>
+
+  <h3>Device A</h3>
+  <button id="connectBtnA">Connect A</button>
+  <button id="disconnectBtnA">Disconnect A</button>
+  <button id="reconnectBtnA">Reconnect A</button>
+  <button id="rescanBtnA">Rescan A</button>
+  <button id="checkConnA">Check Connection A</button>
+  <button id="getIDBtnA">Get ID A</button>
+
+  <h3>Device B</h3>
+  <button id="connectBtnB">Connect B</button>
+  <button id="disconnectBtnB">Disconnect B</button>
+
+  <pre id="log"></pre>
 
   <script type="module" src="./main.js"></script>
 </body>

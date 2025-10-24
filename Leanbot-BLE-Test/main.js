@@ -1,17 +1,31 @@
 // main.js
-import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
-import { log } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_utils.js";
+import { LeanbotBLE } from "./leanbot_ble.js";
+import { log, UI } from "./leanbot_utils.js";
 
-const bot = new LeanbotBLE();
+const botA = new LeanbotBLE();
+const botB = new LeanbotBLE();
 
-bot.OnConnect = (dev) => log(`Connected to ${dev.name}`);
-bot.OnDisconnect = (dev) => log(`Disconnected from ${dev.name}`);
-bot.Serial.OnSerialMessage = (msg) => log(`[Serial] ${msg}`);
-bot.Uploader.OnUploadMessage = (msg) => log(`[Upload] ${msg}`);
+botA.OnConnect = (dev) => log(`Callback: ${dev.name} ready`);
+botA.OnDisconnect = (dev) => log(`Callback: Disconnected from ${dev.name}`);
 
-document.getElementById("connectBtn").onclick = () => bot.Connect();
-document.getElementById("sendBtn").onclick = () => bot.Serial.SendSerialMessage("Hello Leanbot!");
-document.getElementById("uploadBtn").onclick = async () => {
-  const hex = ":100000000C945C000C946E000C946E000C946E00A4\n:00000001FF";
-  await bot.Uploader.Upload(hex);
+// ====== BUTTON EVENTS (Device A) ======
+UI("connectBtnA").onclick = () => botA.Connect();
+UI("disconnectBtnA").onclick = () => botA.Disconnect();
+UI("reconnectBtnA").onclick = () => botA.Reconnect();
+UI("rescanBtnA").onclick = () => botA.Rescan();
+
+UI("checkConnA").onclick = () => {
+  const state = botA.IsConnected() ? "Connected" : "Not connected";
+  log(`[A] State: ${state}`);
 };
+
+UI("getIDBtnA").onclick = () => {
+  log(`[A] ID: ${botA.getLeanbotID()}`);
+};
+
+// ====== BUTTON EVENTS (Device B - chỉ kết nối cơ bản) ======
+UI("connectBtnB").onclick = () => botB.Connect();
+UI("disconnectBtnB").onclick = () => botB.Disconnect();
+
+botB.OnConnect = (dev) => log(`Callback: ${dev.name} ready`);
+botB.OnDisconnect = (dev) => log(`Callback: Disconnected from ${dev.name}`);
