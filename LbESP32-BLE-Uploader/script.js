@@ -314,11 +314,10 @@ async function uploadHexFromText(hexText) {
       }
 
       const expectedAddr = currentAddr + baseLen;
-      const nLen = nParsed.length;
       const nAddr = nParsed.address;
 
-      // Nếu length khác hoặc address không liền kề → dừng ghép
-      if (nLen !== baseLen || nAddr !== expectedAddr) break;
+      // Nếu address không liền kề → dừng ghép
+      if (nAddr !== expectedAddr) break;
 
       // Nối phần data, không gửi lại length + address
       block += nParsed.data;
