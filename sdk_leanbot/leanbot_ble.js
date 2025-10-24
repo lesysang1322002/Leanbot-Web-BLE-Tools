@@ -12,16 +12,16 @@ export class LeanbotBLE {
     this.OnConnect = null;
     this.OnDisconnect = null;
 
-    // --- Submodules ---
-    this.Serial = {
-      SendSerialMessage: async (msg) => this.#sendSerial(msg),
-      OnSerialMessage: null,
-    };
+    // // --- Submodules ---
+    // this.Serial = {
+    //   SendSerialMessage: async (msg) => this.#sendSerial(msg),
+    //   OnSerialMessage: null,
+    // };
 
-    this.Uploader = {
-      Upload: async (hexText) => this.#uploadHEX(hexText),
-      OnUploadMessage: null,
-    };
+    // this.Uploader = {
+    //   Upload: async (hexText) => this.#uploadHEX(hexText),
+    //   OnUploadMessage: null,
+    // };
   }
 
   // ---------------- BLE CORE ----------------
