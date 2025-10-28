@@ -207,12 +207,18 @@ export class LeanbotBLE {
   async Rescan() {
     try {
       utils.log("Rescanning BLE device...");
+      if (!this.device) {
+        utils.log("No previous device found to rescan.");
+        return;
+      }
       this.Disconnect();
       await this.Connect();
+      utils.log("Rescan completed.");
     } catch (e) {
       utils.log("Rescan failed: " + e);
     }
   }
+
 
   IsConnected() {
     return this.device?.gatt.connected === true;
