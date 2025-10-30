@@ -3,202 +3,297 @@ import * as utils from "./leanbot_utils.js";
 
 export class LeanbotBLE {
 
-  // ===== UUID BLE MẶC ĐỊNH =====
-  static SERVICE_UUID   = '0000ffe0-0000-1000-8000-00805f9b34fb';
-  static CHAR_UUID      = '0000ffe1-0000-1000-8000-00805f9b34fb';
-  static ESP32_RX       = '0000ffe2-0000-1000-8000-00805f9b34fb';
-  static ESP32_TX       = '0000ffe3-0000-1000-8000-00805f9b34fb';
+  // ===== SERVICE UUID CHUNG =====
+  static SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
 
+  // ---- PRIVATE MEMBERS ----
+  #device = null;
+  #server = null;
+  #service = null;
+  #chars = {};
+  
   constructor() {
-    this.device = null;
-    this.server = null;
-    this.service = null;
-    this.char = null;
-
     this.OnConnect = null;
     this.OnDisconnect = null;
 
-    // --- Submodules ---
-  this.Serial = {
-    /** Đăng ký callback nhận notify cho từng UUID */
-    OnMessage: (uuid, callback) => {
-      if (!this._onMessageMap) this._onMessageMap = {};
-      this._onMessageMap[uuid.toLowerCase()] = callback;
-    },
+    // ======================================================
+    // 🔹 SUBMODULE: SERIAL
+    // ======================================================
+    this.Serial = {
+      // UUID riêng của Serial
+      get UUID() {
+        return '0000ffe1-0000-1000-8000-00805f9b34fb';
+      },
 
-    /** Gửi dữ liệu qua characteristic có hỗ trợ write */
-    Send: async (uuid, data) => {
-      try {
-        const char = this.chars?.[uuid.toLowerCase()];
-        if (!char) return utils.log(`Send Error: characteristic ${uuid} not found`);
-        const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
-        await char.writeValue(buffer);
-        utils.log(`[${uuid}] Sent (${buffer.length} bytes)`);
-      } catch (e) {
-        utils.log(`Send Error: ${e}`);
-      }
-    },
+      /** Callback khi nhận notify Serial */
+      OnMessage: null,
 
-    /** Gửi nhanh (không chờ phản hồi, tốc độ cao hơn) */
-    SendWithoutResponse: async (uuid, data) => {
-      try {
-        const char = this.chars?.[uuid.toLowerCase()];
-        if (!char) return utils.log(`Send Error: characteristic ${uuid} not found`);
-        const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
-        await char.writeValueWithoutResponse(buffer);
-        utils.log(`[${uuid}] SentWithoutResponse (${buffer.length} bytes)`);
-      } catch (e) {
-        utils.log(`SendWithoutResponse Error: ${e}`);
-      }
-    },
-  };
+      /** Gửi dữ liệu qua đặc tính Serial mặc định (UUID) */
+      Send: async (data) => {
+        try {
+          const uuid = this.Serial.UUID.toLowerCase();
+          const char = this.#chars?.[uuid];
+          if (!char) return utils.log(`Serial.Send Error: characteristic ${uuid} not found`);
 
-  // --- Submodules ---
-  this.Uploader = {
-    /**
-     * Upload nội dung HEX qua BLE (blocking until done)
-     * @param {string} hexText - nội dung file .hex
-     */
-    Upload: async (hexText) => {
-      if (!this.chars || !this.chars[LeanbotBLE.ESP32_RX]) {
-        utils.log("Uploader Error: RX characteristic not found.");
-        return;
-      }
+          const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
+          await char.writeValue(buffer);
+          utils.log(`[Serial] Sent (${buffer.length} bytes)`);
+        } catch (e) {
+          utils.log(`Serial.Send Error: ${e}`);
+        }
+      },
 
-      const rxChar = this.chars[LeanbotBLE.ESP32_RX];
-      const LINES_PER_BLOCK = 14;
-      const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
+      /** Gửi nhanh (không chờ phản hồi, tốc độ cao hơn) */
+      SendWithoutResponse: async (data) => {
+        try {
+          const uuid = this.Serial.UUID.toLowerCase();
+          const char = this.#chars?.[uuid];
+          if (!char) return utils.log(`Serial.SendWithoutResponse Error: characteristic ${uuid} not found`);
 
-      utils.log("Uploader: Start uploading HEX...");
-      const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
-      await rxChar.writeValueWithoutResponse(startHeader);
-      utils.log("Uploader: Sent START header");
+          const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
+          await char.writeValueWithoutResponse(buffer);
+          utils.log(`[Serial] SentWithoutResponse (${buffer.length} bytes)`);
+        } catch (e) {
+          utils.log(`Serial.SendWithoutResponse Error: ${e}`);
+        }
+      },
 
-      let sequence = 0;
-      for (let i = 0; i < lines.length;) {
-        const rawLine = lines[i].trim();
-        const parsed = utils.parseHexLine(rawLine);
-        if (!parsed || !utils.verifyChecksum(parsed)) { i++; continue; }
+      enableNotify: async () => {
+        const uuid = this.Serial.UUID;
+        const char = this.#chars?.[uuid];
+        if (!char) return utils.log("Serial Notify: UUID not found");
+        if (!char.properties.notify) return utils.log("Serial Notify: Not supported");
 
-        // Ghép các dòng liên tiếp
-        let block = parsed.hex.substr(2, 4) + parsed.data;
-        let baseLen = parsed.length;
-        let currentAddr = parsed.address;
-        let lineCount = 1;
+        await char.startNotifications();
+        char.addEventListener("characteristicvaluechanged", (event) => {
+          const msg = new TextDecoder().decode(event.target.value);
+          utils.log(`[Serial RX] ${msg}`);
+          if (this.Serial.OnMessage) this.Serial.OnMessage(msg);
+        });
 
-        for (let j = i + 1; j < lines.length && lineCount < LINES_PER_BLOCK; j++) {
-          const next = utils.parseHexLine(lines[j].trim());
-          if (!next || !utils.verifyChecksum(next)) break;
-          const expectedAddr = currentAddr + baseLen;
-          if (next.address !== expectedAddr) break;
-          block += next.data;
-          currentAddr = next.address;
-          baseLen = next.length;
-          lineCount++;
-          i = j;
+        utils.log("Callback Serial.OnMessage: Enabled");
+      },
+
+      /** Kiểm tra hỗ trợ Serial */
+      supported: () => {
+        return this.#chars?.[this.Serial.UUID];
+      },
+    };
+
+    // ======================================================
+    // 🔹 SUBMODULE: UPLOADER
+    // ======================================================
+    this.Uploader = {
+      // UUID riêng của Uploader
+      get UUID_WebToLb() {
+        return '0000ffe2-0000-1000-8000-00805f9b34fb';
+      },
+      get UUID_LbToWeb() {
+        return '0000ffe3-0000-1000-8000-00805f9b34fb';
+      },
+      
+      /** Callback khi nhận notify Uploader */
+      OnMessage: null,
+
+      /** Upload HEX file */
+      Upload: async (hexText) => {
+        if (!this.#chars || !this.#chars[this.Uploader.UUID_WebToLb]) {
+          utils.log("Uploader Error: RX characteristic not found.");
+          return;
         }
 
-        i++;
+        const WebtoLb = this.#chars[this.Uploader.UUID_WebToLb];
+        const LINES_PER_BLOCK = 14;
+        const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
 
-        // Gửi block
-        const header = sequence.toString(16).padStart(2, "0").toUpperCase();
-        const payload = header + block;
-        const bytes = utils.hexLineToBytes(payload);
-        await rxChar.writeValueWithoutResponse(bytes);
-        utils.log(`Uploader: Sent block #${sequence} (${bytes.length} bytes)`);
+        utils.log("Uploader: Start uploading HEX...");
+        const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
+        await WebtoLb.writeValueWithoutResponse(startHeader);
+        utils.log("Uploader: Sent START header");
 
-        sequence++;
-      }
+        let sequence = 0;
+        for (let i = 0; i < lines.length;) {
+          const rawLine = lines[i].trim();
+          const parsed = utils.parseHexLine(rawLine);
+          if (!parsed || !utils.verifyChecksum(parsed)) { i++; continue; }
 
-      utils.log("Uploader: Upload completed!");
-    },
-    OnUploadMessage: null,
-    
-  };
-  // --- Gắn cố định callback notify của ESP32_TX ---
-  this.Serial.OnMessage(LeanbotBLE.ESP32_TX, (msg) => {
-    if (this.Uploader.OnUploadMessage) {
-      this.Uploader.OnUploadMessage(msg);
-    } else {
-      log(`[ESP32_TX] ${msg}`);
-    }
-  });
+          // Ghép các dòng liên tiếp
+          let block = parsed.hex.substr(2, 4) + parsed.data;
+          let baseLen = parsed.length;
+          let currentAddr = parsed.address;
+          let lineCount = 1;
+
+          for (let j = i + 1; j < lines.length && lineCount < LINES_PER_BLOCK; j++) {
+            const next = utils.parseHexLine(lines[j].trim());
+            if (!next || !utils.verifyChecksum(next)) break;
+            const expectedAddr = currentAddr + baseLen;
+            if (next.address !== expectedAddr) break;
+            block += next.data;
+            currentAddr = next.address;
+            baseLen = next.length;
+            lineCount++;
+            i = j;
+          }
+
+          i++;
+
+          // Gửi block
+          const header = sequence.toString(16).padStart(2, "0").toUpperCase();
+          const payload = header + block;
+          const bytes = utils.hexLineToBytes(payload);
+          await WebtoLb.writeValueWithoutResponse(bytes);
+          utils.log(`Uploader: Sent block #${sequence} (${bytes.length} bytes)`);
+
+          sequence++;
+        }
+
+        utils.log("Uploader: Upload completed!");
+      },
+
+      enableNotify: async () => {
+        const uuid = this.Uploader.UUID_LbToWeb.toLowerCase();
+        const char = this.#chars?.[uuid];
+        if (!char) return utils.log("Uploader Notify: UUID not found");
+        if (!char.properties.notify) return utils.log("Uploader Notify: Not supported");
+
+        await char.startNotifications();
+        char.addEventListener("characteristicvaluechanged", (event) => {
+          const msg = new TextDecoder().decode(event.target.value);
+          utils.log(`[Uploader RX] ${msg}`);
+          if (this.Uploader.OnMessage) this.Uploader.OnMessage(msg);
+        });
+
+        utils.log("Callback Uploader.OnMessage: Enabled");
+      },
+
+      /** Kiểm tra hỗ trợ Uploader */
+      supported: () => {
+        const hasWebToLb = this.#chars?.[this.Uploader.UUID_WebToLb];
+        const hasLbToWeb = this.#chars?.[this.Uploader.UUID_LbToWeb];
+        return hasWebToLb && hasLbToWeb;
+      },  
+    };
   }
 
   // ---------------- BLE CORE ----------------
   async Connect() {
     try {
-      utils.log("Scanning Leanbot...");
       // 1️⃣ Chọn thiết bị BLE có service UUID tương ứng
-      this.device = await navigator.bluetooth.requestDevice({
+      this.#device = await navigator.bluetooth.requestDevice({
         filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
       });
 
+      localStorage.setItem("leanbot_device", JSON.stringify(this.#device));
+      console.log("Saved device to LocalStorage.", this.#device.name);
+      let saved = localStorage.getItem("leanbot_device");
+      console.log("Loaded device from LocalStorage.");
+      saved = JSON.parse(saved);
+      console.log("Device ID:", saved.id);
+      console.log("Device Name:", saved.name);
+      //  Lưu vào LocalStorage
+      // this.#saveLastDevice(this.#device);
+
       // 2️⃣ Gắn sự kiện ngắt kết nối
-      this.device.addEventListener("gattserverdisconnected", () => {
-        if (this.OnDisconnect) this.OnDisconnect(this.device);
+      console.log("Callback OnDisconnect: Enabled");
+      this.#device.addEventListener("gattserverdisconnected", () => {
+        if (this.OnDisconnect) {
+          this.OnDisconnect();
+        }
       });
 
       // 3️⃣ Kết nối GATT server
-      this.server = await this.device.gatt.connect();
+      this.#server = await this.#device.gatt.connect();
 
       // 4️⃣ Lấy service chính
-      this.service = await this.server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
+      this.#service = await this.#server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
 
       // 5️⃣ Lấy toàn bộ characteristics
-      const chars = await this.service.getCharacteristics();
-      this.chars = {};
-      this.OnMessage = this.OnMessage || {}; // khởi tạo bảng callback
+      const chars = await this.#service.getCharacteristics();
+      // Lưu lại toàn bộ characteristic
+      this.#chars = {};
+      for (const c of chars) this.#chars[c.uuid] = c;
 
-      for (const c of chars) {
-        const uuid = c.uuid.toLowerCase();
-        this.chars[uuid] = c;
+      // --- Bật notify riêng cho từng module ---
+      await this.Serial.enableNotify();
+      await this.Uploader.enableNotify();
 
-        // Bật notify nếu có hỗ trợ
-        if (c.properties.notify) {
-          await c.startNotifications();
-          c.addEventListener("characteristicvaluechanged", (event) => {
-            const msg = new TextDecoder().decode(event.target.value);
-            const handler = this._onMessageMap?.[uuid];
-            if (handler) handler(msg);
-          });
-        }
+      console.log("Callback OnConnect: Enabled");
+      if (this.OnConnect) {
+        this.OnConnect();
       }
+      return {
+        success: true,
+        message: `Connected to ${this.#device.name}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Connect failed: ${error.message}`
+      };
+    }
+  }
 
-    utils.log(`Connected: ${this.device.name}`);
-    if (this.OnConnect) this.OnConnect(this.device);
-    return this.device;
+  // ============================================================
+  // 🔹 PRIVATE: Lưu / Tải thông tin thiết bị BLE
+  // ============================================================
+  #saveLastDevice(device) {
+    try {
+      localStorage.setItem(
+        "leanbot_last_device", JSON.stringify({ id: device.id, name: device.name })
+      );
+      utils.log(`Saved device: ${device.name}`);
+    } catch (err) {
+      utils.log("LocalStorage Save Error: " + err);
+    }
+  }
 
-    } catch (e) {
-      utils.log("Connection failed: " + e);
+  #loadLastDevice() {
+    try {
+      const saved = localStorage.getItem("leanbot_last_device");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
       return null;
     }
   }
 
   Disconnect() {
-    utils.log("Disconnecting...");
-    if (this.device?.gatt.connected) this.device.gatt.disconnect();
+    if (this.#device?.gatt.connected) this.#device.gatt.disconnect();
   }
 
   async Reconnect() {
     try {
-      if (!this.device) {
-        utils.log("No previous device found. Use Connect() first.");
+      if (!this.#device) {
+        const last = this.#loadLastDevice();
+        console.log("Last saved device:", last);
+        if (!last) {
+          utils.log("No saved device found in LocalStorage.");
+          return;
+        }
+        // Lấy danh sách thiết bị đã được cấp quyền
+        const devices = await navigator.bluetooth.getDevices();
+        console.log("Previously granted devices:", devices);
+        const target = devices.find(d => d.id === last.id || d.name === last.name);
+
+        if (target) {
+          this.#device = target;
+        } else {
+          utils.log("No matching device found.");
+          return;
+        }
+      }
+
+      if (this.#device.gatt.connected) {
+        utils.log("Already connected to " + this.#device.name);
         return;
       }
 
-      if (this.device.gatt.connected) {
-        utils.log("Already connected to " + this.device.name);
-        return;
-      }
+      utils.log("Reconnecting to " + this.#device.name + "...");
+      this.#server = await this.#device.gatt.connect();
+      this.#service = await this.#server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
+      this.char = await this.#service.getCharacteristic(LeanbotBLE.CHAR_UUID);
 
-      utils.log("Reconnecting to " + this.device.name + "...");
-      this.server = await this.device.gatt.connect();
-      this.service = await this.server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
-      this.char = await this.service.getCharacteristic(LeanbotBLE.CHAR_UUID);
-
-      utils.log("Reconnected to " + this.device.name);
-      if (this.OnConnect) this.OnConnect(this.device);
+      utils.log("Reconnected to " + this.#device.name);
+      if (this.OnConnect) this.OnConnect(this.#device);
     } catch (e) {
       utils.log("Reconnect failed: " + e);
     }
@@ -207,7 +302,7 @@ export class LeanbotBLE {
   async Rescan() {
     try {
       utils.log("Rescanning BLE device...");
-      if (!this.device) {
+      if (!this.#device) {
         utils.log("No previous device found to rescan.");
         return;
       }
@@ -221,133 +316,12 @@ export class LeanbotBLE {
 
 
   IsConnected() {
-    return this.device?.gatt.connected === true;
+    return this.#device?.gatt.connected === true;
   }
 
   getLeanbotID() {
-    if (!this.device) return "No device";
-    return this.device.name || "Unknown";
+    if (!this.#device) return "No device";
+    return this.#device.name || "Unknown";
   }
 
 }
-
-// export class LeanbotBLE {
-
-//   // ===== UUID BLE MẶC ĐỊNH =====
-//   static SERVICE_UUID  = '0000ffe0-0000-1000-8000-00805f9b34fb';
-//   static CHAR_UUID     = '0000ffe1-0000-1000-8000-00805f9b34fb';
-//   static WEB_TX_UUID   = '0000ffe2-0000-1000-8000-00805f9b34fb';
-//   static WEB_RX_UUID   = '0000ffe3-0000-1000-8000-00805f9b34fb';
-
-//   constructor() {
-//     this.device = null;
-//     this.server = null;
-//     this.service = null;
-//     this.txChar = null;
-//     this.rxChar = null;
-
-//     this.OnConnect = null;
-//     this.OnDisconnect = null;
-
-//     // // --- Submodules ---
-//     // this.Serial = {
-//     //   SendSerialMessage: async (msg) => this.#sendSerial(msg),
-//     //   OnSerialMessage: null,
-//     // };
-
-//     // this.Uploader = {
-//     //   Upload: async (hexText) => this.#uploadHEX(hexText),
-//     //   OnUploadMessage: null,
-//     // };
-//   }
-
-//   // ---------------- BLE CORE ----------------
-//   async Connect() {
-//     try {
-//       utils.log("Requesting BLE device...");
-//       this.device = await navigator.bluetooth.requestDevice({
-//         filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
-//       });
-
-//       this.device.addEventListener("gattserverdisconnected", () => {
-//         utils.log(`Disconnected: ${this.device.name}`);
-//         if (this.OnDisconnect) this.OnDisconnect(this.device);
-//       });
-
-//       this.server = await this.device.gatt.connect();
-//       this.service = await this.server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
-//       this.txChar = await this.service.getCharacteristic(LeanbotBLE.CHAR_UUID);
-
-//       await this.txChar.startNotifications();
-//       this.txChar.addEventListener("characteristicvaluechanged", (event) => {
-//         const msg = new TextDecoder().decode(event.target.value);
-//         if (this.Serial.OnSerialMessage) this.Serial.OnSerialMessage(msg);
-//       });
-
-//       utils.log(`Connected: ${this.device.name}`);
-//       if (this.OnConnect) this.OnConnect(this.device);
-//     } catch (e) {
-//       utils.log("Connection failed: " + e);
-//     }
-//   }
-
-//   Disconnect() {
-//     if (this.device?.gatt.connected) this.device.gatt.disconnect();
-//   }
-
-//   async Reconnect() {
-//     if (this.device && !this.device.gatt.connected) {
-//       await this.Connect();
-//     }
-//   }
-
-//   IsConnected() {
-//     return this.device?.gatt.connected || false;
-//   }
-
-//   getLeanbotID() {
-//     return this.device ? `${this.device.name} BLE` : "No device connected";
-//   }
-
-// //   // ---------------- SERIAL ----------------
-// //   async #sendSerial(msg) {
-// //     if (!this.txChar) {
-// //       utils.log("Serial characteristic not available");
-// //       return;
-// //     }
-// //     const bytes = new TextEncoder().encode(msg);
-// //     await this.txChar.writeValueWithoutResponse(bytes);
-// //     utils.log(`[Serial] Sent: ${msg}`);
-// //   }
-
-// //   // ---------------- UPLOADER ----------------
-// //   async #uploadHEX(hexText) {
-// //     if (!this.txChar) {
-// //       utils.log("Upload characteristic not available");
-// //       return;
-// //     }
-
-// //     const lines = hexText.split(/\r?\n/).filter((l) => l.trim().length > 0);
-// //     const LINES_PER_BLOCK = 8;
-
-// //     // Gửi header START
-// //     const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
-// //     await this.txChar.writeValueWithoutResponse(startHeader);
-// //     utils.log("⬆️ Upload started");
-
-// //     let seq = 0;
-// //     for (let i = 0; i < lines.length; i += LINES_PER_BLOCK) {
-// //       const blockLines = lines.slice(i, i + LINES_PER_BLOCK).join("\n");
-// //       const blockBytes = new TextEncoder().encode(seq.toString().padStart(2, "0") + ":" + blockLines);
-
-// //       await this.txChar.writeValueWithoutResponse(blockBytes);
-// //       if (this.Uploader.OnUploadMessage)
-// //         this.Uploader.OnUploadMessage(`Sent block #${seq}`);
-
-// //       seq++;
-// //       await delay(5);
-// //     }
-
-// //     utils.log("✅ Upload completed");
-// //   }
-// }

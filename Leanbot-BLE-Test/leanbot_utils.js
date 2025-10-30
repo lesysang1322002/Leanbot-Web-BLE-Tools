@@ -8,7 +8,7 @@ export function UI(id) {
 
 /* Ghi log ra console và lên giao diện. */
 export function log(msg) {
-  console.log(`[Web] ${msg}`);
+  console.log(msg);
 
   const logBox = UI("log");
   if (!logBox) return;
