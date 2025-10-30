@@ -1,3 +1,5 @@
+console.log("Version 30/10/2025");
+
 let Device, LeanbotCharacteristic, WebTxCharacteristic, WebRxCharacteristic;
 
 let SERVICE_UUID        = '0000ffe0-0000-1000-8000-00805f9b34fb';
@@ -157,7 +159,7 @@ async function sendHEXFile(data) {
   console.log(`[${relStart}] Write #${sendCount} begin`);
 
   await WebTxCharacteristic.writeValueWithoutResponse(bytes);
-  await new Promise(resolve => setTimeout(resolve, 20)); // wait for 20ms
+  await new Promise(resolve => setTimeout(resolve, 30)); // wait for 30ms
 
   const t1 = performance.now();
   const relEnd = (t1 - sendStartTime).toFixed(2);
