@@ -1,4 +1,4 @@
-console.log("Version 30/10/2025");
+console.log("Version 30/10/2025 - 50ms");
 
 let Device, LeanbotCharacteristic, WebTxCharacteristic, WebRxCharacteristic;
 
@@ -159,7 +159,7 @@ async function sendHEXFile(data) {
   console.log(`[${relStart}] Write #${sendCount} begin`);
 
   await WebTxCharacteristic.writeValueWithoutResponse(bytes);
-  await new Promise(resolve => setTimeout(resolve, 30)); // wait for 30ms
+  await new Promise(resolve => setTimeout(resolve, 50)); // wait for 50ms
 
   const t1 = performance.now();
   const relEnd = (t1 - sendStartTime).toFixed(2);
