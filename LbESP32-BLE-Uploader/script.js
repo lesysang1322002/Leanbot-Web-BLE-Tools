@@ -157,7 +157,7 @@ async function sendHEXFile(data) {
   console.log(`[${relStart}] Write #${sendCount} begin`);
 
   await WebTxCharacteristic.writeValueWithoutResponse(bytes);
-  await new Promise(resolve => setTimeout(resolve, 10)); // wait for 10ms
+  await new Promise(resolve => setTimeout(resolve, 50)); // wait for 50ms
 
   const t1 = performance.now();
   const relEnd = (t1 - sendStartTime).toFixed(2);
