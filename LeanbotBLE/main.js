@@ -32,6 +32,8 @@ const status = utils.UI("leanbotStatus");
 const btnConnect = utils.UI("btnConnect");
 const btnReconnect = utils.UI("btnReconnect");
 
+const lastDevice = JSON.parse(localStorage.getItem("leanbot_device"));
+status.textContent = lastDevice ? lastDevice : "No Leanbot";
 const leanbot = new LeanbotBLE();
 
 leanbot.OnConnect = () => {

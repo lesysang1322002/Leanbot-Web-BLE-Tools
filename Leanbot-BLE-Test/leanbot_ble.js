@@ -9,6 +9,8 @@ export class LeanbotBLE {
   #server = null;
   #service = null;
   #chars = {};
+  #ReconnectWithFilterName = false;
+  #lastDevice = null;
   
   constructor() {
     this.OnConnect = null;
@@ -172,10 +174,24 @@ export class LeanbotBLE {
   // ---------------- BLE CORE ----------------
   async Connect() {
     try {
-      // 1️⃣ Chọn thiết bị BLE có service UUID tương ứng
-      this.#device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
-      });
+      if (this.#ReconnectWithFilterName) {
+        // 1️⃣ Chọn thiết bị BLE có tên tương ứng
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{
+            name: this.#lastDevice,
+            services: [LeanbotBLE.SERVICE_UUID]
+          }],
+        });
+      } else {
+        // 1️⃣ Chọn thiết bị BLE có service UUID tương ứng
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
+        });
+      }
+
+      // Lưu tên thiết bị để reconnect sau này
+      console.log("Storing device name for future reconnect:", this.#device.name);
+      localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
 
       // 2️⃣ Gắn sự kiện ngắt kết nối
       console.log("Callback OnDisconnect: Enabled");
@@ -242,10 +258,18 @@ export class LeanbotBLE {
     try {
       // Kiểm tra thiết bị đã lưu
       if (!this.#device) {
-        return {
-          success: false,
-          message: "No previous device found. Please connect manually."
-        };
+        const lastDevice = localStorage.getItem("leanbot_device");
+        this.#lastDevice = lastDevice ? JSON.parse(lastDevice) : null;
+        console.log("Stored device name for reconnect:", this.#lastDevice);
+        if(this.#lastDevice) {
+          this.#ReconnectWithFilterName = true;
+          return await this.Connect();
+        } else {
+          return {
+            success: false,
+            message: "No previous device found. Please connect manually."
+          };
+        }
       }
 
       // Nếu thiết bị vẫn đang kết nối

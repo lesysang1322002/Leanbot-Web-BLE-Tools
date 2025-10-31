@@ -177,9 +177,12 @@ export class LeanbotBLE {
       if (this.#ReconnectWithFilterName) {
         // 1️⃣ Chọn thiết bị BLE có tên tương ứng
         this.#device = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [LeanbotBLE.SERVICE_UUID] },
-                    { name: this.#lastDevice }],
+          filters: [{
+            name: this.#lastDevice,
+            services: [LeanbotBLE.SERVICE_UUID]
+          }],
         });
+        this.#ReconnectWithFilterName = false;
       } else {
         // 1️⃣ Chọn thiết bị BLE có service UUID tương ứng
         this.#device = await navigator.bluetooth.requestDevice({
@@ -254,7 +257,8 @@ export class LeanbotBLE {
     try {
       // Kiểm tra thiết bị đã lưu
       if (!this.#device) {
-        this.#lastDevice = localStorage.getItem("leanbot_device");
+        const lastDevice = localStorage.getItem("leanbot_device");
+        this.#lastDevice = lastDevice ? JSON.parse(lastDevice) : null;
         if(this.#lastDevice) {
           this.#ReconnectWithFilterName = true;
           return await this.Connect();
