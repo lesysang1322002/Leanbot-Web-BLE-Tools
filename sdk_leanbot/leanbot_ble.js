@@ -9,6 +9,8 @@ export class LeanbotBLE {
   #server = null;
   #service = null;
   #chars = {};
+  #ReconnectWithFilterName = false;
+  #lastDevice = null;
   
   constructor() {
     this.OnConnect = null;
@@ -172,10 +174,18 @@ export class LeanbotBLE {
   // ---------------- BLE CORE ----------------
   async Connect() {
     try {
-      // 1️⃣ Chọn thiết bị BLE có service UUID tương ứng
-      this.#device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
-      });
+      if (this.#ReconnectWithFilterName) {
+        // 1️⃣ Chọn thiết bị BLE có tên tương ứng
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [LeanbotBLE.SERVICE_UUID] },
+                    { name: this.#lastDevice }],
+        });
+      } else {
+        // 1️⃣ Chọn thiết bị BLE có service UUID tương ứng
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
+        });
+      }
 
       localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
 
@@ -210,9 +220,10 @@ export class LeanbotBLE {
     try {
       // Không có thiết bị nào được lưu
       if (!this.#device) {
-        this.#device = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
-        });
+        return {
+          success: false,
+          message: "No device found to disconnect. Please connect a device first."
+        };
       }
 
       // Thiết bị tồn tại nhưng chưa kết nối
@@ -243,10 +254,16 @@ export class LeanbotBLE {
     try {
       // Kiểm tra thiết bị đã lưu
       if (!this.#device) {
-        return {
-          success: false,
-          message: "No previous device found. Please connect manually."
-        };
+        this.#lastDevice = localStorage.getItem("leanbot_device");
+        if(this.#lastDevice) {
+          this.#ReconnectWithFilterName = true;
+          return await this.Connect();
+        } else {
+          return {
+            success: false,
+            message: "No previous device found. Please connect manually."
+          };
+        }
       }
 
       // Nếu thiết bị vẫn đang kết nối

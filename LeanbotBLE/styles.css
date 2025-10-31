@@ -4,36 +4,28 @@ body {
   background: #fafafa;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 50px);
+  min-height: calc(100vh - 40px);
 }
 
+/* --- TOP BAR --- */
 #topBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: relative;
   margin-bottom: 8px;
 }
 
 #leftButtons, #rightButtons {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-/* 🔹 Căn giữa tuyệt đối tên Leanbot */
-#leanbotStatus {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+#fileName {
   font-weight: bold;
-  font-size: 15px;
 }
 
-.connected { color: #2ecc71; }   /* xanh lá */
-.disconnected { color: #e74c3c; } /* đỏ */
-
-
+/* --- BUTTONS --- */
 button {
   padding: 6px 10px;
   border-radius: 4px;
@@ -44,19 +36,34 @@ button {
 button:hover {
   background-color: #f1f1f1;
 }
-h3 {
-  margin: 10px 0 4px 0;
-  font-size: 16px;
-}
 
-/* Serial Monitor Section */
-#serialSection {
+/* --- UPLOAD LOG --- */
+#uploadSection {
+  margin-bottom: 10px;
   border: 1px solid #ccc;
   background: #fff;
   border-radius: 5px;
   padding: 10px;
-  flex: 1;                     
-  display: flex;               
+}
+#uploadLog {
+  height: 100px;
+  background: #111;
+  color: #0ff;
+  font-family: monospace;
+  padding: 8px;
+  overflow-y: auto;
+  border-radius: 4px;
+  border: 1px solid #888;
+}
+
+/* --- SERIAL MONITOR --- */
+#serialSection {
+  flex: 1;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 5px;
+  padding: 10px;
+  display: flex;
   flex-direction: column;
 }
 
@@ -74,7 +81,6 @@ h3 {
 
 #serialLog {
   flex: 1;
-  width: 100%;
   background: #000;
   color: #0f0;
   font-family: monospace;
@@ -101,22 +107,68 @@ h3 {
   font-family: monospace;
 }
 
-/* Upload Section */
-#uploadSection {
+/* --- BOTTOM BAR --- */
+#bottomBar {
+  display: flex;
+  justify-content: space-between; /* ✅ logo bên trái, status bên phải */
+  align-items: center;
+  border-top: 1px solid #ccc;
   margin-top: 10px;
-  border: 1px solid #ccc;
-  background: #fff;
-  border-radius: 5px;
-  padding: 10px;
+  padding-top: 8px;
 }
 
-#uploadLog {
-  height: 100px;        
-  background: #111;
-  color: #0ff;
-  font-family: monospace;
-  padding: 8px;
-  overflow-y: auto;
+#leftStatus {
+  font-weight: bold;
+}
+
+#rightButtons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#leanbotStatus {
+  font-weight: bold;
+}
+
+.connected { color: #2ecc71; }
+.disconnected { color: #e74c3c; }
+
+/* --- MODAL (File Selection) --- */
+#fileModal.hidden {
+  display: none;
+}
+#fileModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 6px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.modal-content h3 {
+  margin-bottom: 10px;
+}
+.fileOption {
+  display: block;
+  width: 180px;
+  margin: 8px auto;
+  padding: 8px 10px;
   border-radius: 4px;
-  border: 1px solid #888;
+  border: 1px solid #444;
+  cursor: pointer;
+}
+.fileOption:hover {
+  background: #eaeaea;
+}
+#closeModal {
+  margin-top: 12px;
 }

@@ -8,52 +8,70 @@
 </head>
 <body>
 
-    <!-- TOP BAR -->
-    <div id="topBar">
+  <!-- TOP BAR -->
+  <div id="topBar">
+    <div id="leftButtons">
+      <button id="btnCode">{ } Code</button>
+    </div>
+
     <div id="rightButtons">
-        <button id="btnLoadHex">Load HEX</button>
-        <button id="btnUpload">Upload</button>
+      <span id="fileName">No file</span>
+      <button id="btnLoadHex">Load HEX</button>
+      <button id="btnUpload">Upload</button>
     </div>
-    </div>
+  </div>
 
+  <!-- UPLOAD LOG -->
+  <div id="uploadSection">
+    <h3>Upload Log:</h3>
+    <div id="uploadLog"></div>
+  </div>
 
-    <!-- SERIAL MONITOR -->
-    <div id="serialSection">
-        <h3>Serial Monitor:</h3>
-        <div id="serialTop">
-        <div id="serialOptions">
-            <label><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
-            <label><input type="checkbox" id="showTimestamp"> Timestamp</label>
-        </div>
-        <div>
-            <button id="btnClear">Clear</button>
-            <button id="btnCopy">Copy</button>
-        </div>
-        </div>
-
-        <div id="serialLog"></div>
-
-        <div id="serialBottom">
-        <button id="btnSend">Send</button>
-        <input type="text" id="serialInput" placeholder="Send Message -> ...">
-        <label><input type="checkbox" id="addNewline" checked> Newline</label>
-        </div>
+  <!-- SERIAL MONITOR -->
+  <div id="serialSection">
+    <h3>Serial Monitor:</h3>
+    <div id="serialTop">
+      <div id="serialOptions">
+        <label><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
+        <label><input type="checkbox" id="showTimestamp"> Timestamp</label>
+      </div>
+      <div>
+        <button id="btnClear">Clear</button>
+        <button id="btnCopy">Copy</button>
+      </div>
     </div>
 
-    <!-- UPLOAD LOG -->
-    <div id="uploadSection">
-        <h3>Upload Log:</h3>
-        <div id="uploadLog"></div>
+    <div id="serialLog"></div>
+
+    <div id="serialBottom">
+      <button id="btnSend">Send</button>
+      <input type="text" id="serialInput" placeholder="Send Message -> ...">
+      <label><input type="checkbox" id="addNewline" checked> Newline</label>
+    </div>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div id="bottomBar">
+    <div id="leftStatus">
+      <span class="logo">© Leanbot BLE</span>
     </div>
 
-    <!-- BOTTOM BAR -->
-    <div id="bottomBar">
-        <div id="rightButtons">
-            <span id="status">No Leanbot connected</span>
-            <button id="btnConnect">Connect</button>
-            <button id="btnReconnect">Reconnect</button>
-        </div>
+    <div id="rightButtons">
+      <span id="leanbotStatus" class="disconnected">No Leanbot</span>
+      <button id="btnConnect">Connect</button>
+      <button id="btnReconnect">Reconnect</button>
     </div>
+  </div>
+
+  <!-- FILE SELECTION MODAL -->
+  <div id="fileModal" class="hidden">
+    <div class="modal-content">
+      <h3>Select HEX File</h3>
+      <button class="fileOption" data-file="firmware/standard.hex">HEX Standard</button>
+      <button class="fileOption" data-file="firmware/advanced.hex">HEX Advanced</button>
+      <button id="closeModal">Cancel</button>
+    </div>
+  </div>
 
   <script type="module" src="main.js"></script>
 </body>

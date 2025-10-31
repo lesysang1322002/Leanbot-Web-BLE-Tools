@@ -1,57 +1,86 @@
+// main.js
 import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
 import * as utils from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_utils.js";
 
-const leanbot = new LeanbotBLE();
+// // =================== FILE SELECTION MODAL =================== //
+// const btnCode = document.getElementById("btnCode");
+// const modal = document.getElementById("fileModal");
+// const closeModal = document.getElementById("closeModal");
+// const fileNameLabel = document.getElementById("fileName");
+
+// btnCode.addEventListener("click", () => {
+//   modal.classList.remove("hidden");
+// });
+
+// closeModal.addEventListener("click", () => {
+//   modal.classList.add("hidden");
+// });
+
+// document.querySelectorAll(".fileOption").forEach(btn => {
+//   btn.addEventListener("click", e => {
+//     const filePath = e.target.getAttribute("data-file");
+//     const fileName = filePath.split("/").pop();
+//     fileNameLabel.textContent = fileName;
+//     modal.classList.add("hidden");
+//     utils.log(`Selected file: ${fileName}`);
+//   });
+// });
+
+// =================== BLE =================== //
+
 const status = utils.UI("leanbotStatus");
-const logBox = utils.UI("serialLog");
+const btnConnect = utils.UI("btnConnect");
+const btnReconnect = utils.UI("btnReconnect");
 
-// ========= UI EVENTS =========
-utils.UI("btnConnect").onclick = () => connectLeanbot();
-// utils.UI("btnReconnect").onclick = () => leanbot.Reconnect();
+const leanbot = new LeanbotBLE();
 
-async function connectLeanbot() {
-  console.log("Disconnect before connecting ...");
-  leanbot.Disconnect();
-
-  console.log("Scanning for Leanbot...");
-  const result = await leanbot.Connect();
-
-  if(result.success){
+leanbot.OnConnect = () => {
     status.textContent = leanbot.getLeanbotID();
     status.className = "connected";
-  } else {
-    status.textContent = result.message;
-    status.className = "disconnected";
-  }
 }
 
-// leanbot.OnConnect = (dev) => {
-//   status.textContent = dev.name;
-//   status.className = "connected";
-//   utils.log("Connected to " + dev.name);
-// };
-// leanbot.OnDisconnect = () => {
-//   status.textContent = "Disconnected";
+leanbot.OnDisconnect = () => {
+    status.className = "disconnected";
+}
+
+btnConnect.onclick = async () => connectLeanbot();
+btnReconnect.onclick = async () => reconnectLeanbot();
+
+async function connectLeanbot() {
+    console.log("Disconnect before scan...");
+    leanbot.Disconnect();
+    console.log("Scanning for Leanbot...");
+    const result = await leanbot.Connect();
+    console.log("Connect result:", result.message);
+}
+
+// utils.UI("btnConnect").onclick = () => {
+//   status.textContent = "Connecting...";
 //   status.className = "disconnected";
+//   utils.log("Connecting to Leanbot...");
+//   setTimeout(() => {
+//     status.textContent = "Leanbot 123456 BLE";
+//     status.className = "connected";
+//     utils.log("Connected to Leanbot 123456 BLE");
+//   }, 1000);
 // };
 
-// // SEND SERIAL
-// utils.UI("btnSend").onclick = () => {
-//   const msg = utils.UI("serialInput").value;
-//   const final = utils.UI("addNewline").checked ? msg + "\n" : msg;
-//   leanbot.Serial.Send(LeanbotBLE.UUID, final);
-//   utils.log("> " + msg);
+// utils.UI("btnReconnect").onclick = () => {
+//   utils.log("Reconnect clicked (placeholder)");
 // };
 
-// // CLEAR / COPY LOG
-// utils.UI("btnClear").onclick = () => logBox.textContent = "";
+// // =================== SERIAL BUTTONS =================== //
+// utils.UI("btnClear").onclick = () => {
+//   utils.UI("serialLog").textContent = "";
+// };
 // utils.UI("btnCopy").onclick = () => {
-//   navigator.clipboard.writeText(logBox.textContent);
+//   navigator.clipboard.writeText(utils.UI("serialLog").textContent);
 //   alert("Copied Serial Log!");
 // };
 
-// // CUSTOM LOG BEHAVIOR
+// // =================== LOG FUNCTION =================== //
 // utils.log = function (msg) {
+//   const logBox = utils.UI("serialLog");
 //   const timestamp = utils.UI("showTimestamp").checked
 //     ? "[" + new Date().toLocaleTimeString() + "] "
 //     : "";
