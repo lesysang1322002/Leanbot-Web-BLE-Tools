@@ -33,6 +33,7 @@ const btnConnect = utils.UI("btnConnect");
 const btnReconnect = utils.UI("btnReconnect");
 
 const lastDevice = JSON.parse(localStorage.getItem("leanbot_device"));
+console.log("Last stored device for reconnect:", lastDevice);
 status.textContent = lastDevice ? lastDevice : "No Leanbot";
 const leanbot = new LeanbotBLE();
 
@@ -54,6 +55,12 @@ async function connectLeanbot() {
     console.log("Scanning for Leanbot...");
     const result = await leanbot.Connect();
     console.log("Connect result:", result.message);
+}
+
+async function reconnectLeanbot() {
+    console.log("Reconnecting to Leanbot...");
+    const result = await leanbot.Reconnect();
+    console.log("Reconnect result:", result.message);
 }
 
 // utils.UI("btnConnect").onclick = () => {
