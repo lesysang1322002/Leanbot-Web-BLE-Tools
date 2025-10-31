@@ -177,6 +177,8 @@ export class LeanbotBLE {
         filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
       });
 
+      localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
+
       // 2️⃣ Gắn sự kiện ngắt kết nối
       console.log("Callback OnDisconnect: Enabled");
       this.#device.addEventListener("gattserverdisconnected", () => {

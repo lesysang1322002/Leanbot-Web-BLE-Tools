@@ -7,7 +7,7 @@ const logBox = utils.UI("serialLog");
 
 // ========= UI EVENTS =========
 utils.UI("btnConnect").onclick = () => connectLeanbot();
-utils.UI("btnReconnect").onclick = () => leanbot.Reconnect();
+// utils.UI("btnReconnect").onclick = () => leanbot.Reconnect();
 
 async function connectLeanbot() {
   console.log("Disconnect before connecting ...");
@@ -25,30 +25,30 @@ async function connectLeanbot() {
   }
 }
 
-leanbot.OnConnect = (dev) => {
-  status.textContent = dev.name;
-  status.className = "connected";
-  utils.log("Connected to " + dev.name);
-};
-leanbot.OnDisconnect = () => {
-  status.textContent = "Disconnected";
-  status.className = "disconnected";
-};
+// leanbot.OnConnect = (dev) => {
+//   status.textContent = dev.name;
+//   status.className = "connected";
+//   utils.log("Connected to " + dev.name);
+// };
+// leanbot.OnDisconnect = () => {
+//   status.textContent = "Disconnected";
+//   status.className = "disconnected";
+// };
 
-// SEND SERIAL
-utils.UI("btnSend").onclick = () => {
-  const msg = utils.UI("serialInput").value;
-  const final = utils.UI("addNewline").checked ? msg + "\n" : msg;
-  leanbot.Serial.Send(LeanbotBLE.UUID, final);
-  utils.log("> " + msg);
-};
+// // SEND SERIAL
+// utils.UI("btnSend").onclick = () => {
+//   const msg = utils.UI("serialInput").value;
+//   const final = utils.UI("addNewline").checked ? msg + "\n" : msg;
+//   leanbot.Serial.Send(LeanbotBLE.UUID, final);
+//   utils.log("> " + msg);
+// };
 
-// CLEAR / COPY LOG
-utils.UI("btnClear").onclick = () => logBox.textContent = "";
-utils.UI("btnCopy").onclick = () => {
-  navigator.clipboard.writeText(logBox.textContent);
-  alert("Copied Serial Log!");
-};
+// // CLEAR / COPY LOG
+// utils.UI("btnClear").onclick = () => logBox.textContent = "";
+// utils.UI("btnCopy").onclick = () => {
+//   navigator.clipboard.writeText(logBox.textContent);
+//   alert("Copied Serial Log!");
+// };
 
 // // CUSTOM LOG BEHAVIOR
 // utils.log = function (msg) {
