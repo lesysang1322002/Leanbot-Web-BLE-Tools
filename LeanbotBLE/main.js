@@ -1,5 +1,5 @@
 // main.js
-import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
+import { LeanbotBLE } from "./leanbot_ble.js";
 import * as utils from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_utils.js";
 
 // // =================== FILE SELECTION MODAL =================== //
@@ -31,6 +31,8 @@ import * as utils from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-
 const status = utils.UI("leanbotStatus");
 const btnConnect = utils.UI("btnConnect");
 const btnReconnect = utils.UI("btnReconnect");
+
+// localStorage.removeItem("leanbot_device");
 
 const lastDevice = JSON.parse(localStorage.getItem("leanbot_device"));
 console.log("Last stored device for reconnect:", lastDevice);

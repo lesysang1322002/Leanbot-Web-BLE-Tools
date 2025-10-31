@@ -317,6 +317,11 @@ export class LeanbotBLE {
     return this.#device.name || "Unknown";
   }
 
+  getLastLeanbotID() {
+    const lastDevice = localStorage.getItem("leanbot_device");
+    return lastDevice ? JSON.parse(lastDevice) : null;
+  }
+
   async #setupConnection() {
     // Kết nối GATT, lấy service và characteristics
     this.#server = await this.#device.gatt.connect();
