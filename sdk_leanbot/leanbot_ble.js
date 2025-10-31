@@ -210,10 +210,9 @@ export class LeanbotBLE {
     try {
       // Không có thiết bị nào được lưu
       if (!this.#device) {
-        return {
-          success: false,
-          message: "No device found to disconnect. Please connect a device first."
-        };
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
+        });
       }
 
       // Thiết bị tồn tại nhưng chưa kết nối

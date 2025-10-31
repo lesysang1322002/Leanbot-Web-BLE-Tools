@@ -3,20 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leanbot BLE Tool</title>
+  <title>Leanbot BLE</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
     <!-- TOP BAR -->
     <div id="topBar">
-    <div id="leftButtons">
-        <button id="btnConnect">Connect</button>
-        <button id="btnReconnect">Reconnect</button>
-    </div>
-
-    <span id="leanbotStatus" class="disconnected">No Leanbot</span>
-
     <div id="rightButtons">
         <button id="btnLoadHex">Load HEX</button>
         <button id="btnUpload">Upload</button>
@@ -51,6 +44,15 @@
     <div id="uploadSection">
         <h3>Upload Log:</h3>
         <div id="uploadLog"></div>
+    </div>
+
+    <!-- BOTTOM BAR -->
+    <div id="bottomBar">
+        <div id="rightButtons">
+            <span id="status">No Leanbot connected</span>
+            <button id="btnConnect">Connect</button>
+            <button id="btnReconnect">Reconnect</button>
+        </div>
     </div>
 
   <script type="module" src="main.js"></script>
