@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leanbot BLE Tool</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- TOP BAR -->
+    <div id="topBar">
+    <div id="leftButtons">
+        <button id="btnConnect">Connect</button>
+        <button id="btnReconnect">Reconnect</button>
+    </div>
+
+    <span id="leanbotStatus" class="disconnected">No Leanbot</span>
+
+    <div id="rightButtons">
+        <button id="btnLoadHex">Load HEX</button>
+        <button id="btnUpload">Upload</button>
+    </div>
+    </div>
+
+
+    <!-- SERIAL MONITOR -->
+    <div id="serialSection">
+        <h3>Serial Monitor:</h3>
+        <div id="serialTop">
+        <div id="serialOptions">
+            <label><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
+            <label><input type="checkbox" id="showTimestamp"> Timestamp</label>
+        </div>
+        <div>
+            <button id="btnClear">Clear</button>
+            <button id="btnCopy">Copy</button>
+        </div>
+        </div>
+
+        <div id="serialLog"></div>
+
+        <div id="serialBottom">
+        <button id="btnSend">Send</button>
+        <input type="text" id="serialInput" placeholder="Send Message -> ...">
+        <label><input type="checkbox" id="addNewline" checked> Newline</label>
+        </div>
+    </div>
+
+    <!-- UPLOAD LOG -->
+    <div id="uploadSection">
+        <h3>Upload Log:</h3>
+        <div id="uploadLog"></div>
+    </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
