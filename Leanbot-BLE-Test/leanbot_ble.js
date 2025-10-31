@@ -185,16 +185,16 @@ export class LeanbotBLE {
         }
       });
 
-      // 3️⃣ Thiết lập kết nối BLE
-    await this.#setupConnection();
+        // 3️⃣ Thiết lập kết nối BLE
+      await this.#setupConnection();
 
-    console.log("Callback OnConnect: Enabled");
-    if (this.OnConnect) this.OnConnect();
+      console.log("Callback OnConnect: Enabled");
+      if (this.OnConnect) this.OnConnect();
 
-    return {  
-      success: true,
-      message: `Connected to ${this.#device.name}`
-    };
+      return {  
+        success: true,
+        message: `Connected to ${this.#device.name}`
+      };
 
     } catch (error) {
       return {
