@@ -1,4 +1,6 @@
 // leanbot_ble.js
+import * as utils from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_utils.js";
+
 export class LeanbotBLE {
 
   // ===== SERVICE UUID CHUNG =====
@@ -9,8 +11,6 @@ export class LeanbotBLE {
   #server = null;
   #service = null;
   #chars = {};
-  #ReconnectWithFilterName = false;
-  #lastDevice = null;
   
   constructor() {
     this.OnConnect = null;
@@ -172,21 +172,21 @@ export class LeanbotBLE {
   }
 
   // ---------------- BLE CORE ----------------
-  async Connect() {
+  async Connect(deviceName = "") {
     try {
-      if (this.#ReconnectWithFilterName) {
-        // Chọn thiết bị BLE có tên tương ứng
-        this.#device = await navigator.bluetooth.requestDevice({
-          filters: [{
-            name: this.#lastDevice,
-            services: [LeanbotBLE.SERVICE_UUID]
-          }],
-        });
-        this.#ReconnectWithFilterName = false;
-      } else {
-        // Chọn thiết bị BLE có service UUID tương ứng
+      // Nếu deviceName rỗng → quét tất cả thiết bị có service UUID tương ứng
+      if (!deviceName || deviceName.trim() === "") {
         this.#device = await navigator.bluetooth.requestDevice({
           filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
+        });
+      } 
+      // Nếu có deviceName → chỉ quét thiết bị có tên trùng khớp
+      else {
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{
+            name: deviceName.trim(),
+            services: [LeanbotBLE.SERVICE_UUID],
+          }],
         });
       }
 
@@ -256,17 +256,9 @@ export class LeanbotBLE {
 
   async Reconnect() {
     try {
-      // Nếu không có thiết bị đã lưu, thử lấy từ localStorage
+      // Nếu kể từ khi load trang chưa kết nối thiết bị nào
       if (!this.#device) {
-        const lastDevice = localStorage.getItem("leanbot_device");
-        this.#lastDevice = lastDevice ? JSON.parse(lastDevice) : null;
-
-        // Nếu có thiết bị đã lưu, thử reconnect với tên đó
-        if(this.#lastDevice) {
-          this.#ReconnectWithFilterName = true;
-        }
-
-        return await this.Connect();
+        return await this.Connect(this.getLastLeanbotID());
       }
 
       // Nếu thiết bị vẫn đang kết nối
@@ -277,7 +269,7 @@ export class LeanbotBLE {
         };
       }
 
-      // Bắt đầu quá trình reconnect
+      // Bắt đầu quá trình kết nối lại
       await this.#setupConnection();
 
       if (this.OnConnect) this.OnConnect(this.#device);
