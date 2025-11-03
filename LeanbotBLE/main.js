@@ -1,28 +1,29 @@
 // main.js
 import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
 
-// =================== BLE =================== //
+// =================== BLE Connection =================== //
 
-const status       = document.getElementById("leanbotStatus");
-const btnConnect   = document.getElementById("btnConnect");
-const btnReconnect = document.getElementById("btnReconnect");
+const leanbotStatus = document.getElementById("leanbotStatus");
+const btnConnect    = document.getElementById("btnConnect");
+const btnReconnect  = document.getElementById("btnReconnect");
 
+// Khởi tạo đối tượng LeanbotBLE
 const leanbot = new LeanbotBLE();
 
 const lastDevice = leanbot.getLastLeanbotID();
 console.log("Last device:", lastDevice);
-status.textContent = lastDevice ? lastDevice : "No Leanbot";
+leanbotStatus.textContent = lastDevice ? lastDevice : "No Leanbot";
 
 leanbot.OnConnect = () => {
-  status.textContent = leanbot.getLeanbotID();
-  status.style.color = "green";
+  leanbotStatus.textContent = leanbot.getLeanbotID();
+  leanbotStatus.style.color = "green";
 }
 
 leanbot.OnDisconnect = () => {
-  status.style.color = "red";
+  leanbotStatus.style.color = "red";
 }
 
-btnConnect.onclick = async () => connectLeanbot();
+btnConnect.onclick   = async () => connectLeanbot();
 btnReconnect.onclick = async () => reconnectLeanbot();
 
 async function connectLeanbot() {
@@ -39,6 +40,7 @@ async function reconnectLeanbot() {
 
 // =================== Serial Monitor =================== //
 
+// Receive data from Leanbot and display in Serial Monitor
 let nextIsNewline   = true;
 let lastTimestamp   = null;
 let msgIsFromWeb    = false;
@@ -46,11 +48,16 @@ let msgIsFromWeb    = false;
 const serialLog           = document.getElementById("serialLog");
 const checkboxAutoScroll  = document.getElementById("autoScroll");
 const checkboxTimestamp   = document.getElementById("showTimestamp");
+const btnClear            = document.getElementById("btnClear");
+const btnCopy             = document.getElementById("btnCopy");
 
 leanbot.Serial.OnMessage = msg => {
   msg = msg.replace(/\r/g, '');
   showSerialLog(msg);
 }
+
+btnClear.onclick = () => clearSerialLog();
+btnCopy.onclick  = () => copySerialLog();
 
 let logBuffer = "";
 
@@ -133,9 +140,6 @@ function copySerialLog() {
     .catch(err => console.error("Copy failed:", err));
 }
 
-document.getElementById("btnClear").onclick = () => clearSerialLog();
-document.getElementById("btnCopy").onclick  = () => copySerialLog();
-
 // ================== Send Command ==================
 const inputCommand    = document.getElementById("serialInput");
 const btnSend         = document.getElementById("btnSend");
@@ -157,10 +161,12 @@ async function send() {
 }
 
 // =================== FILE SELECTION MODAL =================== //
+
 const btnCode        = document.getElementById("btnCode");
 const modal          = document.getElementById("fileModal");
 const closeModal     = document.getElementById("closeModal");
 const fileNameLabel  = document.getElementById("fileName");
+
 let loadedHexContent = ""; // lưu nội dung file HEX đã đọc
 
 btnCode.addEventListener("click", () => {
@@ -184,7 +190,7 @@ document.querySelectorAll(".fileOption").forEach(btn => {
 
     try {
       const res = await fetch(fileUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP ${res.leanbotStatus}`);
       const text = await res.text();
       loadedHexContent = text;
 
@@ -198,7 +204,7 @@ document.querySelectorAll(".fileOption").forEach(btn => {
 
 // =================== Button Load HEX =================== //
 const btnLoadHex = document.getElementById("btnLoadHex");
-const fileInput = document.getElementById("hexFileInput");
+const fileInput  = document.getElementById("hexFileInput");
 
 btnLoadHex.addEventListener("click", () => {
   fileInput.click();
@@ -219,7 +225,7 @@ async function loadHexFile() {
   });
 }
 
-// =================== Button Upload=================== //
+// =================== Button Upload =================== //
 const btnUpload = document.getElementById("btnUpload");
 
 btnUpload.addEventListener("click", async () => {
@@ -243,6 +249,7 @@ btnUpload.addEventListener("click", async () => {
   await leanbot.Uploader.Upload(loadedHexContent); // Upload the HEX file
 });
 
+// =================== Upload Log =================== //
 const uploadLog = document.getElementById("uploadLog");
 
 leanbot.Uploader.OnMessage = msg => {
