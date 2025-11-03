@@ -245,7 +245,7 @@ btnUpload.addEventListener("click", async () => {
     }
   }
 
-  uploadLog.innerText = ""; // Clear previous log
+  uploadLog.textContent = ""; // Clear previous log
   await leanbot.Uploader.Upload(loadedHexContent); // Upload the HEX file
 });
 
@@ -253,7 +253,7 @@ btnUpload.addEventListener("click", async () => {
 const uploadLog = document.getElementById("uploadLog");
 
 leanbot.Uploader.OnMessage = msg => {
-  uploadLog.innerText += msg;
+  uploadLog.textContent += msg;
   uploadLog.scrollTop = uploadLog.scrollHeight;
 };
 
