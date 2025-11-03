@@ -1,12 +1,166 @@
 // main.js
-import { LeanbotBLE } from "./leanbot_ble.js";
-import * as utils from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_utils.js";
+import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
+
+// =================== BLE =================== //
+
+const status       = document.getElementById("leanbotStatus");
+const btnConnect   = document.getElementById("btnConnect");
+const btnReconnect = document.getElementById("btnReconnect");
+
+const leanbot = new LeanbotBLE();
+
+const lastDevice = leanbot.getLastLeanbotID();
+console.log("Last device:", lastDevice);
+status.textContent = lastDevice ? lastDevice : "No Leanbot";
+
+leanbot.OnConnect = () => {
+  status.textContent = leanbot.getLeanbotID();
+  status.style.color = "green";
+}
+
+leanbot.OnDisconnect = () => {
+  status.style.color = "red";
+}
+
+btnConnect.onclick = async () => connectLeanbot();
+btnReconnect.onclick = async () => reconnectLeanbot();
+
+async function connectLeanbot() {
+  console.log("Scanning for Leanbot...");
+  const result = await leanbot.Rescan();
+  console.log("Connect result:", result.message);
+}
+
+async function reconnectLeanbot() {
+  console.log("Reconnecting to Leanbot...");
+  const result = await leanbot.Reconnect();
+  console.log("Reconnect result:", result.message);
+}
+
+// =================== Serial Monitor =================== //
+
+let nextIsNewline   = true;
+let lastTimestamp   = null;
+let msgIsFromWeb    = false;
+
+const serialLog           = document.getElementById("serialLog");
+const checkboxAutoScroll  = document.getElementById("autoScroll");
+const checkboxTimestamp   = document.getElementById("showTimestamp");
+
+leanbot.Serial.OnMessage = msg => {
+  msg = msg.replace(/\r/g, '');
+  showSerialLog(msg);
+}
+
+let logBuffer = "";
+
+setInterval(() => {
+  if (logBuffer) {
+    serialLog.value += logBuffer;
+    logBuffer = "";
+
+    if (checkboxAutoScroll.checked) serialLog.scrollTop = serialLog.scrollHeight;
+  }
+}, 20); // update mỗi 20ms
+
+function showSerialLog(text) {
+  // Goal: Replace the Leanbot initialization message sequence
+  // "\nAT+NAME\nLB999999\n" with "\n>>> Leanbot ready >>>\n"
+  if (text == "AT+NAME\n") return;
+
+  if (text == "LB999999\n") {
+    // Add "\n" before last line (works with TimestampPrefix too)
+    let lines = serialLog.value.split('\n');
+    lines[lines.length - 1] = "\n" + lines[lines.length - 1];
+    serialLog.value = lines.join('\n');
+
+    logBuffer += ">>> Leanbot ready >>>\n";
+    return;
+  }
+  // ================================================
+
+  if (nextIsNewline) {
+    text = '\n' + text;
+    nextIsNewline = false;
+  }
+  if (text.endsWith('\n')) {
+    text = text.slice(0, -1); // Skipped "\n", Leanbot initialization message = "AT+NAME\nLB999999\n"
+    nextIsNewline = true;
+  }
+
+  let now = new Date();
+  let gap = 0;
+  if (!msgIsFromWeb && lastTimestamp) {
+    gap = (now - lastTimestamp) / 1000;
+  }
+
+  if (!msgIsFromWeb) lastTimestamp = now;
+
+  if (checkboxTimestamp.checked) {
+    const hours        = String(now.getHours()).padStart(2, '0');
+    const minutes      = String(now.getMinutes()).padStart(2, '0');
+    const seconds      = String(now.getSeconds()).padStart(2, '0');
+    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+    const gapStr = !msgIsFromWeb ? `(+${gap.toFixed(3)})` : "        ";
+
+    text = text.split('\n').map((line, idx) => {
+      if (idx === 0) {
+        // Keep the first line unchanged
+        return line;
+      } else if (idx === 1) {
+        // Second line -> use the actual gapStr
+        return `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> ${line}`;
+      } else {
+        // From the third line onward -> force gap = 0
+        return `${hours}:${minutes}:${seconds}.${milliseconds} (+0.000) -> ${line}`;
+      }
+    }).join('\n');
+  }
+
+  if (msgIsFromWeb)  msgIsFromWeb = false;
+
+  logBuffer += text;
+}
+
+function clearSerialLog() {
+  serialLog.value = "";
+}
+
+function copySerialLog() {
+  serialLog.select();
+  navigator.clipboard.writeText(serialLog.value)
+    .then(() => console.log("Copied!"))
+    .catch(err => console.error("Copy failed:", err));
+}
+
+document.getElementById("btnClear").onclick = () => clearSerialLog();
+document.getElementById("btnCopy").onclick  = () => copySerialLog();
+
+// ================== Send Command ==================
+const inputCommand    = document.getElementById("serialInput");
+const btnSend         = document.getElementById("btnSend");
+const checkboxNewline = document.getElementById("addNewline");
+
+btnSend.onclick = () => send();
+
+async function send() {
+  msgIsFromWeb = true;
+
+  logBuffer += "\n";
+  showSerialLog("    You -> " + inputCommand.value + "\n");
+  logBuffer += "\n";
+
+  const newline = checkboxNewline.checked ? "\n" : "";
+  await leanbot.Serial.Send(inputCommand.value + newline);
+
+  inputCommand.value = "";
+}
 
 // =================== FILE SELECTION MODAL =================== //
-const btnCode = utils.UI("btnCode");
-const modal = utils.UI("fileModal");
-const closeModal = utils.UI("closeModal");
-const fileNameLabel = utils.UI("fileName");
+const btnCode        = document.getElementById("btnCode");
+const modal          = document.getElementById("fileModal");
+const closeModal     = document.getElementById("closeModal");
+const fileNameLabel  = document.getElementById("fileName");
 let loadedHexContent = ""; // lưu nội dung file HEX đã đọc
 
 btnCode.addEventListener("click", () => {
@@ -18,71 +172,81 @@ closeModal.addEventListener("click", () => {
 });
 
 document.querySelectorAll(".fileOption").forEach(btn => {
-  btn.addEventListener("click", async e => {
-    const filePath = e.target.getAttribute("data-file");
-    const fileName = filePath.split("/").pop();
+  btn.addEventListener("click", async (e) => {
+    const fileUrl = e.target.getAttribute("data-file");
+    const fileName = fileUrl.split("/").pop();
+
     fileNameLabel.textContent = fileName;
     modal.classList.add("hidden");
-    utils.log(`Loaded HEX file: ${fileName}`);
-    const text = await fetch(filePath).then(res => res.text());
-    loadedHexContent = text;
+
+    console.log(`Fetching HEX file from GitHub...`);
+    console.log(`URL: ${fileUrl}`);
+
+    try {
+      const res = await fetch(fileUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      loadedHexContent = text;
+
+      console.log(`Loaded HEX file: ${fileName}`);
+    } catch (err) {
+      console.log(`Failed to fetch HEX file: ${err}`);
+      alert("Error loading file. Please check your internet or URL.");
+    }
   });
 });
 
 // =================== Button Load HEX =================== //
-const btnLoadHex = utils.UI("btnLoadHex");
-const fileInput = utils.UI("hexFileInput");
+const btnLoadHex = document.getElementById("btnLoadHex");
+const fileInput = document.getElementById("hexFileInput");
 
 btnLoadHex.addEventListener("click", () => {
-  fileInput.click(); // mở hộp chọn file
+  fileInput.click();
+  loadHexFile();
 });
 
-fileInput.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+async function loadHexFile() {
+  return new Promise((resolve) => {
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return resolve(null);
 
-  // cập nhật tên file hiển thị
-  fileNameLabel.textContent = file.name;
-
-  // đọc nội dung HEX
-  const text = await file.text();
-  loadedHexContent = text;
-
-  console.log(`Loaded HEX file: ${file.name}`);
-});
-
-
-// =================== BLE =================== //
-
-const status = utils.UI("leanbotStatus");
-const btnConnect = utils.UI("btnConnect");
-const btnReconnect = utils.UI("btnReconnect");
-
-const leanbot = new LeanbotBLE();
-console.log("Get last device for reconnect...");
-const lastDevice = leanbot.getLastLeanbotID();
-status.textContent = lastDevice ? lastDevice : "No Leanbot";
-
-leanbot.OnConnect = () => {
-    status.textContent = leanbot.getLeanbotID();
-    status.className = "connected";
+      fileNameLabel.textContent = file.name;
+      const text = await file.text();
+      loadedHexContent = text;
+      resolve(text);
+    }, { once: true });
+  });
 }
 
-leanbot.OnDisconnect = () => {
-    status.className = "disconnected";
-}
+// =================== Button Upload=================== //
+const btnUpload = document.getElementById("btnUpload");
 
-btnConnect.onclick = async () => connectLeanbot();
-btnReconnect.onclick = async () => reconnectLeanbot();
-
-async function connectLeanbot() {
-    console.log("Scanning for Leanbot...");
-    const result = await leanbot.Rescan();
-    console.log("Connect result:", result.message);
-}
-
-async function reconnectLeanbot() {
-    console.log("Reconnecting to Leanbot...");
+btnUpload.addEventListener("click", async () => {
+  if (!leanbot.IsConnected()){
     const result = await leanbot.Reconnect();
-    console.log("Reconnect result:", result.message);
-}
+    if (!result.success) {
+      alert("Please connect to Leanbot first!");
+      return;
+    }
+  }
+  if (!loadedHexContent) {
+    fileInput.click();
+    loadedHexContent = await loadHexFile();
+    if (!loadedHexContent) {
+      alert("No HEX file loaded!");
+      return;
+    }
+  }
+
+  uploadLog.innerText = ""; // Clear previous log
+  await leanbot.Uploader.Upload(loadedHexContent); // Upload the HEX file
+});
+
+const uploadLog = document.getElementById("uploadLog");
+
+leanbot.Uploader.OnMessage = msg => {
+  uploadLog.innerText += msg;
+  uploadLog.scrollTop = uploadLog.scrollHeight;
+};
+

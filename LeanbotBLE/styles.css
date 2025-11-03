@@ -45,10 +45,11 @@ button:hover {
   border-radius: 5px;
   padding: 10px;
 }
+
 #uploadLog {
   height: 100px;
   background: #111;
-  color: #0ff;
+  color: rgb(247, 126, 74);
   font-family: monospace;
   padding: 8px;
   overflow-y: auto;
@@ -82,7 +83,7 @@ button:hover {
 #serialLog {
   flex: 1;
   background: #000;
-  color: #0f0;
+  color: white;
   font-family: monospace;
   padding: 6px;
   margin: 6px 0;
@@ -92,6 +93,7 @@ button:hover {
   border: 1px solid #999;
   box-sizing: border-box;
   display: block;
+  resize: none;
 }
 
 #serialBottom {
@@ -129,10 +131,8 @@ button:hover {
 
 #leanbotStatus {
   font-weight: bold;
+  color: red;
 }
-
-.connected { color: #2ecc71; }
-.disconnected { color: #e74c3c; }
 
 /* --- MODAL (File Selection) --- */
 #fileModal.hidden {
