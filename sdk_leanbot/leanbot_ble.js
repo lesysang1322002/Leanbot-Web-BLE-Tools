@@ -204,9 +204,6 @@ export class LeanbotBLE {
         // Thiết lập kết nối BLE
       await this.#setupConnection();
 
-      console.log("Callback OnConnect: Enabled");
-      if (this.OnConnect) this.OnConnect();
-
       return {  
         success: true,
         message: `Connected to ${this.#device.name}`
@@ -256,11 +253,6 @@ export class LeanbotBLE {
 
   async Reconnect() {
     try {
-      // Nếu kể từ khi load trang chưa kết nối thiết bị nào
-      if (!this.#device) {
-        return await this.Connect(this.getLastLeanbotID());
-      }
-
       // Nếu thiết bị vẫn đang kết nối
       if (this.#device.gatt.connected) {
         return {
@@ -268,16 +260,17 @@ export class LeanbotBLE {
           message: `Already connected to ${this.#device.name}`
         };
       }
-
-      // Bắt đầu quá trình kết nối lại
-      await this.#setupConnection();
-
-      if (this.OnConnect) this.OnConnect(this.#device);
-
-      return {
-        success: true,
-        message: `Reconnected to ${this.#device.name}`
-      };
+      // Nếu đã từng kết nối thiết bị trong phiên làm việc hiện tại
+      if (this.#device) {
+        // Bắt đầu quá trình kết nối lại
+        await this.#setupConnection();
+        return {
+          success: true,
+          message: `Reconnected to ${this.#device.name}`
+        };
+      } 
+      // Nếu phiên làm việc hiện tại chưa kết nối thiết bị nào, gọi lại Connect với thiết bị cuối cùng
+      return await this.Connect(this.getLastLeanbotID());
     } catch (error) {
       return {
         success: false,
@@ -285,7 +278,6 @@ export class LeanbotBLE {
       };
     }
   }
-
 
   async Rescan() {
     try {
@@ -325,5 +317,9 @@ export class LeanbotBLE {
     // Bật notify cho Serial và Uploader
     await this.Serial.enableNotify();
     await this.Uploader.enableNotify();
+
+    // Gọi callback OnConnect
+    console.log("Callback OnConnect: Enabled");
+    if (this.OnConnect) this.OnConnect();
   }
 }

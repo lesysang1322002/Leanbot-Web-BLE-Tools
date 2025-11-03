@@ -229,12 +229,10 @@ async function loadHexFile() {
 const btnUpload = document.getElementById("btnUpload");
 
 btnUpload.addEventListener("click", async () => {
-  if (!leanbot.IsConnected()){
-    const result = await leanbot.Reconnect();
-    if (!result.success) {
-      alert("Please connect to Leanbot first!");
-      return;
-    }
+  const result = await leanbot.Reconnect();
+  if (!result.success) {
+    alert("Please connect to Leanbot first!");
+    return;
   }
   if (!loadedHexContent) {
     fileInput.click();
