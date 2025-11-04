@@ -249,7 +249,7 @@ export class LeanbotBLE {
         console.log("Uploader: Sent START header");
 
         // Chuyển toàn bộ HEX sang gói BLE
-        const packets = this.Uploader.convertHexToBlePackets(hexText);
+        const packets = utils.convertHexToBlePackets(hexText);
         console.log(`Uploader: Prepared ${packets.length} BLE packets`);
 
         // Gửi lần lượt từng gói
