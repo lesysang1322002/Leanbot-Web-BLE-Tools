@@ -193,6 +193,7 @@ export class LeanbotBLE {
       }
 
       // Lưu tên thiết bị vào localStorage để reconnect sau này
+      console.log("Saving device to localStorage:", this.#device.name);
       localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
 
       // Thiết lập kết nối BLE
@@ -296,27 +297,26 @@ export class LeanbotBLE {
   }
 
   async #setupConnection() {
-    // Gắn sự kiện ngắt kết nối
+    /** ---------- DISCONNECT EVENT ---------- */
     console.log("Callback OnDisconnect: Enabled");
     this.#device.addEventListener("gattserverdisconnected", () => {
-      if (this.OnDisconnect) {
-        this.OnDisconnect();
-      }
+      if (this.OnDisconnect) this.OnDisconnect();
     });
     
-    // Kết nối GATT, lấy service và characteristics
+    /** ---------- GATT CONNECTION ---------- */
     this.#server = await this.#device.gatt.connect();
     this.#service = await this.#server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
 
+    /** ---------- CHARACTERISTICS ---------- */
     const chars = await this.#service.getCharacteristics();
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid] = c;
 
-    // Bật notify cho Serial và Uploader
+    /** ---------- ENABLE NOTIFICATIONS ---------- */
     await this.Serial.enableNotify();
     await this.Uploader.enableNotify();
 
-    // Gọi callback OnConnect
+    /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback OnConnect: Enabled");
     if (this.OnConnect) this.OnConnect();
   }
