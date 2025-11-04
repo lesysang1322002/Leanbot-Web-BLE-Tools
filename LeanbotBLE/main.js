@@ -1,4 +1,6 @@
 // main.js
+
+// Import LeanbotBLE SDK
 import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
 
 // =================== BLE Connection =================== //
