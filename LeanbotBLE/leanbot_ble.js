@@ -1,6 +1,6 @@
 // leanbot_ble.js
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
-import * as utils from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools@latest/sdk_leanbot/leanbot_utils.js";
+import * as utils from "https://purge.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools@latest/sdk_leanbot/leanbot_utils.js";
 
 export class LeanbotBLE {
   // ===== SERVICE UUID CHUNG =====
