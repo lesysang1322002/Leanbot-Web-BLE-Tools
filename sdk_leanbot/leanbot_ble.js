@@ -12,10 +12,147 @@ export class LeanbotBLE {
   #server  = null;
   #service = null;
   #chars   = {};
-  
+
+  // ---------------- BLE CORE ----------------
+  async connect(deviceName = null) {
+    try {
+      // Nếu deviceName rỗng → quét tất cả thiết bị có service UUID tương ứng
+      if (!deviceName || deviceName.trim() === "") {
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
+        });
+      } 
+      // Nếu có deviceName → chỉ quét thiết bị có tên trùng khớp
+      else {
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{
+            name: deviceName.trim(),
+            services: [LeanbotBLE.SERVICE_UUID],
+          }],
+        });
+      }
+
+      // Lưu tên thiết bị vào localStorage để reconnect sau này
+      console.log("Saving device to localStorage:", this.#device.name);
+      localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
+
+      // Thiết lập kết nối BLE
+      await this.#setupConnection();
+      return {  
+        success: true,
+        message: `Connected to ${this.#device.name}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Connection failed: ${error.message || "Unknown error"}`
+      };
+    }
+  }
+
+  async reconnect() {
+    try {
+      if (this.isConnected()) {
+        // Nếu đang kết nối rồi thì không cần làm gì
+        return {
+          success: true,
+          message: `Already connected to ${this.#device.name}`
+        };
+      }
+
+      if (this.#device) {
+        // Nếu đã ngắt kết nối thì kết nối lại
+        await this.#setupConnection();
+        return {
+          success: true,
+          message: `Reconnected to ${this.#device.name}`
+        };
+      }
+
+      // Gọi lại Connect nếu không có thiết bị trong phiên làm việc hiện tại
+      return await this.connect(this.getLastLeanbotID());
+    } catch (error) {
+      return {
+        success: false,
+        message: `Reconnect failed: ${error.message || "Unknown error"}`
+      };
+    }
+  }
+
+  disconnect() {
+    try {
+      // Không có thiết bị nào được lưu
+      if (!this.#device) {
+        return {
+          success: false,
+          message: "No device found to disconnect. Please connect a device first."
+        };
+      }
+
+      // Thiết bị tồn tại nhưng chưa kết nối
+      if (!this.#device.gatt.connected) {
+        return {
+          success: false,
+          message: "Device is not currently connected."
+        };
+      }
+
+      // Ngắt kết nối
+      this.#device.gatt.disconnect();
+      return {
+        success: true,
+        message: `Disconnected from ${this.#device.name}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Disconnect failed: ${error.message || "Unknown error"}`
+      };
+    }
+  }
+
+  isConnected() {
+    return this.#device?.gatt.connected === true;
+  }
+
+  getLeanbotID() {
+    if (!this.#device) return "No device";
+    return this.#device.name || "Unknown";
+  }
+
+  getLastLeanbotID() {
+    const lastDevice = localStorage.getItem("leanbot_device");
+    return lastDevice ? JSON.parse(lastDevice) : null;
+  }
+
+  async #setupConnection() {
+    /** ---------- DISCONNECT EVENT ---------- */
+    console.log("Callback onDisconnect: Enabled");
+    this.#device.addEventListener("gattserverdisconnected", () => {
+      if (this.onDisconnect) this.onDisconnect();
+    });
+    
+    /** ---------- GATT CONNECTION ---------- */
+    this.#server = await this.#device.gatt.connect();
+    this.#service = await this.#server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
+
+    /** ---------- CHARACTERISTICS ---------- */
+    const chars = await this.#service.getCharacteristics();
+    this.#chars = {};
+    for (const c of chars) this.#chars[c.uuid] = c;
+
+    /** ---------- ENABLE NOTIFICATIONS ---------- */
+    await this.Serial.enableNotify();
+    await this.Uploader.enableNotify();
+
+    /** ---------- CONNECT CALLBACK ---------- */
+    console.log("Callback onConnect: Enabled");
+    if (this.onConnect) this.onConnect();
+  }
+
   constructor() {
-    this.OnConnect = null;
-    this.OnDisconnect = null;
+    this.onConnect = null;
+    this.onDisconnect = null;
 
     // ======================================================
     // 🔹 SUBMODULE: SERIAL
@@ -26,34 +163,37 @@ export class LeanbotBLE {
         return '0000ffe1-0000-1000-8000-00805f9b34fb';
       },
 
-      /** Callback khi nhận notify Serial */
-      OnMessage: null,
-
-      /** Gửi dữ liệu qua đặc tính Serial mặc định (UUID) */
-      Send: async (data) => {
-        try {
-          const uuid = this.Serial.UUID;
-          const char = this.#chars?.[uuid];
-          if (!char) return console.log(`Serial.Send Error: characteristic ${uuid} not found`);
-
-          const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
-          await char.writeValue(buffer);
-        } catch (e) {
-          console.log(`Serial.Send Error: ${e}`);
-        }
+      /** Kiểm tra hỗ trợ Serial */
+      isSupported: () => {
+        return this.#chars?.[this.Serial.UUID];
       },
 
-      /** Gửi nhanh (không chờ phản hồi, tốc độ cao hơn) */
-      SendWithoutResponse: async (data) => {
+      /** Callback khi nhận notify Serial */
+      onMessage: null,
+
+      /** Gửi dữ liệu qua đặc tính Serial mặc định (UUID)
+       * @param {string|Uint8Array} data - dữ liệu cần gửi
+       * @param {boolean} withResponse - true = gửi chờ phản hồi, false = gửi nhanh
+       */
+      send: async (data, withResponse = true) => {
         try {
           const uuid = this.Serial.UUID;
           const char = this.#chars?.[uuid];
-          if (!char) return console.log(`Serial.SendWithoutResponse Error: characteristic ${uuid} not found`);
+          if (!char) {
+            console.log(`Serial.Send Error: characteristic ${uuid} not found`);
+            return;
+          }
 
+          // Chuyển dữ liệu sang Uint8Array nếu là chuỗi
           const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
-          await char.writeValueWithoutResponse(buffer);
+
+          if (withResponse) {
+            await char.writeValue(buffer);
+          } else {
+            await char.writeValueWithoutResponse(buffer);
+          }
         } catch (e) {
-          console.log(`Serial.SendWithoutResponse Error: ${e}`);
+          console.log(`Serial.Send Error: ${e}`);
         }
       },
 
@@ -66,15 +206,10 @@ export class LeanbotBLE {
         await char.startNotifications();
         char.addEventListener("characteristicvaluechanged", (event) => {
           const msg = new TextDecoder().decode(event.target.value);
-          if (this.Serial.OnMessage) this.Serial.OnMessage(msg);
+          if (this.Serial.onMessage) this.Serial.onMessage(msg);
         });
 
-        console.log("Callback Serial.OnMessage: Enabled");
-      },
-
-      /** Kiểm tra hỗ trợ Serial */
-      supported: () => {
-        return this.#chars?.[this.Serial.UUID];
+        console.log("Callback Serial.onMessage: Enabled");
       },
     };
 
@@ -89,12 +224,19 @@ export class LeanbotBLE {
       get UUID_LbToWeb() {
         return '0000ffe3-0000-1000-8000-00805f9b34fb';
       },
+
+      /** Kiểm tra hỗ trợ Uploader */
+      isSupported: () => {
+        const hasWebToLb = this.#chars?.[this.Uploader.UUID_WebToLb];
+        const hasLbToWeb = this.#chars?.[this.Uploader.UUID_LbToWeb];
+        return hasWebToLb && hasLbToWeb;
+      },  
       
       /** Callback khi nhận notify Uploader */
-      OnMessage: null,
+      onMessage: null,
 
       /** Upload HEX file */
-      Upload: async (hexText) => {
+      upload: async (hexText) => {
         if (!this.#chars || !this.#chars[this.Uploader.UUID_WebToLb]) {
           console.log("Uploader Error: RX characteristic not found.");
           return;
@@ -157,167 +299,11 @@ export class LeanbotBLE {
         await char.startNotifications();
         char.addEventListener("characteristicvaluechanged", (event) => {
           const msg = new TextDecoder().decode(event.target.value);
-          if (this.Uploader.OnMessage) this.Uploader.OnMessage(msg);
+          if (this.Uploader.onMessage) this.Uploader.onMessage(msg);
         });
 
-        console.log("Callback Uploader.OnMessage: Enabled");
+        console.log("Callback Uploader.onMessage: Enabled");
       },
-
-      /** Kiểm tra hỗ trợ Uploader */
-      supported: () => {
-        const hasWebToLb = this.#chars?.[this.Uploader.UUID_WebToLb];
-        const hasLbToWeb = this.#chars?.[this.Uploader.UUID_LbToWeb];
-        return hasWebToLb && hasLbToWeb;
-      },  
     };
-  }
-
-  // ---------------- BLE CORE ----------------
-  async Connect(deviceName = "") {
-    try {
-      // Nếu deviceName rỗng → quét tất cả thiết bị có service UUID tương ứng
-      if (!deviceName || deviceName.trim() === "") {
-        this.#device = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
-        });
-      } 
-      // Nếu có deviceName → chỉ quét thiết bị có tên trùng khớp
-      else {
-        this.#device = await navigator.bluetooth.requestDevice({
-          filters: [{
-            name: deviceName.trim(),
-            services: [LeanbotBLE.SERVICE_UUID],
-          }],
-        });
-      }
-
-      // Lưu tên thiết bị vào localStorage để reconnect sau này
-      console.log("Saving device to localStorage:", this.#device.name);
-      localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
-
-      // Thiết lập kết nối BLE
-      await this.#setupConnection();
-      return {  
-        success: true,
-        message: `Connected to ${this.#device.name}`
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Connection failed: ${error.message || "Unknown error"}`
-      };
-    }
-  }
-
-  Disconnect() {
-    try {
-      // Không có thiết bị nào được lưu
-      if (!this.#device) {
-        return {
-          success: false,
-          message: "No device found to disconnect. Please connect a device first."
-        };
-      }
-
-      // Thiết bị tồn tại nhưng chưa kết nối
-      if (!this.#device.gatt.connected) {
-        return {
-          success: false,
-          message: "Device is not currently connected."
-        };
-      }
-
-      // Ngắt kết nối
-      this.#device.gatt.disconnect();
-      return {
-        success: true,
-        message: `Disconnected from ${this.#device.name}`
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Disconnect failed: ${error.message || "Unknown error"}`
-      };
-    }
-  }
-
-  async Reconnect() {
-    try {
-      if (this.IsConnected()) {
-        // Nếu đang kết nối rồi thì không cần làm gì
-        return {
-          success: true,
-          message: `Already connected to ${this.#device.name}`
-        };
-      }
-
-      if (this.#device) {
-        // Nếu đã ngắt kết nối thì kết nối lại
-        await this.#setupConnection();
-        return {
-          success: true,
-          message: `Reconnected to ${this.#device.name}`
-        };
-      }
-
-      // Gọi lại Connect nếu không có thiết bị trong phiên làm việc hiện tại
-      return await this.Connect(this.getLastLeanbotID());
-    } catch (error) {
-      return {
-        success: false,
-        message: `Reconnect failed: ${error.message || "Unknown error"}`
-      };
-    }
-  }
-
-  async Rescan() {
-    try {
-      this.Disconnect();
-      return await this.Connect();
-    } catch (error) {
-      return {
-        success: false,
-        message: `Rescan failed: ${error.message || "Unknown error"}`
-      };
-    }
-  }
-
-  IsConnected() {
-    return this.#device?.gatt.connected === true;
-  }
-
-  getLeanbotID() {
-    if (!this.#device) return "No device";
-    return this.#device.name || "Unknown";
-  }
-
-  getLastLeanbotID() {
-    const lastDevice = localStorage.getItem("leanbot_device");
-    return lastDevice ? JSON.parse(lastDevice) : null;
-  }
-
-  async #setupConnection() {
-    /** ---------- DISCONNECT EVENT ---------- */
-    console.log("Callback OnDisconnect: Enabled");
-    this.#device.addEventListener("gattserverdisconnected", () => {
-      if (this.OnDisconnect) this.OnDisconnect();
-    });
-    
-    /** ---------- GATT CONNECTION ---------- */
-    this.#server = await this.#device.gatt.connect();
-    this.#service = await this.#server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
-
-    /** ---------- CHARACTERISTICS ---------- */
-    const chars = await this.#service.getCharacteristics();
-    this.#chars = {};
-    for (const c of chars) this.#chars[c.uuid] = c;
-
-    /** ---------- ENABLE NOTIFICATIONS ---------- */
-    await this.Serial.enableNotify();
-    await this.Uploader.enableNotify();
-
-    /** ---------- CONNECT CALLBACK ---------- */
-    console.log("Callback OnConnect: Enabled");
-    if (this.OnConnect) this.OnConnect();
   }
 }

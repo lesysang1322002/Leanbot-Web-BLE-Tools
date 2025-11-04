@@ -1,5 +1,5 @@
 // main.js
-import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
+import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk/leanbot_ble.js";
 
 // =================== BLE Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");
@@ -13,12 +13,12 @@ const lastDevice = leanbot.getLastLeanbotID();
 console.log("Last device:", lastDevice);
 leanbotStatus.textContent = lastDevice ? lastDevice : "No Leanbot";
 
-leanbot.OnConnect = () => {
+leanbot.onConnect = () => {
   leanbotStatus.textContent = leanbot.getLeanbotID();
   leanbotStatus.style.color = "green";
 }
 
-leanbot.OnDisconnect = () => {
+leanbot.onDisconnect = () => {
   leanbotStatus.style.color = "red";
 }
 
@@ -27,13 +27,14 @@ btnReconnect.onclick = async () => reconnectLeanbot();
 
 async function connectLeanbot() {
   console.log("Scanning for Leanbot...");
-  const result = await leanbot.Rescan();
+  leanbot.disconnect(); // Ngắt kết nối nếu đang kết nối
+  const result = await leanbot.connect();
   console.log("Connect result:", result.message);
 }
 
 async function reconnectLeanbot() {
   console.log("Reconnecting to Leanbot...");
-  const result = await leanbot.Reconnect();
+  const result = await leanbot.reconnect();
   console.log("Reconnect result:", result.message);
 }
 
@@ -47,7 +48,7 @@ const checkboxTimestamp   = document.getElementById("showTimestamp");
 const btnClear            = document.getElementById("btnClear");
 const btnCopy             = document.getElementById("btnCopy");
 
-leanbot.Serial.OnMessage = msg => {
+leanbot.Serial.onMessage = msg => {
   msg = msg.replace(/\r/g, '');
   showSerialLog(msg);
 }
@@ -140,7 +141,7 @@ btnSend.onclick = () => send();
 
 async function send() {
   const newline = checkboxNewline.checked ? "\n" : "";
-  await leanbot.Serial.Send(inputCommand.value + newline);
+  await leanbot.Serial.send(inputCommand.value + newline);
 
   inputCommand.value = "";
 }
@@ -222,20 +223,20 @@ btnUpload.addEventListener("click", async () => {
     }
   }
 
-  const result = await leanbot.Reconnect();
+  const result = await leanbot.reconnect();
   if (!result.success) {
     alert("Please connect to Leanbot first!");
     return;
   }
 
   uploadLog.textContent = ""; // Clear previous log
-  await leanbot.Uploader.Upload(loadedHexContent); // Upload the HEX file
+  await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });
 
 // =================== Upload Log =================== //
 const uploadLog = document.getElementById("uploadLog");
 
-leanbot.Uploader.OnMessage = msg => {
+leanbot.Uploader.onMessage = msg => {
   uploadLog.textContent += msg;
   uploadLog.scrollTop = uploadLog.scrollHeight;
 };
