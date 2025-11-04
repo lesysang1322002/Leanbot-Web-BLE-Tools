@@ -244,15 +244,15 @@ export class LeanbotBLE {
 
   async Reconnect() {
     try {
-      // Nếu phiên làm việc hiện tại đã có thiết bị được lưu
-      if (this.#device) {
+      if (this.IsConnected()) {
         // Nếu đang kết nối rồi thì không cần làm gì
-        if(this.IsConnected()){
-          return {
-            success: true,
-            message: `Already connected to ${this.#device.name}`
-          };
-        }
+        return {
+          success: true,
+          message: `Already connected to ${this.#device.name}`
+        };
+      }
+
+      if (this.#device) {
         // Nếu đã ngắt kết nối thì kết nối lại
         await this.#setupConnection();
         return {
@@ -260,6 +260,7 @@ export class LeanbotBLE {
           message: `Reconnected to ${this.#device.name}`
         };
       }
+
       // Gọi lại Connect nếu không có thiết bị trong phiên làm việc hiện tại
       return await this.Connect(this.getLastLeanbotID());
     } catch (error) {
