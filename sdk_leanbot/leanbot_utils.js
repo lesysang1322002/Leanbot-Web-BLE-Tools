@@ -17,6 +17,7 @@ export function log(msg) {
   logBox.scrollTop = logBox.scrollHeight;
 }
 
+
 function parseHexLine(line) {
   if (!line.startsWith(":")) return null;
   const hex = line.slice(1);
@@ -28,6 +29,7 @@ function parseHexLine(line) {
   return { length, address, recordType, data, checksum, hex };
 }
 
+// Kiểm tra checksum của dòng HEX
 function verifyChecksum(parsed) {
   const { hex, length, checksum } = parsed;
   const allBytes = [];
@@ -39,6 +41,7 @@ function verifyChecksum(parsed) {
   return calcChecksum === checksum;
 }
 
+// Chuyển dòng HEX thành mảng byte
 function hexLineToBytes(block) {
   const bytes = [];
   for (let i = 0; i < block.length; i += 2) {
