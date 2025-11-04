@@ -1,16 +1,18 @@
 // leanbot_ble.js
+// SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
+
+// Nhập module tiện ích
 import * as utils from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_utils.js";
 
 export class LeanbotBLE {
-
   // ===== SERVICE UUID CHUNG =====
   static SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
 
   // ---- PRIVATE MEMBERS ----
-  #device = null;
-  #server = null;
+  #device  = null;
+  #server  = null;
   #service = null;
-  #chars = {};
+  #chars   = {};
   
   constructor() {
     this.OnConnect = null;
@@ -31,7 +33,7 @@ export class LeanbotBLE {
       /** Gửi dữ liệu qua đặc tính Serial mặc định (UUID) */
       Send: async (data) => {
         try {
-          const uuid = this.Serial.UUID.toLowerCase();
+          const uuid = this.Serial.UUID;
           const char = this.#chars?.[uuid];
           if (!char) return console.log(`Serial.Send Error: characteristic ${uuid} not found`);
 
@@ -45,7 +47,7 @@ export class LeanbotBLE {
       /** Gửi nhanh (không chờ phản hồi, tốc độ cao hơn) */
       SendWithoutResponse: async (data) => {
         try {
-          const uuid = this.Serial.UUID.toLowerCase();
+          const uuid = this.Serial.UUID;
           const char = this.#chars?.[uuid];
           if (!char) return console.log(`Serial.SendWithoutResponse Error: characteristic ${uuid} not found`);
 
@@ -148,7 +150,7 @@ export class LeanbotBLE {
       },
 
       enableNotify: async () => {
-        const uuid = this.Uploader.UUID_LbToWeb.toLowerCase();
+        const uuid = this.Uploader.UUID_LbToWeb;
         const char = this.#chars?.[uuid];
         if (!char) return console.log("Uploader Notify: UUID not found");
         if (!char.properties.notify) return console.log("Uploader Notify: Not supported");
@@ -193,22 +195,12 @@ export class LeanbotBLE {
       // Lưu tên thiết bị vào localStorage để reconnect sau này
       localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
 
-      // Gắn sự kiện ngắt kết nối
-      console.log("Callback OnDisconnect: Enabled");
-      this.#device.addEventListener("gattserverdisconnected", () => {
-        if (this.OnDisconnect) {
-          this.OnDisconnect();
-        }
-      });
-
-        // Thiết lập kết nối BLE
+      // Thiết lập kết nối BLE
       await this.#setupConnection();
-
       return {  
         success: true,
         message: `Connected to ${this.#device.name}`
       };
-
     } catch (error) {
       return {
         success: false,
@@ -237,7 +229,6 @@ export class LeanbotBLE {
 
       // Ngắt kết nối
       this.#device.gatt.disconnect();
-
       return {
         success: true,
         message: `Disconnected from ${this.#device.name}`
@@ -250,26 +241,25 @@ export class LeanbotBLE {
     }
   }
 
-
   async Reconnect() {
     try {
-      // Nếu thiết bị vẫn đang kết nối
-      if (this.#device.gatt.connected) {
-        return {
-          success: true,
-          message: `Already connected to ${this.#device.name}`
-        };
-      }
-      // Nếu đã từng kết nối thiết bị trong phiên làm việc hiện tại
+      // Nếu phiên làm việc hiện tại đã có thiết bị được lưu
       if (this.#device) {
-        // Bắt đầu quá trình kết nối lại
+        // Nếu đang kết nối rồi thì không cần làm gì
+        if(this.IsConnected()){
+          return {
+            success: true,
+            message: `Already connected to ${this.#device.name}`
+          };
+        }
+        // Nếu đã ngắt kết nối thì kết nối lại
         await this.#setupConnection();
         return {
           success: true,
           message: `Reconnected to ${this.#device.name}`
         };
-      } 
-      // Nếu phiên làm việc hiện tại chưa kết nối thiết bị nào, gọi lại Connect với thiết bị cuối cùng
+      }
+      // Gọi lại Connect nếu không có thiết bị trong phiên làm việc hiện tại
       return await this.Connect(this.getLastLeanbotID());
     } catch (error) {
       return {
@@ -306,6 +296,14 @@ export class LeanbotBLE {
   }
 
   async #setupConnection() {
+    // Gắn sự kiện ngắt kết nối
+    console.log("Callback OnDisconnect: Enabled");
+    this.#device.addEventListener("gattserverdisconnected", () => {
+      if (this.OnDisconnect) {
+        this.OnDisconnect();
+      }
+    });
+    
     // Kết nối GATT, lấy service và characteristics
     this.#server = await this.#device.gatt.connect();
     this.#service = await this.#server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
