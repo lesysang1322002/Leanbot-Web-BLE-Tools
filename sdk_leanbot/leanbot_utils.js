@@ -17,7 +17,7 @@ export function log(msg) {
   logBox.scrollTop = logBox.scrollHeight;
 }
 
-export function parseHexLine(line) {
+function parseHexLine(line) {
   if (!line.startsWith(":")) return null;
   const hex = line.slice(1);
   const length = parseInt(hex.substr(0, 2), 16);
@@ -28,7 +28,7 @@ export function parseHexLine(line) {
   return { length, address, recordType, data, checksum, hex };
 }
 
-export function verifyChecksum(parsed) {
+function verifyChecksum(parsed) {
   const { hex, length, checksum } = parsed;
   const allBytes = [];
   for (let i = 0; i < 4 + length; i++) {
@@ -39,7 +39,7 @@ export function verifyChecksum(parsed) {
   return calcChecksum === checksum;
 }
 
-export function hexLineToBytes(block) {
+function hexLineToBytes(block) {
   const bytes = [];
   for (let i = 0; i < block.length; i += 2) {
     const b = parseInt(block.substr(i, 2), 16);
