@@ -189,13 +189,10 @@ let countBytes = 0;
 
 // ================== UI Handlers ==================
 function handleChangedValue(event) {
-    if (writing) return; // Bỏ qua nếu event do Web ghi -> ESP
-    const byteLength = event.target.value.byteLength;
-    countBytes += byteLength;
-    // console.log('Received ' + byteLength + ' bytes');
+    // if (writing) return; // Bỏ qua nếu event do Web ghi -> ESP
+    
     const valueString = new TextDecoder('utf-8').decode(event.target.value).replace(/\r/g, '');
     showTerminalMessage(valueString);
-    if (checkboxAutoScroll.checked) textArea.scrollTop = textArea.scrollHeight;
 }
 
 function showTerminalMessage(text) {

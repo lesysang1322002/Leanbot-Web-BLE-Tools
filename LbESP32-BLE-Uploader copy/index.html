@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LbESP32 BLE Uploader</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" type="text/css" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+     <!-- ===== NAVBAR ===== -->
+    <nav class="navbar" style="padding: 0px 0px;">
+        <button class="btn btn-primary-scan" id="toggleButton">
+            <img src="../image/ble_logo.png" alt="Scan Icon"><span id="buttonText">Connect to Leanbot...</span>  
+        </button>
+        <a class="navbar-brand" href="#" id="navbarTitle" style="color: rgb(218, 79, 79)">No Leanbot connected</a>
+        <button class="btn" id="BtnReconnect" onclick="reconnectBLE()">
+            Reconnect
+        </button>
+    </nav>
+
+    <div class="split-container">
+        <div class="left-panel">
+            <!-- --- Phần trên: các nút điều khiển --- -->
+            <div class="top-controls">
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" id="CheckAutoScroll" checked>
+                    <label class="form-check-label" for="CheckAutoScroll">Autoscroll</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" id="CheckTimestamp">
+                    <label class="form-check-label" for="CheckTimestamp">Timestamp</label>
+                </div>
+                <div class="ml-auto">
+                    <button class="btn-primary" onclick="clearTextarea()">Clear</button>
+                    <button class="btn-primary" onclick="copyToClipboard()">Copy</button>
+                </div>
+            </div>
+
+            <!-- --- Phần giữa: Textarea --- -->
+            <div class="middle-text">
+                <textarea class="form-control monospace" id="textareaNotification" readonly></textarea>
+            </div>
+
+            <!-- --- Phần dưới: gửi dữ liệu --- -->
+            <div class="bottom-controls">
+                <button class="btn-primary" id="btsend" onclick="send()">Send</button>
+                <input id="input" type="text" class="input monospace" placeholder="Send Message ->...">
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" id="CheckNL" checked>
+                    <label class="form-check-label" for="CheckNL">Newline</label>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="right-panel" style="text-align: center;">
+            <div class="status-block">
+                <h5>Web → ESP (HEX Lines)</h5>
+                <pre id="UploaderSendLog" class="status-box"></pre>
+            </div>
+
+            <div class="status-block">
+                <h5>ESP → Web (Status / Progress)</h5>
+                <pre id="UploaderRecvLog" class="status-box"></pre>
+            </div>
+    
+            <!-- Upload Container -->
+            <div class="upload-container">
+            
+            <!-- NỬA TRÁI -->
+            <div class="upload-left">
+                <!-- Drop zone -->
+                <div class="drop-zone">
+                <div id="dropZone">
+                    <label for="fileInput" class="custom-file-upload">Choose HEX File</label>
+                    <div>
+                    <input type="file" id="fileInput" accept=".hex" hidden/>
+                    </div>
+                    <p>or drop HEX File here</p>
+                    <div id="fileName">No file chosen</div>
+                </div>
+                </div>
+
+                <!-- Upload button -->
+                <div>
+                <button id="uploadBtn">Send to LbESP32</button>
+                </div>
+            </div>
+
+            <!-- NỬA PHẢI -->
+            <div class="upload-right">
+                <button id="uploadStandardBtn">Upload Standard</button>
+                <button id="uploadAdvanceBtn">Upload Advance</button>
+            </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</body>
+    <!-- <script src="https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/Leanbot.js"></script> -->
+    <script src="https://lesysang1322002.github.io/Leanbot-Web-BLE-Tools/Leanbot-BLE-Serial-Monitor/script.js"></script>
+    <script type="module" src="./script.js"></script>
+</html>

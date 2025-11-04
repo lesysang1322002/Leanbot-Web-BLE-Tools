@@ -134,3 +134,9 @@ footer {
   cursor: pointer;
   font-size: 20px;
 }
+
+#BtnReconnect{
+  background-color: #6e7173;
+  color: #ffffff;
+  font-weight: bold;
+}

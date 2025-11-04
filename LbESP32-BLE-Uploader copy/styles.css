@@ -1,0 +1,333 @@
+body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==== NAVBAR ==== */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#navbarTitle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0 auto;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.btn-primary {
+  border-radius: 5px;
+  color: #000 !important; /* Chữ màu đen */
+  background-color: #fff !important; /* Nền trắng */
+  border-color: #000 !important; /* Màu đen cho viền */
+}
+
+.btn-primary-scan {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+  color: #ffffff !important;
+  background-color: #2c5f85 !important;
+  border-color: #000000 !important;
+  width: auto;
+  height: auto;
+}
+
+.btn-primary-scan img {
+  padding-bottom: 2px;
+  width: 22px;
+  height: auto;
+}
+
+#buttonText {
+  font-weight: bold;
+}
+
+#infoButton {
+  margin: 5px 0;
+  background: #ffffff;
+  color: rgb(38, 15, 15);
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+/* ==== INFO PANEL ==== */
+.info-content {
+  display: none;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  white-space: pre-line;
+  line-height: 0.1;
+}
+
+body h6 {
+  font-size: 12px;
+}
+
+/* ==== BỐ CỤC CHÍNH: 2 NỬA MÀN HÌNH ==== */
+.split-container {
+  display: flex;
+  flex: 1;
+  min-height: 0; /* tránh overflow */
+}
+
+.left-panel,
+.right-panel {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* ===== LEFT PANEL LAYOUT ===== */
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  /* background-color: #f5f5f5; */
+  border-right: 2px solid #ccc;
+  padding: 10px;
+}
+
+/* --- Phần trên cùng --- */
+.top-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  margin-left: 5px;
+} 
+
+/* --- Phần giữa (textarea chiếm toàn bộ khoảng trống còn lại) --- */
+.middle-text {
+  flex: 1;
+  display: flex;
+}
+
+.middle-text textarea {
+  flex: 1;
+  resize: none;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+#textareaNotification {
+  resize: none;
+  width: 100%;
+  background: #ffffff;
+  font-size: 12px; 
+  padding: 0;
+  overflow-x: auto;
+}
+
+/* --- Phần dưới --- */
+.bottom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 2px;
+}
+
+.input {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 5px;
+  margin: 0 5px;
+}
+
+/* ==== RIGHT PANEL: layout tổng thể ==== */
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  /* height: calc(100vh - 50px); trừ chiều cao navbar */
+  padding: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+
+/* ==== MỖI KHỐI LOG (Web→ESP và ESP→Web) ==== */
+.status-block {
+  flex: 1; /* chia đều chiều cao */
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* bắt buộc để scroll hoạt động */
+  margin-bottom: 8px;
+}
+
+.status-block h5 {
+  flex-shrink: 0;
+  margin: 4px 0;
+  /* color: #1d78bd; */
+  text-align: left;
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* ==== Ô log cuộn độc lập ==== */
+.status-box {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fafafa;
+  padding: 6px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  text-align: left;
+   /* scroll-behavior: smooth; */
+}
+
+/* ==== DROP ZONE + BUTTON nằm cố định cuối ==== */
+.drop-zone {
+  flex-shrink: 0;
+  flex: 1;
+  margin-top: auto; /* đẩy xuống cuối */
+  text-align: center;
+}
+
+#dropZone {
+  width: 100%;
+  border: 2px dashed #888;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 0 auto 10px auto;
+  background: #fff;
+}
+
+#uploadBtn {
+  background: #1d78bd;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+#uploadBtn:hover {
+  background: #155a8a;
+}
+
+/* ==== DROPZONE VÀ FILE UPLOAD ==== */
+#dropZone.dragover {
+  background-color: #eef;
+  border-color: #00f;
+}
+
+.custom-file-upload {
+  display: inline-block;
+  padding: 8px 16px;
+  cursor: pointer;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  background: #f8f8f8;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+/* ==== TEXT & BUTTONS ==== */
+label {
+  font-weight: bold;
+}
+
+.monospace {
+  font-family: 'Roboto Mono', monospace;
+}
+
+p {
+  font-size: 15px;
+  margin: 0;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* ==== RESPONSIVE ==== */
+@media screen and (orientation: portrait) {
+  #navbarTitle {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 700px) {
+  .upload-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .upload-right {
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    gap: 15px;
+  }
+}
+
+/* === Upload Container Layout === */
+.upload-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
+  margin-top: 10px;
+  flex-wrap: wrap; /* giúp responsive */
+}
+
+.upload-left,
+.upload-right {
+  text-align: center;
+}
+
+.upload-left {
+  flex: 1;
+  min-width: 200px;
+}
+
+.upload-right {
+  flex: 0.6;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 200px;
+}
+
+#uploadStandardBtn,
+#uploadAdvanceBtn {
+  background: #2c5f85;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+#uploadStandardBtn:hover,
+#uploadAdvanceBtn:hover {
+  background: #1b3c57;
+}
+
+#BtnReconnect{
+  background-color: #6e7173;
+  color: #ffffff;
+  font-weight: bold;
+}
+

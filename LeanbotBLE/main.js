@@ -1,5 +1,5 @@
 // main.js
-import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
+import { LeanbotBLE } from "./leanbot_ble.js";
 
 // =================== BLE Connection =================== //
 
@@ -39,11 +39,8 @@ async function reconnectLeanbot() {
 }
 
 // =================== Serial Monitor =================== //
-
-// Receive data from Leanbot and display in Serial Monitor
 let nextIsNewline   = true;
 let lastTimestamp   = null;
-let msgIsFromWeb    = false;
 
 const serialLog           = document.getElementById("serialLog");
 const checkboxAutoScroll  = document.getElementById("autoScroll");
@@ -85,7 +82,6 @@ function showSerialLog(text) {
     return;
   }
   // ================================================
-
   if (nextIsNewline) {
     text = '\n' + text;
     nextIsNewline = false;
@@ -97,18 +93,15 @@ function showSerialLog(text) {
 
   let now = new Date();
   let gap = 0;
-  if (!msgIsFromWeb && lastTimestamp) {
-    gap = (now - lastTimestamp) / 1000;
-  }
 
-  if (!msgIsFromWeb) lastTimestamp = now;
+  if (lastTimestamp) gap = (now - lastTimestamp) / 1000;
 
   if (checkboxTimestamp.checked) {
     const hours        = String(now.getHours()).padStart(2, '0');
     const minutes      = String(now.getMinutes()).padStart(2, '0');
     const seconds      = String(now.getSeconds()).padStart(2, '0');
     const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-    const gapStr = !msgIsFromWeb ? `(+${gap.toFixed(3)})` : "        ";
+    const gapStr       = `(+${gap.toFixed(3)})`;
 
     text = text.split('\n').map((line, idx) => {
       if (idx === 0) {
@@ -124,9 +117,8 @@ function showSerialLog(text) {
     }).join('\n');
   }
 
-  if (msgIsFromWeb)  msgIsFromWeb = false;
-
   logBuffer += text;
+  lastTimestamp = now;
 }
 
 function clearSerialLog() {
@@ -136,7 +128,7 @@ function clearSerialLog() {
 function copySerialLog() {
   serialLog.select();
   navigator.clipboard.writeText(serialLog.value)
-    .then(() => console.log("Copied!"))
+    .then(()   => console.log("Copied!"))
     .catch(err => console.error("Copy failed:", err));
 }
 
@@ -148,12 +140,6 @@ const checkboxNewline = document.getElementById("addNewline");
 btnSend.onclick = () => send();
 
 async function send() {
-  msgIsFromWeb = true;
-
-  logBuffer += "\n";
-  showSerialLog("    You -> " + inputCommand.value + "\n");
-  logBuffer += "\n";
-
   const newline = checkboxNewline.checked ? "\n" : "";
   await leanbot.Serial.Send(inputCommand.value + newline);
 
@@ -161,7 +147,6 @@ async function send() {
 }
 
 // =================== FILE SELECTION MODAL =================== //
-
 const btnCode        = document.getElementById("btnCode");
 const modal          = document.getElementById("fileModal");
 const closeModal     = document.getElementById("closeModal");
@@ -229,11 +214,6 @@ async function loadHexFile() {
 const btnUpload = document.getElementById("btnUpload");
 
 btnUpload.addEventListener("click", async () => {
-  const result = await leanbot.Reconnect();
-  if (!result.success) {
-    alert("Please connect to Leanbot first!");
-    return;
-  }
   if (!loadedHexContent) {
     fileInput.click();
     loadedHexContent = await loadHexFile();
@@ -241,6 +221,12 @@ btnUpload.addEventListener("click", async () => {
       alert("No HEX file loaded!");
       return;
     }
+  }
+
+  const result = await leanbot.Reconnect();
+  if (!result.success) {
+    alert("Please connect to Leanbot first!");
+    return;
   }
 
   uploadLog.textContent = ""; // Clear previous log
