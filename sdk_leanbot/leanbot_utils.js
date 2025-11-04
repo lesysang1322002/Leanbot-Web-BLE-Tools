@@ -47,3 +47,48 @@ export function hexLineToBytes(block) {
   }
   return new Uint8Array(bytes);
 }
+
+export function convertHexToBlePackets(hexText) {
+  const packets = [];
+  const LINES_PER_BLOCK = 14;
+  const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
+
+  let sequence = 0;
+
+  for (let i = 0; i < lines.length;) {
+    const rawLine = lines[i].trim();
+    const parsed = utils.parseHexLine(rawLine);
+    if (!parsed || !utils.verifyChecksum(parsed)) { i++; continue; }
+
+    // Ghép block đầu tiên
+    let block = parsed.hex.substr(2, 4) + parsed.data;
+    let baseLen = parsed.length;
+    let currentAddr = parsed.address;
+    let lineCount = 1;
+
+    // Ghép thêm tối đa LINES_PER_BLOCK dòng liền kề
+    for (let j = i + 1; j < lines.length && lineCount < LINES_PER_BLOCK; j++) {
+      const next = utils.parseHexLine(lines[j].trim());
+      if (!next || !utils.verifyChecksum(next)) break;
+      const expectedAddr = currentAddr + baseLen;
+      if (next.address !== expectedAddr) break;
+      block += next.data;
+      currentAddr = next.address;
+      baseLen = next.length;
+      lineCount++;
+      i = j;
+    }
+
+    i++;
+
+    // Tạo payload BLE
+    const header = sequence.toString(16).padStart(2, "0").toUpperCase();
+    const payload = header + block;
+    const bytes = utils.hexLineToBytes(payload);
+    packets.push(bytes);
+
+    sequence++;
+  }
+
+  return packets;
+}

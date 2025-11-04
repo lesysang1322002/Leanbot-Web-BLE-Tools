@@ -1,7 +1,8 @@
 // main.js
 
 // Import LeanbotBLE SDK
-import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools@latest/sdk_leanbot/leanbot_ble.js";
+// import { LeanbotBLE } from "https://cdn.jsdelivr.net/gh/lesysang1322002/Leanbot-Web-BLE-Tools@latest/sdk_leanbot/leanbot_ble.js";
+import { LeanbotBLE } from "./leanbot_ble.js";
 
 // =================== BLE Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");
@@ -11,9 +12,8 @@ const btnReconnect  = document.getElementById("btnReconnect");
 // Khởi tạo đối tượng LeanbotBLE
 const leanbot = new LeanbotBLE();
 
-const lastDevice = leanbot.getLastLeanbotID();
-console.log("Last device:", lastDevice);
-leanbotStatus.textContent = lastDevice ? lastDevice : "No Leanbot";
+console.log("Getting Leanbot ID:", leanbot.getLeanbotID());
+leanbotStatus.textContent = leanbot.getLeanbotID();
 
 leanbot.onConnect = () => {
   leanbotStatus.textContent = leanbot.getLeanbotID();

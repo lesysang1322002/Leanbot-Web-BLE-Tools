@@ -69,7 +69,7 @@ export class LeanbotBLE {
       }
 
       // Gọi lại Connect nếu không có thiết bị trong phiên làm việc hiện tại
-      return await this.connect(this.getLastLeanbotID());
+      return await this.connect(this.getLeanbotID());
     } catch (error) {
       return {
         success: false,
@@ -240,49 +240,22 @@ export class LeanbotBLE {
           return;
         }
 
-        const WebtoLb = this.#chars[this.Uploader.UUID_WebToLb];
-        const LINES_PER_BLOCK = 14;
-        const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
-
+        const WebToLb = this.#chars[this.Uploader.UUID_WebToLb];
         console.log("Uploader: Start uploading HEX...");
+
+        // Gửi header bắt đầu
         const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
-        await WebtoLb.writeValueWithoutResponse(startHeader);
+        await WebToLb.writeValueWithoutResponse(startHeader);
         console.log("Uploader: Sent START header");
 
-        let sequence = 0;
-        for (let i = 0; i < lines.length;) {
-          const rawLine = lines[i].trim();
-          const parsed = utils.parseHexLine(rawLine);
-          if (!parsed || !utils.verifyChecksum(parsed)) { i++; continue; }
+        // Chuyển toàn bộ HEX sang gói BLE
+        const packets = this.Uploader.convertHexToBlePackets(hexText);
+        console.log(`Uploader: Prepared ${packets.length} BLE packets`);
 
-          // Ghép các dòng liên tiếp
-          let block = parsed.hex.substr(2, 4) + parsed.data;
-          let baseLen = parsed.length;
-          let currentAddr = parsed.address;
-          let lineCount = 1;
-
-          for (let j = i + 1; j < lines.length && lineCount < LINES_PER_BLOCK; j++) {
-            const next = utils.parseHexLine(lines[j].trim());
-            if (!next || !utils.verifyChecksum(next)) break;
-            const expectedAddr = currentAddr + baseLen;
-            if (next.address !== expectedAddr) break;
-            block += next.data;
-            currentAddr = next.address;
-            baseLen = next.length;
-            lineCount++;
-            i = j;
-          }
-
-          i++;
-
-          // Gửi block
-          const header = sequence.toString(16).padStart(2, "0").toUpperCase();
-          const payload = header + block;
-          const bytes = utils.hexLineToBytes(payload);
-          await WebtoLb.writeValueWithoutResponse(bytes);
-          console.log(`Uploader: Sent block #${sequence} (${bytes.length} bytes)`);
-
-          sequence++;
+        // Gửi lần lượt từng gói
+        for (let i = 0; i < packets.length; i++) {
+          await WebToLb.writeValueWithoutResponse(packets[i]);
+          console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
         }
 
         console.log("Uploader: Upload completed!");
