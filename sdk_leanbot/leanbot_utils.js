@@ -57,8 +57,8 @@ export function convertHexToBlePackets(hexText) {
 
   for (let i = 0; i < lines.length;) {
     const rawLine = lines[i].trim();
-    const parsed = utils.parseHexLine(rawLine);
-    if (!parsed || !utils.verifyChecksum(parsed)) { i++; continue; }
+    const parsed = parseHexLine(rawLine);
+    if (!parsed || !verifyChecksum(parsed)) { i++; continue; }
 
     // Ghép block đầu tiên
     let block = parsed.hex.substr(2, 4) + parsed.data;
@@ -68,8 +68,8 @@ export function convertHexToBlePackets(hexText) {
 
     // Ghép thêm tối đa LINES_PER_BLOCK dòng liền kề
     for (let j = i + 1; j < lines.length && lineCount < LINES_PER_BLOCK; j++) {
-      const next = utils.parseHexLine(lines[j].trim());
-      if (!next || !utils.verifyChecksum(next)) break;
+      const next = parseHexLine(lines[j].trim());
+      if (!next || !verifyChecksum(next)) break;
       const expectedAddr = currentAddr + baseLen;
       if (next.address !== expectedAddr) break;
       block += next.data;
@@ -84,7 +84,7 @@ export function convertHexToBlePackets(hexText) {
     // Tạo payload BLE
     const header = sequence.toString(16).padStart(2, "0").toUpperCase();
     const payload = header + block;
-    const bytes = utils.hexLineToBytes(payload);
+    const bytes = hexLineToBytes(payload);
     packets.push(bytes);
 
     sequence++;
