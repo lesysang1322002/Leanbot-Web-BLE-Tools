@@ -254,7 +254,15 @@ export class LeanbotBLE {
         // Gửi lần lượt từng gói
         for (let i = 0; i < packets.length; i++) {
           await WebToLb.writeValueWithoutResponse(packets[i]);
-          console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
+          // console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
+          const preview = Array.from(packets[i].slice(0, 16))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join(' ');
+
+          console.log(
+            `Uploader: Sent block #${i} (${packets[i].length} bytes) ` +
+            `Data:[${preview}${packets[i].length > 16 ? ' ...' : ''}]`
+          );
           if ((i + 1) % 3 === 0) {
             await new Promise(resolve => setTimeout(resolve, 10));
           }
@@ -367,34 +375,36 @@ function convertHexToBlePackets(hexText) {
 
     // Tính delta giữa các block (so với block trước)
     let deltaAddr = 0;
+
+    if (data.length === 0) {
+      // Xử lý trường hợp block EOF
+      const bytes = new Uint8Array([sequence & 0xFF, deltaAddr]);
+      packets.push(bytes);
+      break;
+    }
+
     if (packets.length === 0) {
       deltaAddr = 0; // block đầu tiên
     } else {
       const diff = block.address - lastAddr;
-      deltaAddr = (diff >= 0 && diff <= 255) ? diff : 0xFF; // nếu vượt 255 thì marker reset
-    }
+      while (diff > 255) {
+        // Gửi marker 0xFF (bản tin rỗng)
+        const seqByte = sequence & 0xFF;
+        const marker = new Uint8Array([seqByte, 0xFF]);
+        packets.push(marker);
+        console.log(`Packet Seq:${seqByte} Δ:255 (marker) [gap reduction]`);
+        sequence++;
+        diff -= 255; // giảm dần khoảng cách
+      }
 
-    if (data.length === 0) {
-      // Xử lý trường hợp block EOF
-      const seqByte = sequence & 0xFF;
-      const bytes = new Uint8Array([seqByte, deltaAddr]);
-      packets.push(bytes);
-      break;
+      deltaAddr = diff & 0xFF; // phần còn lại (<255)
     }
     
     let offset = 0;
 
     while (offset < data.length) {
       const chunk = data.slice(offset, offset + MAX_BLE_DATA);
-      const addr = block.address + offset;
-
-      // --- Tạo 3 byte header BLE packet ---
-      const seqByte = sequence & 0xFF;       // 1 byte: sequence number (0–255)
-      const addrHigh = (addr >> 8) & 0xFF;   // 1 byte: high byte of address
-      const addrLow = addr & 0xFF;           // 1 byte: low byte of address
-
-      const bytes = new Uint8Array([seqByte, addrHigh, addrLow, ...chunk]);
-      console.log(`Packet Seq:${seqByte} Addr:0x${addr.toString(16).padStart(4,'0')} Size:${bytes.length}B`);
+      const bytes = new Uint8Array([sequence & 0xFF, deltaAddr, ...chunk]);
       packets.push(bytes);
 
       sequence++;
