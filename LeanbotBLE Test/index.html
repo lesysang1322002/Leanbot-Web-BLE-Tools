@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leanbot BLE</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div id="topBar">
+    <div id="leftButtons">
+      <button id="btnCode">{ } Code</button>
+    </div>
+
+    <div id="rightButtons">
+      <span id="fileName">No file</span>
+      <button id="btnLoadHex">Load HEX</button>
+      <input type="file" id="hexFileInput" accept=".hex" hidden>
+      <button id="btnUpload">Upload</button>
+    </div>
+  </div>
+
+  <!-- UPLOAD LOG -->
+  <div id="uploadSection">
+    <h3>Upload Log:</h3>
+    <div id="uploadLog"></div>
+  </div>
+
+  <!-- SERIAL MONITOR -->
+  <div id="serialSection">
+    <h3>Serial Monitor:</h3>
+    <div id="serialTop">
+      <div id="serialOptions">
+        <label><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
+        <label><input type="checkbox" id="showTimestamp"> Timestamp</label>
+      </div>
+      <div>
+        <button id="btnClear">Clear</button>
+        <button id="btnCopy">Copy</button>
+      </div>
+    </div>
+
+    <textarea id="serialLog" readonly></textarea>
+
+    <div id="serialBottom">
+      <button id="btnSend">Send</button>
+      <input type="text" id="serialInput" placeholder="Send Message -> ...">
+      <label><input type="checkbox" id="addNewline" checked> Newline</label>
+    </div>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div id="bottomBar">
+    <div id="leftStatus">
+      <span class="logo">© Leanbot BLE</span>
+    </div>
+
+    <div id="rightButtons">
+      <span id="leanbotStatus" class="disconnected">No Leanbot</span>
+      <button id="btnReconnect">Reconnect</button>
+      <button id="btnConnect">Connect ...</button>
+    </div>
+  </div>
+
+  <!-- FILE SELECTION MODAL -->
+  <div id="fileModal" class="hidden">
+    <div class="modal-content">
+      <h3>Select HEX File</h3>
+      <button class="fileOption"
+        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/standard.hex">
+        Test Leanbot Standard
+      </button>
+      <button class="fileOption"
+        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/advanced.hex">
+        Test Leanbot Advanced
+      </button>
+      <button id="closeModal">Cancel</button>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
