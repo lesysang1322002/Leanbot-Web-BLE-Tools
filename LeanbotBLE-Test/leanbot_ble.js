@@ -254,15 +254,8 @@ export class LeanbotBLE {
         // Gửi lần lượt từng gói
         for (let i = 0; i < packets.length; i++) {
           await WebToLb.writeValueWithoutResponse(packets[i]);
-          // console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
-          const preview = Array.from(packets[i].slice(0, 16))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join(' ');
-
-          console.log(
-            `Uploader: Sent block #${i} (${packets[i].length} bytes) ` +
-            `Data:[${preview}${packets[i].length > 16 ? ' ...' : ''}]`
-          );
+          console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
+          
           if ((i + 1) % 3 === 0) {
             await new Promise(resolve => setTimeout(resolve, 10));
           }
