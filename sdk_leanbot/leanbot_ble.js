@@ -255,6 +255,10 @@ export class LeanbotBLE {
         for (let i = 0; i < packets.length; i++) {
           await WebToLb.writeValueWithoutResponse(packets[i]);
           console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
+          
+          if ((i + 1) % 3 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
         }
         console.log("Uploader: Upload completed!");
       },
@@ -319,77 +323,88 @@ function hexLineToBytes(block) {
  * @param {string} hexText - HEX file content
  * @returns {Uint8Array[]} packets - Array of BLE message bytes ready to send
  */
-// function convertHexToBlePackets(hexText) {
-//   const MAX_BLE_DATA = 239 - 1 - 2; // BLE payload limit: 239B total - 1B seq - 2B address
-//   const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
+function convertHexToBlePackets(hexText) {
+  const MAX_BLE_DATA = 253 - 1 - 1; // BLE payload limit: 253B total - 1B seq - 1B address
+  const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
 
-//   // --- STEP 1: Parse each HEX line ---
-//   const parsedLines = [];
-//   for (let i = 0; i < lines.length; i++) {
-//     const parsed = parseHexLine(lines[i].trim());
-//     if (!parsed) continue;
-//     if (!verifyChecksum(parsed)) continue;
-//     const bytes = hexLineToBytes(parsed.data);
-//     parsedLines.push({ address: parsed.address, bytes: bytes });
-//   }
+  // --- STEP 1: Parse each HEX line ---
+  const parsedLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    const parsed = parseHexLine(lines[i].trim());
+    if (!parsed) continue;
+    if (!verifyChecksum(parsed)) continue;
+    const bytes = hexLineToBytes(parsed.data);
+    parsedLines.push({ address: parsed.address, bytes: bytes });
+  }
 
-//   // --- STEP 2: Merge consecutive address blocks ---
-//   const mergedBlocks = [];
-//   let current = null;
+  // --- STEP 2: Merge consecutive address blocks ---
+  const mergedBlocks = [];
+  let current = null;
 
-//   for (const line of parsedLines) {
-//     if (!current) {
-//       // Dùng spread operator [...] để sao chép dữ liệu, tránh ảnh hưởng mảng gốc
-//       current = { address: line.address, bytes: [...line.bytes] };
-//       continue;
-//     }
+  for (const line of parsedLines) {
+    if (!current) {
+      // Dùng spread operator [...] để sao chép dữ liệu, tránh ảnh hưởng mảng gốc
+      current = { address: line.address, bytes: [...line.bytes] };
+      continue;
+    }
 
-//     const expectedAddr = current.address + current.bytes.length;
-//     if (line.address === expectedAddr) {
-//       current.bytes.push(...line.bytes);
-//     } else {
-//       mergedBlocks.push(current);
-//       current = { address: line.address, bytes: [...line.bytes] };
-//     }
-//   }
-//   if (current) mergedBlocks.push(current);
+    const expectedAddr = current.address + current.bytes.length;
+    if (line.address === expectedAddr) {
+      current.bytes.push(...line.bytes);
+    } else {
+      mergedBlocks.push(current);
+      current = { address: line.address, bytes: [...line.bytes] };
+    }
+  }
+  if (current) mergedBlocks.push(current);
 
-//   // --- STEP 3: Split each merged block into BLE packets (≤ MAX_BLE_DATA bytes) ---
-//   const packets = [];
-//   let sequence = 0;
+  // --- STEP 3: Split each merged block into BLE packets (≤ MAX_BLE_DATA bytes) ---
+  const packets = [];
+  let sequence = 0;
+  let lastAddr = 0;
 
-//   for (const block of mergedBlocks) {
-//     const data = block.bytes;
+  for (const block of mergedBlocks) {
+    const data = block.bytes;
 
-//     if (data.length === 0) {
-//       // Xử lý trường hợp block EOF
-//       const seqByte = sequence & 0xFF;
-//       const addrHigh = (block.address >> 8) & 0xFF;
-//       const addrLow = block.address & 0xFF;
-//       const bytes = new Uint8Array([seqByte, addrHigh, addrLow]);
-//       packets.push(bytes);
-//       break;
-//     }
+    // Tính delta giữa các block (so với block trước)
+    let deltaAddr = 0;
+
+    if (data.length === 0) {
+      // Xử lý trường hợp block EOF
+      const bytes = new Uint8Array([sequence & 0xFF, deltaAddr]);
+      packets.push(bytes);
+      break;
+    }
+
+    if (packets.length === 0) {
+      deltaAddr = 0; // block đầu tiên
+    } else {
+      const diff = block.address - lastAddr;
+      while (diff > 255) {
+        // Gửi marker 0xFF (bản tin rỗng)
+        const seqByte = sequence & 0xFF;
+        const marker = new Uint8Array([seqByte, 0xFF]);
+        packets.push(marker);
+        sequence++;
+        diff -= 255; // giảm dần khoảng cách
+      }
+
+      deltaAddr = diff & 0xFF; // phần còn lại (<255)
+    }
     
-//     let offset = 0;
+    let offset = 0;
 
-//     while (offset < data.length) {
-//       const chunk = data.slice(offset, offset + MAX_BLE_DATA);
-//       const addr = block.address + offset;
+    while (offset < data.length) {
+      const chunk = data.slice(offset, offset + MAX_BLE_DATA);
+      const bytes = new Uint8Array([sequence & 0xFF, deltaAddr, ...chunk]);
+      packets.push(bytes);
 
-//       // --- Tạo 3 byte header BLE packet ---
-//       const seqByte = sequence & 0xFF;       // 1 byte: sequence number (0–255)
-//       const addrHigh = (addr >> 8) & 0xFF;   // 1 byte: high byte of address
-//       const addrLow = addr & 0xFF;           // 1 byte: low byte of address
+      sequence++;
+      offset += MAX_BLE_DATA;
+    }
 
-//       const bytes = new Uint8Array([seqByte, addrHigh, addrLow, ...chunk]);
-//       console.log(`Packet Seq:${seqByte} Addr:0x${addr.toString(16).padStart(4,'0')} Size:${bytes.length}B`);
-//       packets.push(bytes);
+    lastAddr = block.address + data.length;
+  }
 
-//       sequence++;
-//       offset += MAX_BLE_DATA;
-//     }
-//   }
-
-//   return packets;
-// }
+  return packets;
+}

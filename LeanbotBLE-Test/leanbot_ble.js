@@ -324,7 +324,7 @@ function hexLineToBytes(block) {
  * @returns {Uint8Array[]} packets - Array of BLE message bytes ready to send
  */
 function convertHexToBlePackets(hexText) {
-  const MAX_BLE_DATA = 239 - 1 - 2; // BLE payload limit: 239B total - 1B seq - 2B address
+  const MAX_BLE_DATA = 253 - 1 - 1; // BLE payload limit: 253B total - 1B seq - 1B address
   const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
 
   // --- STEP 1: Parse each HEX line ---
@@ -385,7 +385,6 @@ function convertHexToBlePackets(hexText) {
         const seqByte = sequence & 0xFF;
         const marker = new Uint8Array([seqByte, 0xFF]);
         packets.push(marker);
-        console.log(`Packet Seq:${seqByte} Δ:255 (marker) [gap reduction]`);
         sequence++;
         diff -= 255; // giảm dần khoảng cách
       }
