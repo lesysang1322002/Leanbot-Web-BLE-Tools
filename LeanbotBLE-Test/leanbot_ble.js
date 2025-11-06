@@ -396,12 +396,23 @@ function convertHexToBlePackets(hexText) {
     let offset = 0;
 
     while (offset < data.length) {
-      const chunk = data.slice(offset, offset + MAX_BLE_DATA);
-      const bytes = new Uint8Array([sequence & 0xFF, deltaAddr, ...chunk]);
-      packets.push(bytes);
+      const remain = data.length - offset;
+
+      if (deltaAddr === 0 && remain >= 252) {
+        // Loại 1: [Seq][252 data]
+        const chunk = data.slice(offset, offset + 252);
+        const bytes = new Uint8Array([sequence & 0xFF, ...chunk]);
+        packets.push(bytes);
+        offset += 252;
+      } else {
+        // Loại 2: [Seq][deltaAddr][≤250 data]
+        const chunk = data.slice(offset, offset + 250);
+        const bytes = new Uint8Array([sequence & 0xFF, deltaAddr, ...chunk]);
+        packets.push(bytes);
+        offset += 250;
+      }
 
       sequence++;
-      offset += MAX_BLE_DATA;
     }
 
     lastAddr = block.address + data.length;
