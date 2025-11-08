@@ -243,9 +243,9 @@ export class LeanbotBLE {
         console.log("Uploader: Start uploading HEX...");
 
         // Gửi header bắt đầu
-        const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
-        await WebToLb.writeValueWithoutResponse(startHeader);
-        console.log("Uploader: Sent START header");
+        // const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
+        // await WebToLb.writeValueWithoutResponse(startHeader);
+        // console.log("Uploader: Sent START header");
 
         // Chuyển toàn bộ HEX sang gói BLE
         const packets = convertHexToBlePackets(hexText);
@@ -257,9 +257,9 @@ export class LeanbotBLE {
           // console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
           console.log(Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
           
-          if ((i + 1) % 3 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 10));
-          }
+          // if ((i + 1) % 3 === 0) {
+          //   await new Promise(resolve => setTimeout(resolve, 10));
+          // }
         }
         console.log("Uploader: Upload completed!");
       },
@@ -398,18 +398,18 @@ function convertHexToBlePackets(hexText) {
     while (offset < data.length) {
       const remain = data.length - offset;
 
-      if (deltaAddr === 0 && remain >= 252) {
-        // Loại 1: [Seq][252 data]
-        const chunk = data.slice(offset, offset + 252);
+      if (deltaAddr === 0 && remain >= 511) {
+        // Loại 1: [Seq][511 data]
+        const chunk = data.slice(offset, offset + 511);
         const bytes = new Uint8Array([sequence & 0xFF, ...chunk]);
         packets.push(bytes);
-        offset += 252;
+        offset += 511;
       } else {
-        // Loại 2: [Seq][deltaAddr][≤250 data]
-        const chunk = data.slice(offset, offset + 250);
+        // Loại 2: [Seq][deltaAddr][≤509 data]
+        const chunk = data.slice(offset, offset + 509);
         const bytes = new Uint8Array([sequence & 0xFF, deltaAddr, ...chunk]);
         packets.push(bytes);
-        offset += 250;
+        offset += 509;
       }
 
       sequence++;
