@@ -1,4 +1,4 @@
-// leanbot_ble.js  - Version 251110_9:30
+// leanbot_ble.js
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
 export class LeanbotBLE {
@@ -242,11 +242,6 @@ export class LeanbotBLE {
         const WebToLb = this.#chars[this.Uploader.UUID_WebToLb];
         console.log("Uploader: Start uploading HEX...");
 
-        // Gửi header bắt đầu
-        const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
-        await WebToLb.writeValueWithoutResponse(startHeader);
-        console.log("Uploader: Sent START header");
-
         // Chuyển toàn bộ HEX sang gói BLE
         const packets = convertHexToBlePackets(hexText);
         console.log(`Uploader: Prepared ${packets.length} BLE packets`);
@@ -255,6 +250,7 @@ export class LeanbotBLE {
         for (let i = 0; i < packets.length; i++) {
           await WebToLb.writeValueWithoutResponse(packets[i]);
           console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
+          // console.log(Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
           
           if ((i + 1) % 3 === 0) {
             await new Promise(resolve => setTimeout(resolve, 10));
@@ -324,7 +320,7 @@ function hexLineToBytes(block) {
  * @returns {Uint8Array[]} packets - Array of BLE message bytes ready to send
  */
 function convertHexToBlePackets(hexText) {
-  const MAX_BLE_DATA = 253 - 1 - 1; // BLE payload limit: 253B total - 1B seq - 1B address
+  const MAX_BLE_DATA = 512;
   const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
 
   // --- STEP 1: Parse each HEX line ---
@@ -395,16 +391,26 @@ function convertHexToBlePackets(hexText) {
     let offset = 0;
 
     while (offset < data.length) {
-      const chunk = data.slice(offset, offset + MAX_BLE_DATA);
-      const bytes = new Uint8Array([sequence & 0xFF, deltaAddr, ...chunk]);
-      packets.push(bytes);
+      const remain = data.length - offset;
+
+      if (deltaAddr === 0 && remain >= (MAX_BLE_DATA - 1)) {
+        // Loại 1: [Seq][511 data]
+        const chunk = data.slice(offset, offset + (MAX_BLE_DATA - 1));
+        const bytes = new Uint8Array([sequence & 0xFF, ...chunk]);
+        packets.push(bytes);
+        offset += (MAX_BLE_DATA - 1);
+      } else {
+        // Loại 2: [Seq][deltaAddr][≤509 data]
+        const chunk = data.slice(offset, offset + (MAX_BLE_DATA - 3));
+        const bytes = new Uint8Array([sequence & 0xFF, deltaAddr, ...chunk]);
+        packets.push(bytes);
+        offset += (MAX_BLE_DATA - 3);
+      }
 
       sequence++;
-      offset += MAX_BLE_DATA;
     }
 
     lastAddr = block.address + data.length;
   }
-
   return packets;
 }
