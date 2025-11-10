@@ -370,16 +370,16 @@ function convertHexToBlePackets(hexText) {
       deltaAddr = 0; // block đầu tiên
     } else {
       const diff = block.address - lastAddr;
-      while (diff > 255) {
-        // Gửi marker 0xFF (bản tin rỗng)
+      while (diff > 0x7F) {
+        // Gửi marker 0x7F (bản tin rỗng)
         const seqByte = sequence & 0xFF;
-        const marker = new Uint8Array([seqByte, 0xFF]);
+        const marker = new Uint8Array([seqByte, 0x7F]);
         packets.push(marker);
         sequence++;
-        diff -= 255; // giảm dần khoảng cách
+        diff -= 0x7F; // giảm dần khoảng cách
       }
 
-      deltaAddr = diff & 0xFF; // phần còn lại (<255)
+      deltaAddr = diff & 0x7F; // giới hạn trong [0x00, 0x7F]
     }
     
     let offset = 0;
