@@ -366,13 +366,6 @@ function convertHexToBlePackets(hexText) {
     // Tính delta giữa các block (so với block trước)
     let deltaAddr = 0;
 
-    // if (data.length === 0) {
-    //   // Xử lý trường hợp block EOF
-    //   const bytes = new Uint8Array([sequence & 0xFF, deltaAddr]);
-    //   packets.push(bytes);
-    //   break;
-    // }
-
     if (packets.length === 0) {
       deltaAddr = 0; // block đầu tiên
     } else {
