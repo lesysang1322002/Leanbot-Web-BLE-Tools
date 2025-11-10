@@ -135,6 +135,7 @@ export class LeanbotBLE {
 
     /** ---------- CHARACTERISTICS ---------- */
     const chars = await this.#service.getCharacteristics();
+    console.log(`Found ${chars.length} characteristics`);
     this.#chars = {};
     for (const c of chars) {
       this.#chars[c.uuid] = c;
