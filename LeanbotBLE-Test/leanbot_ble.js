@@ -196,6 +196,7 @@ export class LeanbotBLE {
 
       enableNotify: async () => {
         const uuid = this.Serial.UUID;
+        console.log("Enabling Serial notifications for UUID:", uuid);
         const char = this.#chars?.[uuid];
         if (!char) return console.log("Serial Notify: UUID not found");
         if (!char.properties.notify) return console.log("Serial Notify: Not supported");
@@ -261,6 +262,7 @@ export class LeanbotBLE {
 
       enableNotify: async () => {
         const uuid = this.Uploader.UUID_LbToWeb;
+        console.log("Enabling Uploader notifications for UUID:", uuid);
         const char = this.#chars?.[uuid];
         if (!char) return console.log("Uploader Notify: UUID not found");
         if (!char.properties.notify) return console.log("Uploader Notify: Not supported");
