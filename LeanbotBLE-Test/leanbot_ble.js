@@ -242,11 +242,6 @@ export class LeanbotBLE {
         const WebToLb = this.#chars[this.Uploader.UUID_WebToLb];
         console.log("Uploader: Start uploading HEX...");
 
-        // Gửi header bắt đầu
-        // const startHeader = new Uint8Array([0xFF, 0x1E, 0xA2, 0xB0, 0x75, 0x00]);
-        // await WebToLb.writeValueWithoutResponse(startHeader);
-        // console.log("Uploader: Sent START header");
-
         // Chuyển toàn bộ HEX sang gói BLE
         const packets = convertHexToBlePackets(hexText);
         console.log(`Uploader: Prepared ${packets.length} BLE packets`);
@@ -254,12 +249,12 @@ export class LeanbotBLE {
         // Gửi lần lượt từng gói
         for (let i = 0; i < packets.length; i++) {
           await WebToLb.writeValueWithoutResponse(packets[i]);
-          // console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
-          console.log(Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
+          console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
+          // console.log(Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
           
-          // if ((i + 1) % 3 === 0) {
-          //   await new Promise(resolve => setTimeout(resolve, 10));
-          // }
+          if ((i + 1) % 3 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
         }
         console.log("Uploader: Upload completed!");
       },
