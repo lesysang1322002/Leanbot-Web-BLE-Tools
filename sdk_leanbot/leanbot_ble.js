@@ -249,8 +249,8 @@ export class LeanbotBLE {
         // Gửi lần lượt từng gói
         for (let i = 0; i < packets.length; i++) {
           await WebToLb.writeValueWithoutResponse(packets[i]);
-          console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
-          // console.log(Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
+          // console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
+          console.log(`Send packet #${i}:` + Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
           
           if ((i + 1) % 3 === 0) {
             await new Promise(resolve => setTimeout(resolve, 10));
@@ -361,37 +361,33 @@ function convertHexToBlePackets(hexText) {
 
   for (const block of mergedBlocks) {
     const data = block.bytes;
+    const isLastBlock = block === mergedBlocks[mergedBlocks.length - 2]; // block EOF không tính
 
     // Tính delta giữa các block (so với block trước)
     let deltaAddr = 0;
-
-    if (data.length === 0) {
-      // Xử lý trường hợp block EOF
-      const bytes = new Uint8Array([sequence & 0xFF, deltaAddr]);
-      packets.push(bytes);
-      break;
-    }
 
     if (packets.length === 0) {
       deltaAddr = 0; // block đầu tiên
     } else {
       const diff = block.address - lastAddr;
-      while (diff > 255) {
-        // Gửi marker 0xFF (bản tin rỗng)
+      while (diff > 0x7F) {
+        // Gửi marker 0x7F (bản tin rỗng)
         const seqByte = sequence & 0xFF;
-        const marker = new Uint8Array([seqByte, 0xFF]);
+        const marker = new Uint8Array([seqByte, 0x7F]);
         packets.push(marker);
         sequence++;
-        diff -= 255; // giảm dần khoảng cách
+        diff -= 0x7F; // giảm dần khoảng cách
       }
 
-      deltaAddr = diff & 0xFF; // phần còn lại (<255)
+      deltaAddr = diff & 0x7F; // giới hạn trong [0x00, 0x7F]
     }
     
     let offset = 0;
 
     while (offset < data.length) {
       const remain = data.length - offset;
+
+      const isFinalPacket = isLastBlock && (offset + (MAX_BLE_LEN - 1) >= data.length);
 
       if (deltaAddr === 0 && remain >= (MAX_BLE_LEN - 1)) {
         // Loại 1: [Seq][511 data]
@@ -402,7 +398,8 @@ function convertHexToBlePackets(hexText) {
       } else {
         // Loại 2: [Seq][deltaAddr][≤509 data]
         const chunk = data.slice(offset, offset + (MAX_BLE_LEN - 3));
-        const bytes = new Uint8Array([sequence & 0xFF, deltaAddr, ...chunk]);
+        const effectiveDelta = isFinalPacket ? (0xFF - deltaAddr) : deltaAddr;
+        const bytes = new Uint8Array([sequence & 0xFF, effectiveDelta, ...chunk]);
         packets.push(bytes);
         offset += (MAX_BLE_LEN - 3);
       }
