@@ -136,7 +136,7 @@ export class LeanbotBLE {
     /** ---------- CHARACTERISTICS ---------- */
     const chars = await this.#service.getCharacteristics();
     this.#chars = {};
-    for (const c of chars) this.#chars[c.uuid] = c;
+    for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
 
     /** ---------- ENABLE NOTIFICATIONS ---------- */
     await this.Serial.enableNotify();
