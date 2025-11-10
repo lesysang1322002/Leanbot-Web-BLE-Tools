@@ -1,7 +1,7 @@
 // main.js
 
 // Import LeanbotBLE SDK
-import { LeanbotBLE } from "https://lesysang1322002.github.io/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
+import { LeanbotBLE } from "./leanbot_ble.js";
 
 // =================== BLE Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");
