@@ -7,6 +7,20 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <pre id="log" style="background:#111;color:#0f0;padding:10px;font-size:13px;max-height:50vh;overflow:auto"></pre>
+
+  <script>
+    // Ghi đè console.log để hiển thị lên web
+    const logBox = document.getElementById("log");
+    console.log = (...args) => {
+      const text = args.map(a => 
+        typeof a === "object" ? JSON.stringify(a, null, 2) : a
+      ).join(" ");
+      logBox.textContent += text + "\n";
+    };
+
+    console.log("🔵 Console ready!");
+  </script>
 
   <!-- TOP BAR -->
   <div id="topBar">
