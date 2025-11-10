@@ -251,10 +251,10 @@ export class LeanbotBLE {
           await WebToLb.writeValueWithoutResponse(packets[i]);
           console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
           // console.log(Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
-          
-          if ((i + 1) % 3 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 10));
-          }
+          await new Promise(resolve => setTimeout(resolve, 10));
+          // if ((i + 1) % 3 === 0) {
+          //   await new Promise(resolve => setTimeout(resolve, 10));
+          // }
         }
         console.log("Uploader: Upload completed!");
       },
