@@ -1,4 +1,4 @@
-// leanbot_ble.js  - Version 251110_9:09
+// leanbot_ble.js  - Version 251110_9:12
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
 export class LeanbotBLE {
