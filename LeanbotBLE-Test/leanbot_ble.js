@@ -135,12 +135,8 @@ export class LeanbotBLE {
 
     /** ---------- CHARACTERISTICS ---------- */
     const chars = await this.#service.getCharacteristics();
-    console.log(`Found ${chars.length} characteristics`);
     this.#chars = {};
-    for (const c of chars) {
-      this.#chars[c.uuid] = c;
-      console.log("Found characteristic UUID:", c.uuid);
-    }
+    for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
 
     /** ---------- ENABLE NOTIFICATIONS ---------- */
     await this.Serial.enableNotify();
@@ -200,7 +196,6 @@ export class LeanbotBLE {
 
       enableNotify: async () => {
         const uuid = this.Serial.UUID;
-        console.log("Enabling Serial notifications for UUID:", uuid);
         const char = this.#chars?.[uuid];
         if (!char) return console.log("Serial Notify: UUID not found");
         if (!char.properties.notify) return console.log("Serial Notify: Not supported");
@@ -256,17 +251,16 @@ export class LeanbotBLE {
           await WebToLb.writeValueWithoutResponse(packets[i]);
           console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
           // console.log(Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
-          await new Promise(resolve => setTimeout(resolve, 10));
-          // if ((i + 1) % 3 === 0) {
-          //   await new Promise(resolve => setTimeout(resolve, 10));
-          // }
+          
+          if ((i + 1) % 3 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
         }
         console.log("Uploader: Upload completed!");
       },
 
       enableNotify: async () => {
         const uuid = this.Uploader.UUID_LbToWeb;
-        console.log("Enabling Uploader notifications for UUID:", uuid);
         const char = this.#chars?.[uuid];
         if (!char) return console.log("Uploader Notify: UUID not found");
         if (!char.properties.notify) return console.log("Uploader Notify: Not supported");
