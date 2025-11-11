@@ -260,16 +260,22 @@ export class LeanbotBLE {
             // Gọi callback gốc từ main.js nếu có
             if (typeof userHandler === "function") userHandler(msg);
 
-            const match = msg.match(/Receive\s+(\d+)/i);
-            if (match) {
-            const received = parseInt(match[1]);
+            // --- Xử lý từng dòng ---
+            const lines = msg.split(/\r?\n/); // tách từng dòng theo newline
+            for (const line of lines) {
+              if (!line.trim()) continue; // bỏ qua dòng rỗng
 
-            // Gửi tiếp các block tiếp theo (nếu còn)
-            while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
-              await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-              console.log(`Uploader: Sent block #${nextToSend}`);
-              nextToSend++;
-            }
+              const match = line.match(/Receive\s+(\d+)/i);
+              if (match) {
+                const received = parseInt(match[1]);
+
+                // Gửi tiếp các block tiếp theo (nếu còn)
+                while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
+                  await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
+                  console.log(`Uploader: Sent block #${nextToSend}`);
+                  nextToSend++;
+                }
+              }
             }
           };
 
