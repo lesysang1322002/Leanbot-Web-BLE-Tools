@@ -289,6 +289,13 @@ export class LeanbotBLE {
         if (!char) return console.log("Uploader Notify: UUID not found");
         if (!char.properties.notify) return console.log("Uploader Notify: Not supported");
 
+        // Gửi text command sang Leanbot qua UUID Lb2Web để thiết lập tham số nếu có
+        if (window.BLE_Interval) {
+          const cmd = `SET BLE_INTERVAL ${window.BLE_Interval}`;
+          await char.writeValueWithoutResponse(new TextEncoder().encode(cmd));
+          console.log(`Uploader: Set BLE Interval = ${window.BLE_Interval} ms`);
+        } 
+
         await char.startNotifications();
         char.addEventListener("characteristicvaluechanged", (event) => {
           const msg = new TextDecoder().decode(event.target.value);
