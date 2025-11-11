@@ -1,4 +1,4 @@
-// leanbot_ble.js - version 1.0.5
+// leanbot_ble.js - version 1.0.6
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
 export class LeanbotBLE {
@@ -243,50 +243,55 @@ export class LeanbotBLE {
         console.log("Uploader: Start uploading HEX...");
 
         // Chuyển toàn bộ HEX sang gói BLE
-          const packets = convertHexToBlePackets(hexText);
-          console.log(`Uploader: Prepared ${packets.length} BLE packets`);
+        const packets = convertHexToBlePackets(hexText);
+        console.log(`Uploader: Prepared ${packets.length} BLE packets`);
 
-          // === Sau khi tạo packets ===
-          const BlockBufferSize = 4;
-          let nextToSend = 0;
+        // === Sau khi tạo packets ===
+        const BlockBufferSize = 4;
+        let nextToSend = 0;
 
-          console.log("Uploader: Start upload (4-block mode)");
+        console.log("Uploader: Start upload (4-block mode)");
 
-          const userHandler = this.Uploader.onMessage;
+        const userHandler = this.Uploader.onMessage;
 
-          // Khi nhận được phản hồi từ Leanbot
-          this.Uploader.onMessage = async (msg) => {
-            console.log(`Uploader Received: ${msg}`);
-            // Gọi callback gốc từ main.js nếu có
-            if (typeof userHandler === "function") userHandler(msg);
+        // Khi nhận được phản hồi từ Leanbot
+        let isSending = false;
 
-            // --- Xử lý từng dòng ---
-            const lines = msg.split(/\r?\n/); // tách từng dòng theo newline
-            for (const line of lines) {
-              if (!line.trim()) continue; // bỏ qua dòng rỗng
+        this.Uploader.onMessage = async (msg) => {
+          if (isSending) return; // tránh chạy song song
+          isSending = true;
 
-              const match = line.match(/Receive\s+(\d+)/i);
-              if (match) {
-                const received = parseInt(match[1]);
+          const lines = msg.split(/\r?\n/);
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            const match = line.match(/Receive\s+(\d+)/i);
+            if (match) {
+              const received = parseInt(match[1]);
 
-                // Gửi tiếp các block tiếp theo (nếu còn)
-                while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
-                  await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-                  console.log(`Uploader: Sent block #${nextToSend}`);
-                  nextToSend++;
-                }
+              while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
+                await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
+                console.log(`Uploader: Sent block #${nextToSend}`);
+                nextToSend++;
               }
             }
-          };
-
-          // --- Gửi 4 block đầu tiên ---
-          for (let i = 0; i < Math.min(BlockBufferSize, packets.length); i++) {
-            await WebToLb.writeValueWithoutResponse(packets[i]);
-            console.log(`Uploader: Sent block #${i}`);
-            nextToSend++;
           }
 
-          console.log("Waiting for Receive feedback...");
+          if (nextToSend >= packets.length) {
+            console.log("Uploader: Upload complete ✅");
+            this.Uploader.onMessage = userHandler;
+          }
+
+          isSending = false;
+        };
+
+        // --- Gửi 4 block đầu tiên ---
+        for (let i = 0; i < Math.min(BlockBufferSize, packets.length); i++) {
+          await WebToLb.writeValueWithoutResponse(packets[i]);
+          console.log(`Uploader: Sent block #${i}`);
+          nextToSend++;
+        }
+
+        console.log("Waiting for Receive feedback...");
       },
 
       enableNotify: async () => {
