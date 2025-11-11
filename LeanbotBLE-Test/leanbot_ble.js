@@ -1,4 +1,4 @@
-// leanbot_ble.js - version 1.0.6
+// leanbot_ble.js - version 1.0.5
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
 export class LeanbotBLE {
@@ -255,33 +255,25 @@ export class LeanbotBLE {
         const userHandler = this.Uploader.onMessage;
 
         // Khi nhận được phản hồi từ Leanbot
-        let isSending = false;
-
         this.Uploader.onMessage = async (msg) => {
-          if (isSending) return; // tránh chạy song song
-          isSending = true;
+          // In msg nhận được
+          console.log(`Uploader Received: ${msg}`);
 
-          const lines = msg.split(/\r?\n/);
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            const match = line.match(/Receive\s+(\d+)/i);
-            if (match) {
-              const received = parseInt(match[1]);
+          // Gọi callback gốc từ main.js nếu có
+          if (typeof userHandler === "function") userHandler(msg);
 
-              while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
-                await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-                console.log(`Uploader: Sent block #${nextToSend}`);
-                nextToSend++;
-              }
+          const match = msg.match(/Receive\s+(\d+)/i);
+          if (match) {
+            const received = parseInt(match[1]);
+            // console.log(`Uploader: Leanbot confirmed received up to block #${received}`);
+
+            // Gửi tiếp các block tiếp theo (nếu còn)
+            while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
+              await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
+              console.log(`Uploader: Sent block #${nextToSend}`);
+              nextToSend++;
             }
           }
-
-          if (nextToSend >= packets.length) {
-            console.log("Uploader: Upload complete ✅");
-            this.Uploader.onMessage = userHandler;
-          }
-
-          isSending = false;
         };
 
         // --- Gửi 4 block đầu tiên ---
