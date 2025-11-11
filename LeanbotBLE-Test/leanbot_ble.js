@@ -246,41 +246,17 @@ export class LeanbotBLE {
         const packets = convertHexToBlePackets(hexText);
         console.log(`Uploader: Prepared ${packets.length} BLE packets`);
 
-        // === Sau khi tạo packets ===
-        const BlockBufferSize = 4;
-        let nextToSend = 0;
-
-        console.log("Uploader: Start upload (4-block mode)");
-
-        const userHandler = this.Uploader.onMessage;
-
-        // Khi nhận được phản hồi từ Leanbot
-        this.Uploader.onMessage = async (msg) => {
-          // Gọi callback gốc từ main.js nếu có
-          if (typeof userHandler === "function") userHandler(msg);
-
-          // Phân tích phản hồi từ Leanbot
-          const match = msg.match(/Receive\s+(\d+)/i);
-          if (match) {
-            const received = parseInt(match[1]);
-
-            // Gửi tiếp các block tiếp theo (nếu còn)
-            while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
-              await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-              console.log(`Uploader: Sent block #${nextToSend}`);
-              nextToSend++;
-            }
-          }
-        };
-
-        // --- Gửi 4 block đầu tiên ---
-        for (let i = 0; i < Math.min(BlockBufferSize, packets.length); i++) {
+        // Gửi lần lượt từng gói
+        for (let i = 0; i < packets.length; i++) {
           await WebToLb.writeValueWithoutResponse(packets[i]);
-          console.log(`Uploader: Sent block #${i}`);
-          nextToSend++;
+          console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
+          // console.log(`Send packet #${i}:` + Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
+          
+          if ((i + 1) % 3 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
         }
-
-        console.log("Waiting for Receive feedback...");
+        console.log("Uploader: HEX upload completed.");
       },
 
       enableNotify: async () => {
