@@ -249,8 +249,8 @@ export class LeanbotBLE {
         // Gửi lần lượt từng gói
         for (let i = 0; i < packets.length; i++) {
           await WebToLb.writeValueWithoutResponse(packets[i]);
-          // console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
-          console.log(`Send packet #${i}:` + Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
+          console.log(`Uploader: Sent block #${i} (${packets[i].length} bytes)`);
+          // console.log(`Send packet #${i}:` + Array.from(packets[i]).map(b => b.toString(16).padStart(2, '0')).join(''));
           
           if ((i + 1) % 3 === 0) {
             await new Promise(resolve => setTimeout(resolve, 10));
@@ -320,7 +320,10 @@ function hexLineToBytes(block) {
  * @returns {Uint8Array[]} packets - Array of BLE message bytes ready to send
  */
 function convertHexToBlePackets(hexText) {
-  const MAX_BLE_LEN = 512;
+  const MAX_BLE_LEN = window.MAX_BLE_LEN || 512; // Mặc định 512 nếu không có thiết lập
+  console.log(`convertHexToBlePackets: Using MAX_BLE_LEN = ${MAX_BLE_LEN}`);
+
+  // --- STEP 0: Split HEX text into lines ---
   const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
 
   // --- STEP 1: Parse each HEX line ---
