@@ -231,9 +231,7 @@ export class LeanbotBLE {
       
       /** Callback khi nhận notify Uploader */
       onMessage: null,
-
       
-
       upload: async (hexText) => {
         if (!this.#chars || !this.#chars[this.Uploader.UUID_WebToLb]) {
           console.log("Uploader Error: RX characteristic not found.");
@@ -268,7 +266,7 @@ export class LeanbotBLE {
 
           while (msgQueue.length > 0) {
             const currentMsg = msgQueue.shift();
-            console.log(`Uploader Received: ${currentMsg}`);
+            // console.log(`Uploader Received: ${currentMsg}`);
 
             if (typeof this.Uploader.userHandler === "function") {
               this.Uploader.userHandler(currentMsg + '\n');
@@ -286,10 +284,6 @@ export class LeanbotBLE {
                   console.log(`Uploader: Sending block #${nextToSend}`);
                   await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
                   nextToSend++;
-                } else if (nextToSend >= packets.length) {
-                  console.log("Uploader: All blocks sent.");
-                } else {
-                  console.log(`Uploader: Waiting to send block #${nextToSend}...`);
                 }
               }
             }
