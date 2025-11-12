@@ -256,6 +256,7 @@ export class LeanbotBLE {
 
         // Khi nhận được phản hồi từ Leanbot
         this.Uploader.onMessage = async (msg) => {
+          console.log(`Uploader Received:  ${msg.trim()}`);
           // Gọi callback gốc từ main.js nếu có
           if (typeof this.Uploader.userHandler === "function") this.Uploader.userHandler(msg);
 
