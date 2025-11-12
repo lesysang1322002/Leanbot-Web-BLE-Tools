@@ -303,7 +303,7 @@ export class LeanbotBLE {
           console.log(`Uploader: Set BLE Interval = ${window.BLE_Interval} ms`);
         }
 
-        if( window.BLE_MaxLength ) {
+        if (window.BLE_MaxLength) {
           const cmd = `SET BLE_MAX_LENGTH ${window.BLE_MaxLength}`;
           await char.writeValueWithoutResponse(new TextEncoder().encode(cmd));
           console.log(`Uploader: Set BLE Max Length = ${window.BLE_MaxLength} bytes`);
