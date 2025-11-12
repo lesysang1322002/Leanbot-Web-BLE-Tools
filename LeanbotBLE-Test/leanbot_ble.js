@@ -275,6 +275,12 @@ export class LeanbotBLE {
                 console.log(`Uploader: Sent block #${nextToSend}`);
                 nextToSend++;
               }
+              else if (nextToSend >= packets.length) {
+                console.log("Uploader: All blocks sent.");
+              }
+              else {
+                console.log(`Uploader: Waiting to send block #${nextToSend}...`);
+              }
             }
           }
         };
