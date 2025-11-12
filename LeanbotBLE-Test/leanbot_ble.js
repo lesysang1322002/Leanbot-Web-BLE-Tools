@@ -254,18 +254,15 @@ export class LeanbotBLE {
 
         console.log("Uploader: Start upload (4-block mode)");
 
-        // const userHandler = this.Uploader.onMessage;
-        // this.Uploader.onMessage = null; // Xóa callback cũ nếu có
-
         // Khi nhận được phản hồi từ Leanbot
         this.Uploader.onMessage = async (msg) => {
           // Gọi callback gốc từ main.js nếu có
           if (typeof this.Uploader.userHandler === "function") this.Uploader.userHandler(msg);
 
-
           const lines = msg.split(/\r?\n/); // tách từng dòng theo newline
           for (const line of lines) {
             if (!line.trim()) continue; // bỏ qua dòng rỗng
+
             const match = line.match(/Receive\s+(\d+)/i);
             if (match) {
               const received = parseInt(match[1]);
@@ -291,7 +288,6 @@ export class LeanbotBLE {
           console.log(`Uploader: Sent block #${i}`);
           nextToSend++;
         }
-
         console.log("Waiting for Receive feedback...");
       },
 
