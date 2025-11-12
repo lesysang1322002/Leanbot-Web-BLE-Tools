@@ -1,4 +1,4 @@
-// leanbot_ble.js - version 1.0.5
+// leanbot_ble.js - version 1.0.6
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
 export class LeanbotBLE {
@@ -234,7 +234,6 @@ export class LeanbotBLE {
 
       
 
-      /** Upload HEX file */
       upload: async (hexText) => {
         if (!this.#chars || !this.#chars[this.Uploader.UUID_WebToLb]) {
           console.log("Uploader Error: RX characteristic not found.");
@@ -251,38 +250,52 @@ export class LeanbotBLE {
         // === Sau khi tạo packets ===
         const BlockBufferSize = 4;
         let nextToSend = 0;
+        let msgQueue = [];
+        let isProcessing = false;
 
         console.log("Uploader: Start upload (4-block mode)");
 
-        // Khi nhận được phản hồi từ Leanbot
-        this.Uploader.onMessage = async (msg) => {
-          console.log(`Uploader Received:  ${msg.trim()}`);
-          // Gọi callback gốc từ main.js nếu có
-          if (typeof this.Uploader.userHandler === "function") this.Uploader.userHandler(msg);
+        // Callback BLE: khi nhận được message
+        this.Uploader.onMessage = (msg) => {
+          msgQueue.push(msg.trim());
+          processQueue();
+        };
 
-          const lines = msg.split(/\r?\n/); // tách từng dòng theo newline
-          for (const line of lines) {
-            if (!line.trim()) continue; // bỏ qua dòng rỗng
+        // Hàm xử lý queue
+        const processQueue = async () => {
+          if (isProcessing) return;
+          isProcessing = true;
 
-            const match = line.match(/Receive\s+(\d+)/i);
-            if (match) {
-              const received = parseInt(match[1]);
-              console.log(`Uploader: Received feedback for block #${received}`);
+          while (msgQueue.length > 0) {
+            const currentMsg = msgQueue.shift();
+            console.log(`Uploader Received: ${currentMsg}`);
 
-              // Gửi tiếp các block tiếp theo (nếu còn)
-              if (nextToSend === received + BlockBufferSize && nextToSend < packets.length) {
-                await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-                console.log(`Uploader: Sent block #${nextToSend}`);
-                nextToSend++;
-              }
-              else if (nextToSend >= packets.length) {
-                console.log("Uploader: All blocks sent.");
-              }
-              else {
-                console.log(`Uploader: Waiting to send block #${nextToSend}...`);
+            if (typeof this.Uploader.userHandler === "function") {
+              this.Uploader.userHandler(currentMsg + '\n');
+            }
+
+            const lines = currentMsg.split(/\r?\n/);
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              const match = line.match(/Receive\s+(\d+)/i);
+              if (match) {
+                const received = parseInt(match[1]);
+                console.log(`Uploader: Received feedback for block #${received}`);
+
+                if (nextToSend === received + BlockBufferSize && nextToSend < packets.length) {
+                  console.log(`Uploader: Sending block #${nextToSend}`);
+                  await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
+                  nextToSend++;
+                } else if (nextToSend >= packets.length) {
+                  console.log("Uploader: All blocks sent.");
+                } else {
+                  console.log(`Uploader: Waiting to send block #${nextToSend}...`);
+                }
               }
             }
           }
+
+          isProcessing = false;
         };
 
         // --- Gửi 4 block đầu tiên ---
@@ -291,8 +304,10 @@ export class LeanbotBLE {
           console.log(`Uploader: Sent block #${i}`);
           nextToSend++;
         }
+
         console.log("Waiting for Receive feedback...");
       },
+
 
       enableNotify: async () => {
         const uuid = this.Uploader.UUID_LbToWeb;
