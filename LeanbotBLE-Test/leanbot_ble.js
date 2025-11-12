@@ -232,6 +232,8 @@ export class LeanbotBLE {
       /** Callback khi nhận notify Uploader */
       onMessage: null,
 
+      
+
       /** Upload HEX file */
       upload: async (hexText) => {
         if (!this.#chars || !this.#chars[this.Uploader.UUID_WebToLb]) {
@@ -252,24 +254,34 @@ export class LeanbotBLE {
 
         console.log("Uploader: Start upload (4-block mode)");
 
-        const userHandler = this.Uploader.onMessage;
+        // const userHandler = this.Uploader.onMessage;
+        // this.Uploader.onMessage = null; // Xóa callback cũ nếu có
 
         // Khi nhận được phản hồi từ Leanbot
         this.Uploader.onMessage = async (msg) => {
           // Gọi callback gốc từ main.js nếu có
-          if (typeof userHandler === "function") userHandler(msg);
-          
-          console.log(`Uploader Received: ${msg}`);
-          const match = msg.match(/Receive\s+(\d+)/i);
-          if (match) {
-          const received = parseInt(match[1]);
+          if (typeof this.Uploader.userHandler === "function") this.Uploader.userHandler(msg);
 
-          // Gửi tiếp các block tiếp theo (nếu còn)
-          while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
-            await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-            console.log(`Uploader: Sent block #${nextToSend}`);
-            nextToSend++;
-          }
+
+          const lines = msg.split(/\r?\n/); // tách từng dòng theo newline
+          for (const line of lines) {
+            if (!line.trim()) continue; // bỏ qua dòng rỗng
+            const match = line.match(/Receive\s+(\d+)/i);
+            if (match) {
+              const received = parseInt(match[1]);
+              console.log(`Uploader: Received feedback for block #${received}`);
+
+              // Gửi tiếp các block tiếp theo (nếu còn)
+              if (received === nextToSend - 1) {
+                const blocksToSend = Math.min(BlockBufferSize, packets.length - nextToSend);
+
+                for (let i = 0; i < blocksToSend; i++) {
+                  await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
+                  console.log(`Uploader: Sent block #${nextToSend}`);
+                  nextToSend++;
+                }  
+              }
+            }
           }
         };
 
@@ -288,6 +300,8 @@ export class LeanbotBLE {
         const char = this.#chars?.[uuid];
         if (!char) return console.log("Uploader Notify: UUID not found");
         if (!char.properties.notify) return console.log("Uploader Notify: Not supported");
+
+        this.Uploader.userHandler = this.Uploader.onMessage;
 
         // Gửi text command sang Leanbot qua UUID Lb2Web để thiết lập tham số nếu có
         if (window.BLE_Interval) {
