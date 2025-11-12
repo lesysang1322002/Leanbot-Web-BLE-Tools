@@ -266,7 +266,7 @@ export class LeanbotBLE {
           if (match) {
             const received = parseInt(match[1]);
             // console.log(`Uploader: Leanbot confirmed received up to block #${received}`);
-
+            console.log(`NextToSend = ${nextToSend}, Received = ${received}`);
             // Gửi tiếp các block tiếp theo (nếu còn)
             while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
               await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
@@ -281,6 +281,7 @@ export class LeanbotBLE {
           await WebToLb.writeValueWithoutResponse(packets[i]);
           console.log(`Uploader: Sent block #${i}`);
           nextToSend++;
+          console.log("NextToSend =", nextToSend);
         }
 
         console.log("Waiting for Receive feedback...");
