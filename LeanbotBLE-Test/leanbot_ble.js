@@ -268,8 +268,8 @@ export class LeanbotBLE {
             const currentMsg = msgQueue.shift();
             // console.log(`Uploader Received: ${currentMsg}`);
 
-            if (typeof this.Uploader.userHandler === "function") {
-              this.Uploader.userHandler(currentMsg + '\n');
+            if (typeof this.Uploader.previousOnMessage === "function") {
+              this.Uploader.previousOnMessage(currentMsg + '\n');
             }
 
             const lines = currentMsg.split(/\r?\n/);
@@ -309,7 +309,7 @@ export class LeanbotBLE {
         if (!char) return console.log("Uploader Notify: UUID not found");
         if (!char.properties.notify) return console.log("Uploader Notify: Not supported");
 
-        this.Uploader.userHandler = this.Uploader.onMessage;
+        this.Uploader.previousOnMessage = this.Uploader.onMessage;
 
         // Gửi text command sang Leanbot qua UUID Lb2Web để thiết lập tham số nếu có
         if (window.BLE_Interval) {
