@@ -256,23 +256,20 @@ export class LeanbotBLE {
 
         // Khi nhận được phản hồi từ Leanbot
         this.Uploader.onMessage = async (msg) => {
-          // In msg nhận được
-          console.log(`Uploader Received: ${msg}`);
-
           // Gọi callback gốc từ main.js nếu có
           if (typeof userHandler === "function") userHandler(msg);
-
+          
+          console.log(`Uploader Received: ${msg}`);
           const match = msg.match(/Receive\s+(\d+)/i);
           if (match) {
-            const received = parseInt(match[1]);
-            // console.log(`Uploader: Leanbot confirmed received up to block #${received}`);
-            console.log(`NextToSend = ${nextToSend}, Received = ${received}`);
-            // Gửi tiếp các block tiếp theo (nếu còn)
-            while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
-              await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-              console.log(`Uploader: Sent block #${nextToSend}`);
-              nextToSend++;
-            }
+          const received = parseInt(match[1]);
+
+          // Gửi tiếp các block tiếp theo (nếu còn)
+          while (nextToSend < Math.min(received + BlockBufferSize, packets.length)) {
+            await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
+            console.log(`Uploader: Sent block #${nextToSend}`);
+            nextToSend++;
+          }
           }
         };
 
@@ -281,7 +278,6 @@ export class LeanbotBLE {
           await WebToLb.writeValueWithoutResponse(packets[i]);
           console.log(`Uploader: Sent block #${i}`);
           nextToSend++;
-          console.log("NextToSend =", nextToSend);
         }
 
         console.log("Waiting for Receive feedback...");
