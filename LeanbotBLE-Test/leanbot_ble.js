@@ -268,15 +268,12 @@ export class LeanbotBLE {
               const received = parseInt(match[1]);
               console.log(`Uploader: Received feedback for block #${received}`);
 
-              // Gửi tiếp các block tiếp theo (nếu còn)
-              if (received === nextToSend - 1) {
-                const blocksToSend = Math.min(BlockBufferSize, packets.length - nextToSend);
-
-                for (let i = 0; i < blocksToSend; i++) {
-                  await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-                  console.log(`Uploader: Sent block #${nextToSend}`);
-                  nextToSend++;
-                }  
+              while( received + BlockBufferSize < nextToSend);
+              // Gửi các block tiếp theo
+              if( nextToSend < packets.length ){
+                await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
+                console.log(`Uploader: Sent block #${nextToSend}`);
+                nextToSend++;
               }
             }
           }
@@ -304,7 +301,13 @@ export class LeanbotBLE {
           const cmd = `SET BLE_INTERVAL ${window.BLE_Interval}`;
           await char.writeValueWithoutResponse(new TextEncoder().encode(cmd));
           console.log(`Uploader: Set BLE Interval = ${window.BLE_Interval} ms`);
-        } 
+        }
+
+        if( window.BLE_MaxLength ) {
+          const cmd = `SET BLE_MAX_LENGTH ${window.BLE_MaxLength}`;
+          await char.writeValueWithoutResponse(new TextEncoder().encode(cmd));
+          console.log(`Uploader: Set BLE Max Length = ${window.BLE_MaxLength} bytes`);
+        }
 
         await char.startNotifications();
         char.addEventListener("characteristicvaluechanged", (event) => {
@@ -361,8 +364,8 @@ function hexLineToBytes(block) {
  * @returns {Uint8Array[]} packets - Array of BLE message bytes ready to send
  */
 function convertHexToBlePackets(hexText) {
-  const MAX_BLE_LEN = window.MAX_BLE_LEN || 512; // Mặc định 512 nếu không có thiết lập
-  console.log(`convertHexToBlePackets: Using MAX_BLE_LEN = ${MAX_BLE_LEN}`);
+  const BLE_MaxLength = window.BLE_MaxLength || 512; // Mặc định 512 nếu không có thiết lập
+  console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
 
   // --- STEP 0: Split HEX text into lines ---
   const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
@@ -398,7 +401,7 @@ function convertHexToBlePackets(hexText) {
   }
   if (current) mergedBlocks.push(current);
 
-  // --- STEP 3: Split each merged block into BLE packets (≤ MAX_BLE_LEN bytes) ---
+  // --- STEP 3: Split each merged block into BLE packets (≤ BLE_MaxLength bytes) ---
   const packets = [];
   let sequence = 0;
   let lastAddr = 0;
@@ -431,21 +434,21 @@ function convertHexToBlePackets(hexText) {
     while (offset < data.length) {
       const remain = data.length - offset;
 
-      const isFinalPacket = isLastBlock && (offset + (MAX_BLE_LEN - 1) >= data.length);
+      const isFinalPacket = isLastBlock && (offset + (BLE_MaxLength - 1) >= data.length);
 
-      if (deltaAddr === 0 && remain >= (MAX_BLE_LEN - 1)) {
+      if (deltaAddr === 0 && remain >= (BLE_MaxLength - 1)) {
         // Loại 1: [Seq][511 data]
-        const chunk = data.slice(offset, offset + (MAX_BLE_LEN - 1));
+        const chunk = data.slice(offset, offset + (BLE_MaxLength - 1));
         const bytes = new Uint8Array([sequence & 0xFF, ...chunk]);
         packets.push(bytes);
-        offset += (MAX_BLE_LEN - 1);
+        offset += (BLE_MaxLength - 1);
       } else {
         // Loại 2: [Seq][deltaAddr][≤509 data]
-        const chunk = data.slice(offset, offset + (MAX_BLE_LEN - 3));
+        const chunk = data.slice(offset, offset + (BLE_MaxLength - 3));
         const effectiveDelta = isFinalPacket ? (0xFF - deltaAddr) : deltaAddr;
         const bytes = new Uint8Array([sequence & 0xFF, effectiveDelta, ...chunk]);
         packets.push(bytes);
-        offset += (MAX_BLE_LEN - 3);
+        offset += (BLE_MaxLength - 3);
       }
 
       sequence++;
