@@ -269,14 +269,10 @@ export class LeanbotBLE {
               console.log(`Uploader: Received feedback for block #${received}`);
 
               // Gửi tiếp các block tiếp theo (nếu còn)
-              if (received === nextToSend - 1) {
-                const blocksToSend = Math.min(BlockBufferSize, packets.length - nextToSend);
-
-                for (let i = 0; i < blocksToSend; i++) {
-                  await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-                  console.log(`Uploader: Sent block #${nextToSend}`);
-                  nextToSend++;
-                }  
+              if (nextToSend === received + BlockBufferSize && nextToSend < packets.length) {
+                await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
+                console.log(`Uploader: Sent block #${nextToSend}`);
+                nextToSend++;
               }
             }
           }
