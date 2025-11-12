@@ -267,7 +267,7 @@ export class LeanbotBLE {
             if (match) {
               const received = parseInt(match[1]);
               console.log(`Uploader: Received feedback for block #${received}`);
-              
+
               // Gửi các block tiếp theo
               if( nextToSend >= received + BlockBufferSize && nextToSend < packets.length ){
                 await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
@@ -281,6 +281,7 @@ export class LeanbotBLE {
         // --- Gửi 4 block đầu tiên ---
         for (let i = 0; i < Math.min(BlockBufferSize, packets.length); i++) {
           await WebToLb.writeValueWithoutResponse(packets[i]);
+          await new Promise(resolve => setTimeout(resolve, 5)); // delay 5ms giữa các block
           console.log(`Uploader: Sent block #${i}`);
           nextToSend++;
         }
