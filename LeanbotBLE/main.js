@@ -1,7 +1,7 @@
 // main.js
 
 // Import LeanbotBLE SDK
-import { LeanbotBLE } from "./leanbot_ble.js";
+import { LeanbotBLE } from "https://lesysang1322002.github.io/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
 
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
