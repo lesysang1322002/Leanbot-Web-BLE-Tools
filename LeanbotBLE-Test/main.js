@@ -238,14 +238,140 @@ btnUpload.addEventListener("click", async () => {
   }
 
   uploadLog.textContent = ""; // Clear previous log
+  UploadUI.open();
   await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });
 
 // =================== Upload Log =================== //
-const uploadLog = document.getElementById("uploadLog");
+leanbot.Uploader.onMessage = (msg) => {
+  UploadUI.addLog(msg);
+  let m;
 
-leanbot.Uploader.onMessage = msg => {
-  uploadLog.textContent += msg;
-  uploadLog.scrollTop = uploadLog.scrollHeight;
+  // ===== Transfer =====
+  if (m = msg.match(/Receive\s+(\d+)/i)) {
+    let seq = parseInt(m[1]);
+    console.log(`Packet #${seq} received // Total packets: ${leanbot.Uploader.packets.length - 1}`); // -1 packet EOF
+    let pct = Math.floor(seq / (leanbot.Uploader.packets.length - 1) * 100);
+    UploadUI.updateTransfer(pct);
+    return;
+  }
+
+  // ===== Write =====
+  if (m = msg.match(/Write\s+(\d+)\s*bytes/i)) {
+    let written = parseInt(m[1]);
+    let pct = Math.floor(written / leanbot.Uploader.totalBytesData * 100);
+    UploadUI.updateWrite(pct);
+    return;
+  }
+
+  // ===== Verify =====
+  if (m = msg.match(/Verify\s+(\d+)\s*bytes/i)) {
+    let verified = parseInt(m[1]);
+    let pct = Math.floor(verified / leanbot.Uploader.totalBytesData * 100);
+    UploadUI.updateVerify(pct);
+    return;
+  }
+
+  // ===== Success =====
+  if (/Upload success/i.test(msg)) {
+    UploadUI.markSuccess();
+    return;
+  }
+
+  // ===== Error: Write failed =====
+  if (/Write failed/i.test(msg)) {
+    UploadUI.markWriteError();
+    return;
+  }
+
+  // ===== Error: Verify failed =====
+  if (/Verify failed/i.test(msg)) {
+    UploadUI.markVerifyError();
+    return;
+  }
 };
+
+const UploadUI = {
+  el: {
+    dialog:     document.getElementById("uploadDialog"),
+    compile:    document.getElementById("progCompile"),
+    transfer:   document.getElementById("progTransfer"),
+    write:      document.getElementById("progWrite"),
+    verify:     document.getElementById("progVerify"),
+    log:        document.getElementById("uploadLog"),
+    btnClose:   document.getElementById("btnCloseUpload")
+  },
+
+  open() {
+    this.success = false;
+    this.hasError = false;
+
+    this.el.dialog.style.display = "flex";
+    this.el.dialog.classList.remove("fade-out");
+
+    // reset progress
+    const bars = [this.el.compile, this.el.transfer, this.el.write, this.el.verify];
+    bars.forEach(b => {
+      b.value = 0;
+      b.className = "yellow"; // reset color
+    });
+
+    this.el.log.value = "";
+
+    // Compile luôn 100%
+    this.setColor(this.el.compile, 100);
+  },
+
+  close() {
+    this.el.dialog.style.display = "none";
+  },
+
+  fadeOutLater() {
+    setTimeout(() => {
+      this.el.dialog.classList.add("fade-out");
+      setTimeout(() => this.close(), 600);
+    }, 1000);
+  },
+
+  addLog(msg) {
+    this.el.log.value += msg + "\n";
+    this.el.log.scrollTop = this.el.log.scrollHeight;
+  },
+
+  setColor(bar, value, error = false) {
+    bar.value = value;
+
+    if (error) {
+      bar.className = "red";
+      this.hasError = true;
+    }
+    else if (value >= 100) {
+      bar.className = "green";
+    }
+    else {
+      bar.className = "yellow";
+    }
+  },
+
+  updateTransfer(pct) { this.setColor(this.el.transfer, pct); },
+  updateWrite(pct)    { this.setColor(this.el.write   , pct); },
+  updateVerify(pct)   { this.setColor(this.el.verify  , pct); },
+
+  markSuccess() {
+    this.fadeOutLater();
+  },
+
+  markWriteError() {
+    this.setColor(this.el.write, 0, true);
+  },
+
+  markVerifyError() {
+    this.setColor(this.el.verify, 0, true);
+  },
+
+};
+
+UploadUI.el.btnClose.onclick = () => UploadUI.close();
+
+
 
