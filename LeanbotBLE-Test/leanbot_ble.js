@@ -1,4 +1,4 @@
-// leanbot_ble.js - version 1.0.6
+// leanbot_ble.js
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
 export class LeanbotBLE {
@@ -138,9 +138,16 @@ export class LeanbotBLE {
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
 
+    // Lưu characteristic cho Serial
+    this.SerialChar = this.#chars[ this.Serial.UUID ] || null;
+
+    // Lưu characteristic cho Uploader
+    this.UploaderWebToLb = this.#chars[ this.Uploader.UUID_WebToLb ] || null;
+    this.UploaderLbToWeb = this.#chars[ this.Uploader.UUID_LbToWeb ] || null;
+
     /** ---------- ENABLE NOTIFICATIONS ---------- */
-    await this.Serial.enableNotify();
-    await this.Uploader.enableNotify();
+    await this.Serial.setup();
+    await this.Uploader.setup();
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
@@ -150,6 +157,11 @@ export class LeanbotBLE {
   constructor() {
     this.onConnect = null;
     this.onDisconnect = null;
+
+    // Chứa characteristic để truy cập nhanh
+    this.SerialChar = null;
+    this.UploaderWebToLb = null;
+    this.UploaderLbToWeb = null;
 
     // ======================================================
     // 🔹 SUBMODULE: SERIAL
@@ -161,9 +173,7 @@ export class LeanbotBLE {
       },
 
       /** Kiểm tra hỗ trợ Serial */
-      isSupported: () => {
-        return this.#chars?.[this.Serial.UUID];
-      },
+      isSupported: () => !!this.SerialChar,
 
       /** Callback khi nhận notify Serial */
       onMessage: null,
@@ -174,10 +184,8 @@ export class LeanbotBLE {
        */
       send: async (data, withResponse = true) => {
         try {
-          const uuid = this.Serial.UUID;
-          const char = this.#chars?.[uuid];
-          if (!char) {
-            console.log(`Serial.Send Error: characteristic ${uuid} not found`);
+          if (!this.Serial.isSupported()) {
+            console.log("Serial.Send Error: Serial not supported");
             return;
           }
 
@@ -185,23 +193,28 @@ export class LeanbotBLE {
           const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
 
           if (withResponse) {
-            await char.writeValue(buffer);
+            await this.SerialChar.writeValue(buffer);
           } else {
-            await char.writeValueWithoutResponse(buffer);
+            await this.SerialChar.writeValueWithoutResponse(buffer);
           }
         } catch (e) {
           console.log(`Serial.Send Error: ${e}`);
         }
       },
 
-      enableNotify: async () => {
-        const uuid = this.Serial.UUID;
-        const char = this.#chars?.[uuid];
-        if (!char) return console.log("Serial Notify: UUID not found");
-        if (!char.properties.notify) return console.log("Serial Notify: Not supported");
+      setup: async () => {
+        if (!this.Serial.isSupported()) {
+          console.log("Serial Notify: Serial not supported");
+          return;
+        }
 
-        await char.startNotifications();
-        char.addEventListener("characteristicvaluechanged", (event) => {
+        if (!this.SerialChar.properties.notify) {
+          console.log("Serial Notify: Not supported");
+          return;
+        }
+
+        await this.SerialChar.startNotifications();
+        this.SerialChar.addEventListener("characteristicvaluechanged", (event) => {
           const msg = new TextDecoder().decode(event.target.value);
           if (this.Serial.onMessage) this.Serial.onMessage(msg);
         });
@@ -223,22 +236,17 @@ export class LeanbotBLE {
       },
 
       /** Kiểm tra hỗ trợ Uploader */
-      isSupported: () => {
-        const hasWebToLb = this.#chars?.[this.Uploader.UUID_WebToLb];
-        const hasLbToWeb = this.#chars?.[this.Uploader.UUID_LbToWeb];
-        return hasWebToLb && hasLbToWeb;
-      },  
+      isSupported: () => !!this.UploaderWebToLb && !!this.UploaderLbToWeb,
       
       /** Callback khi nhận notify Uploader */
       onMessage: null,
       
       upload: async (hexText) => {
-        if (!this.#chars || !this.#chars[this.Uploader.UUID_WebToLb]) {
-          console.log("Uploader Error: RX characteristic not found.");
+        if (!this.Uploader.isSupported()) {
+          console.log("Uploader Error: Uploader characteristic not found.");
           return;
         }
 
-        const WebToLb = this.#chars[this.Uploader.UUID_WebToLb];
         console.log("Uploader: Start uploading HEX...");
 
         // Chuyển toàn bộ HEX sang gói BLE
@@ -276,16 +284,20 @@ export class LeanbotBLE {
             for (const line of lines) {
               if (!line.trim()) continue;
               const match = line.match(/Receive\s+(\d+)/i);
-              if (match) {
-                const received = parseInt(match[1]);
-                console.log(`Uploader: Received feedback for block #${received}`);
+              if (!match) return;
 
-                if (nextToSend === received + BlockBufferSize && nextToSend < packets.length) {
-                  console.log(`Uploader: Sending block #${nextToSend}`);
-                  await WebToLb.writeValueWithoutResponse(packets[nextToSend]);
-                  nextToSend++;
-                }
-              }
+              const received = parseInt(match[1]);
+              console.log(`Uploader: Received feedback for block #${received}`);
+
+              // Nếu chưa tới lượt gửi → thoát
+              if (nextToSend !== received + BlockBufferSize) return;
+
+              // Nếu đã gửi hết → thoát
+              if (nextToSend >= packets.length) return;
+
+              console.log(`Uploader: Sending block #${nextToSend}`);
+              await this.UploaderWebToLb.writeValueWithoutResponse(packets[nextToSend]);
+              nextToSend++;
             }
           }
 
@@ -294,7 +306,7 @@ export class LeanbotBLE {
 
         // --- Gửi 4 block đầu tiên ---
         for (let i = 0; i < Math.min(BlockBufferSize, packets.length); i++) {
-          await WebToLb.writeValueWithoutResponse(packets[i]);
+          await this.UploaderWebToLb.writeValueWithoutResponse(packets[i]);
           console.log(`Uploader: Sent block #${i}`);
           nextToSend++;
         }
@@ -302,35 +314,40 @@ export class LeanbotBLE {
         console.log("Waiting for Receive feedback...");
       },
 
-
-      enableNotify: async () => {
-        const uuid = this.Uploader.UUID_LbToWeb;
-        const char = this.#chars?.[uuid];
-        if (!char) return console.log("Uploader Notify: UUID not found");
-        if (!char.properties.notify) return console.log("Uploader Notify: Not supported");
-
-        this.Uploader.previousOnMessage = this.Uploader.onMessage;
-
-        // Gửi text command sang Leanbot qua UUID Lb2Web để thiết lập tham số nếu có
-        if (window.BLE_Interval) {
-          const cmd = `SET BLE_INTERVAL ${window.BLE_Interval}`;
-          await char.writeValueWithoutResponse(new TextEncoder().encode(cmd));
-          console.log(`Uploader: Set BLE Interval = ${window.BLE_Interval} ms`);
-        } 
-
-        if (window.BLE_MaxLength) {
-          const cmd = `SET BLE_MAX_LENGTH ${window.BLE_MaxLength}`;
-          await char.writeValueWithoutResponse(new TextEncoder().encode(cmd));
-          console.log(`Uploader: Set BLE Max Length = ${window.BLE_MaxLength} bytes`);
+      setup: async () => {
+        if (!this.Uploader.isSupported()) {
+          console.log("Uploader Notify: Uploader not supported");
+          return;
         }
 
-        await char.startNotifications();
-        char.addEventListener("characteristicvaluechanged", (event) => {
+        if (!this.UploaderLbToWeb.properties.notify) {
+          console.log("Uploader Notify: Not supported");
+          return;
+        }
+
+        await this.UploaderLbToWeb.startNotifications();
+        this.UploaderLbToWeb.addEventListener("characteristicvaluechanged", (event) => {
           const msg = new TextDecoder().decode(event.target.value);
           if (this.Uploader.onMessage) this.Uploader.onMessage(msg);
         });
 
         console.log("Callback Uploader.onMessage: Enabled");
+
+        // Lưu callback gốc để không bị ghi đè
+        this.Uploader.previousOnMessage = this.Uploader.onMessage;
+
+        // Gửi text command sang Leanbot qua UUID Lb2Web để thiết lập tham số nếu có
+        if (window.BLE_Interval) {
+          const cmd = `SET BLE_INTERVAL ${window.BLE_Interval}`;
+          await this.UploaderLbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
+          console.log(`Uploader: Set BLE Interval = ${window.BLE_Interval} ms`);
+        } 
+
+        if (window.BLE_MaxLength) {
+          const cmd = `SET BLE_MAX_LENGTH ${window.BLE_MaxLength}`;
+          await this.UploaderLbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
+          console.log(`Uploader: Set BLE Max Length = ${window.BLE_MaxLength} bytes`);
+        }
       },
     };
   }
