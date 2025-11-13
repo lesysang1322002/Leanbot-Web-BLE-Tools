@@ -1,12 +1,14 @@
 // main.js
 
 // Import LeanbotBLE SDK
-import { LeanbotBLE } from "https://lesysang1322002.github.io/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
+import { LeanbotBLE } from "./leanbot_ble.js";
 
 const params = new URLSearchParams(window.location.search);
-window.MAX_BLE_LEN = parseInt(params.get("blelen")) || 128;
+window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
+window.BLE_Interval = parseInt(params.get("BLE_Interval"));
 
-console.log(`MAX_BLE_LEN = ${window.MAX_BLE_LEN}`);
+console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
+console.log(`BLE_Interval = ${window.BLE_Interval}`);
 
 // =================== BLE Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");

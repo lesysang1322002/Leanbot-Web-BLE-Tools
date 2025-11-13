@@ -1,4 +1,4 @@
-// leanbot_ble.js
+// leanbot_ble.js - version 1.0.6
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
 export class LeanbotBLE {
@@ -138,11 +138,14 @@ export class LeanbotBLE {
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
 
-    this.SerialChar      = this.#chars[ this.Serial.UUID ] || null;
+    // Lưu characteristic cho Serial
+    this.SerialChar = this.#chars[ this.Serial.UUID ] || null;
+
+    // Lưu characteristic cho Uploader
     this.UploaderWebToLb = this.#chars[ this.Uploader.UUID_WebToLb ] || null;
     this.UploaderLbToWeb = this.#chars[ this.Uploader.UUID_LbToWeb ] || null;
 
-    /** ---------- SETUP MODULES ---------- */
+    /** ---------- ENABLE NOTIFICATIONS ---------- */
     await this.Serial.setup();
     await this.Uploader.setup();
 
@@ -281,16 +284,16 @@ export class LeanbotBLE {
             for (const line of lines) {
               if (!line.trim()) continue;
               const match = line.match(/Receive\s+(\d+)/i);
-              if (!match) return;
+              if (!match) continue;
 
               const received = parseInt(match[1]);
               console.log(`Uploader: Received feedback for block #${received}`);
 
               // Nếu chưa tới lượt gửi → thoát
-              if (nextToSend !== received + BlockBufferSize) return;
+              if (nextToSend !== received + BlockBufferSize) continue;
 
               // Nếu đã gửi hết → thoát
-              if (nextToSend >= packets.length) return;
+              if (nextToSend >= packets.length) continue;
 
               console.log(`Uploader: Sending block #${nextToSend}`);
               await this.UploaderWebToLb.writeValueWithoutResponse(packets[nextToSend]);
