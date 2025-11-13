@@ -237,7 +237,6 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
 
-  uploadLog.textContent = ""; // Clear previous log
   UploadUI.open();
   await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });

@@ -176,7 +176,7 @@ button:hover {
 
 /* Overlay */
 .upload-dialog {
-  display: flex;
+  display: none;
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.4);
