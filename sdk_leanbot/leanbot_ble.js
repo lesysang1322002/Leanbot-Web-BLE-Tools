@@ -366,7 +366,7 @@ export class LeanbotBLE {
             // ===== Success =====
             if (/Upload success/i.test(line)) {
               if (this.Uploader.onSuccess) this.Uploader.onSuccess();
-              contiune;
+              continue;
             }
 
             // ===== Errors =====
