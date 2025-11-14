@@ -244,52 +244,33 @@ btnUpload.addEventListener("click", async () => {
 // =================== Upload Log =================== //
 leanbot.Uploader.onMessage = (msg) => {
   UploadUI.addLog(msg);
-  let m;
-
-  // ===== Transfer =====
-  if (m = msg.match(/Receive\s+(\d+)/i)) {
-    let seq = parseInt(m[1]);
-    console.log(`Packet #${seq} received // Total packets: ${leanbot.Uploader.packets.length - 1}`); // -1 packet EOF
-    let pct = Math.floor(seq / (leanbot.Uploader.packets.length - 1) * 100);
-    UploadUI.updateTransfer(pct);
-    return;
-  }
-
-  // ===== Write =====
-  if (m = msg.match(/Write\s+(\d+)\s*bytes/i)) {
-    let written = parseInt(m[1]);
-    let pct = Math.floor(written / leanbot.Uploader.totalBytesData * 100);
-    UploadUI.updateWrite(pct);
-    return;
-  }
-
-  // ===== Verify =====
-  if (m = msg.match(/Verify\s+(\d+)\s*bytes/i)) {
-    let verified = parseInt(m[1]);
-    let pct = Math.floor(verified / leanbot.Uploader.totalBytesData * 100);
-    UploadUI.updateVerify(pct);
-    return;
-  }
-
-  // ===== Success =====
-  if (/Upload success/i.test(msg)) {
-    UploadUI.markSuccess();
-    return;
-  }
-
-  // ===== Error: Write failed =====
-  if (/Write failed/i.test(msg)) {
-    UploadUI.markWriteError();
-    return;
-  }
-
-  // ===== Error: Verify failed =====
-  if (/Verify failed/i.test(msg)) {
-    UploadUI.markVerifyError();
-    return;
-  }
 };
 
+leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
+  const pct = Math.floor(progress / totalBlocks * 100);
+  UploadUI.updateTransfer(pct);
+};
+
+leanbot.Uploader.onWrite = (progress, totalBytes) => {
+  const pct = Math.floor(progress / totalBytes * 100);
+  UploadUI.updateWrite(pct);
+};
+
+leanbot.Uploader.onVerify = (progress, totalBytes) => {
+  const pct = Math.floor(progress / totalBytes * 100);
+  UploadUI.updateVerify(pct);
+};
+
+leanbot.Uploader.onSuccess = () => {
+  UploadUI.markSuccess();
+};
+
+leanbot.Uploader.onError = (err) => {
+  if (err === "Write failed")  return UploadUI.markWriteError();
+  if (err === "Verify failed") return UploadUI.markVerifyError();
+};
+
+// =================== Upload UI =================== //
 const UploadUI = {
   el: {
     dialog:     document.getElementById("uploadDialog"),
@@ -367,10 +348,9 @@ const UploadUI = {
   markVerifyError() {
     this.setColor(this.el.verify, 0, true);
   },
-
 };
 
 UploadUI.el.btnClose.onclick = () => UploadUI.close();
-
+// End of main.js
 
 

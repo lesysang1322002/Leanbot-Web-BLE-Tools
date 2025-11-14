@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
   <!-- TOP BAR -->
   <div id="topBar">
     <div id="leftButtons">
@@ -23,14 +22,14 @@
   </div>
 
   <!-- UPLOAD LOG -->
-  <div id="uploadSection">
+  <!-- <div id="uploadSection">
     <h3>Upload Log:</h3>
     <div id="uploadLog"></div>
-  </div>
+  </div> -->
 
   <!-- SERIAL MONITOR -->
   <div id="serialSection">
-    <h3>Serial Monitor:</h3>
+    <!-- <h3>Serial Monitor:</h3> -->
     <div id="serialTop">
       <div id="serialOptions">
         <label><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
@@ -63,6 +62,32 @@
       <button id="btnConnect">Connect ...</button>
     </div>
   </div>
+
+  <!-- Upload Dialog -->
+  <div id="uploadDialog" class="upload-dialog">
+    <div class="upload-box">
+
+      <h3>Uploading Firmware…</h3>
+
+      <label>Compile</label>
+      <progress id="progCompile" max="100" value="0"></progress>
+
+      <label>Transfer</label>
+      <progress id="progTransfer" max="100" value="0"></progress>
+
+      <label>Write</label>
+      <progress id="progWrite" max="100" value="0"></progress>
+
+      <label>Verify</label>
+      <progress id="progVerify" max="100" value="0"></progress>
+
+      <label>Uploader Messages</label>
+      <textarea id="uploadLog" readonly></textarea>
+
+      <button id="btnCloseUpload">Close</button>
+    </div>
+  </div>
+
 
   <!-- FILE SELECTION MODAL -->
   <div id="fileModal" class="hidden">

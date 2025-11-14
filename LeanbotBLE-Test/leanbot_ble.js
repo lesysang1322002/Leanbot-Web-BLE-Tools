@@ -1,4 +1,4 @@
-// leanbot_ble.js - version 1.0.6
+// leanbot_ble.js
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
 export class LeanbotBLE {
@@ -137,10 +137,6 @@ export class LeanbotBLE {
     const chars = await this.#service.getCharacteristics();
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
-
-    this.Serial.Char           = this.#chars[ this.Serial.UUID ] || null;
-    this.Uploader.Char_WebToLb = this.#chars[ this.Uploader.UUID_WebToLb ] || null;
-    this.Uploader.Char_LbToWeb = this.#chars[ this.Uploader.UUID_LbToWeb ] || null;
     
     /** ---------- ENABLE NOTIFICATIONS ---------- */
     await this.Serial.setup();
@@ -197,6 +193,8 @@ export class LeanbotBLE {
       },
 
       setup: async () => {
+        this.Serial.Char = this.#chars[ this.Serial.UUID ] || null;
+    
         if (!this.Serial.isSupported()) {
           console.log("Serial Notify: Serial not supported");
           return;
@@ -236,11 +234,16 @@ export class LeanbotBLE {
       isSupported: () => !!this.Uploader.Char_WebToLb && !!this.Uploader.Char_LbToWeb,
       
       /** Callback khi nhận notify Uploader */
-      onMessage: null,
+      onMessage:  null,     // (messageText)
+      onTransfer: null,     // (progress, totalBlocks)
+      onWrite:    null,     // (progress, totalBytes)
+      onVerify:   null,     // (progress, totalBytes)
+      onSuccess:  null,     // ()
+      onError:    null,     // (errorMessage)
 
       nextToSend: 0,
       BlockBufferSize: 4,
-      packets: [],
+      packets:  [],
       msgQueue: [],
       isProcessing: false,
       totalBytesData: 0,
@@ -256,19 +259,11 @@ export class LeanbotBLE {
         // Chuyển toàn bộ HEX sang gói BLE
         this.Uploader.packets = convertHexToBlePackets(hexText);
         
-        const totalPackets = this.Uploader.packets.length;
-        const totalBytes = this.Uploader.packets
-          .reduce((sum, p) => sum + p.length, 0);
-
-        // Dữ liệu thực không tính header (1 byte mỗi packet)
-        const dataBytes = totalBytes - totalPackets;
-
+        const totalBytes = this.Uploader.packets.reduce((sum, p) => sum + p.length, 0);
+        // Dữ liệu thực không tính header (1 byte mỗi packet) - EOF không tính
+        const dataBytes = totalBytes - this.Uploader.packets.length - 1;
         // Làm tròn lên 128 bytes
-        const roundedDataBytes = Math.ceil(dataBytes / 128) * 128;
-        this.Uploader.totalBytesData = roundedDataBytes;
-
-        console.log(`Uploader: ${totalPackets} packets, total=${totalBytes} bytes, data=${dataBytes} bytes, rounded=${roundedDataBytes} bytes`);
-
+        this.Uploader.totalBytesData = Math.ceil(dataBytes / 128) * 128;
 
         // === Reset state before uploading ===
         this.Uploader.nextToSend = 0;
@@ -288,6 +283,9 @@ export class LeanbotBLE {
       },
 
       setup: async () => {
+        this.Uploader.Char_WebToLb = this.#chars[ this.Uploader.UUID_WebToLb ] || null;
+        this.Uploader.Char_LbToWeb = this.#chars[ this.Uploader.UUID_LbToWeb ] || null;
+
         if (!this.Uploader.isSupported()) {
           console.log("Uploader Notify: Uploader not supported");
           return;
@@ -330,27 +328,68 @@ export class LeanbotBLE {
           this.Uploader.isProcessing = false;
         };
 
+        // Hàm xử lý msg nhận được
+        const processUploaderOnX = (msg) => {
+          // Phân tích dòng nhận được
+          const lines = msg.split(/\r?\n/);
+          for (const line of lines) {
+            if (!line.trim()) continue;
+
+            console.log(`Uploader Received: ${line}`);
+            if (this.Uploader.onMessage) this.Uploader.onMessage(line);
+
+            let m = null;
+            // ===== Transfer =====
+            if (m = line.match(/Receive\s+(\d+)/i)) {
+              const progress = parseInt(m[1]);
+              const totalBlocks = this.Uploader.packets.length - 1;
+              if (this.Uploader.onTransfer) this.Uploader.onTransfer(progress, totalBlocks);
+              continue;
+            }
+
+            // ===== Write =====
+            if (m = line.match(/Write\s+(\d+)\s*bytes/i)) {
+              const progress    = parseInt(m[1]);
+              const totalBytes  = this.Uploader.totalBytesData;
+              if (this.Uploader.onWrite) this.Uploader.onWrite(progress, totalBytes);
+              continue;
+            }
+
+            // ===== Verify =====
+            if (m = line.match(/Verify\s+(\d+)\s*bytes/i)) {
+              const progress    = parseInt(m[1]);
+              const totalBytes  = this.Uploader.totalBytesData;
+              if (this.Uploader.onVerify) this.Uploader.onVerify(progress, totalBytes);
+              continue;
+            }
+
+            // ===== Success =====
+            if (/Upload success/i.test(line)) {
+              if (this.Uploader.onSuccess) this.Uploader.onSuccess();
+              contiune;
+            }
+
+            // ===== Errors =====
+            if (/Write failed | Verify failed /i.test(line)) {
+              if (this.Uploader.onError) this.Uploader.onError(line);
+              continue;
+            }
+          }
+        }
+
         await this.Uploader.Char_LbToWeb.startNotifications();
         this.Uploader.Char_LbToWeb.addEventListener("characteristicvaluechanged", (event) => {
           const msg = new TextDecoder().decode(event.target.value);
-          
+
           // Thêm message vào queue để xử lý tuần tự
           this.Uploader.msgQueue.push(msg.trim());
           processQueue();
 
-          // Callback onMessage nếu có
-          if (this.Uploader.onMessage) {
-            const lines = msg.split(/\r?\n/);
-            for (const line of lines) {
-              if (line.trim()) this.Uploader.onMessage(line.trim());
-            }
-          }
+          // Xử lý các hàm Uploader.onX()
+          processUploaderOnX(msg);
         });
 
         console.log("Callback Uploader.onMessage: Enabled");
-
-        // Lưu callback gốc để không bị ghi đè
-        // this.Uploader.previousOnMessage = this.Uploader.onMessage;
 
         // Gửi text command sang Leanbot qua UUID Lb2Web để thiết lập tham số nếu có
         if (window.BLE_Interval) {
