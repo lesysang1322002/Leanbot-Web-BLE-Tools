@@ -334,8 +334,8 @@ export class LeanbotBLE {
           if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
             const progress = parseInt(m[1]);
             const totalBlocks = this.Uploader.packets.length - 1;
-            if (this.Uploader.onTransfer) this.Uploader.onTransfer(progress, totalBlocks);
             if (this.Uploader.onTransferInternal) await this.Uploader.onTransferInternal(progress);
+            if (this.Uploader.onTransfer) this.Uploader.onTransfer(progress, totalBlocks);
             return;
           }
 
