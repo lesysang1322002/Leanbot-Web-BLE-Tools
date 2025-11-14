@@ -138,9 +138,9 @@ export class LeanbotBLE {
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
     
-    /** ---------- ENABLE NOTIFICATIONS ---------- */
+    /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setup();
-    await this.Uploader.setup();
+    await this.Uploader.setup(window.BLE_MaxLength, window.BLE_Interval);
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
@@ -207,8 +207,8 @@ export class LeanbotBLE {
 
         await this.Serial.Char.startNotifications();
         this.Serial.Char.addEventListener("characteristicvaluechanged", (event) => {
-          const msg = new TextDecoder().decode(event.target.value);
-          if (this.Serial.onMessage) this.Serial.onMessage(msg);
+          const BLEPacket = new TextDecoder().decode(event.target.value);
+          if (this.Serial.onMessage) this.Serial.onMessage(BLEPacket);
         });
 
         console.log("Callback Serial.onMessage: Enabled");
@@ -227,26 +227,34 @@ export class LeanbotBLE {
         return '0000ffe3-0000-1000-8000-00805f9b34fb';
       },
 
-      Char_WebToLb : null,
-      Char_LbToWeb : null,
+      // ===== Characteristics =====
+      Char_WebToLb: null,
+      Char_LbToWeb: null,
+
+      // ===== Data =====
+      packets: [],
+      nextBlockToSend: 0,
+      BlockBufferSize: 4,
+      totalBytesData: 0,
+
+      // ===== Queue =====
+      BLEPacketQueue: [],
+      isQueueProcessing: false,
+
+      // ===== User Callbacks =====
+      onMessage: null,
+      onTransfer: null,
+      onWrite: null,
+      onVerify: null,
+      onSuccess: null,
+      onError: null,
+
+      // ===== Internal Callbacks =====
+      onMessageInternal: null,
+      onTransferInternal: null,
 
       /** Kiểm tra hỗ trợ Uploader */
       isSupported: () => !!this.Uploader.Char_WebToLb && !!this.Uploader.Char_LbToWeb,
-      
-      /** Callback khi nhận notify Uploader */
-      onMessage:  null,     // (messageText)
-      onTransfer: null,     // (progress, totalBlocks)
-      onWrite:    null,     // (progress, totalBytes)
-      onVerify:   null,     // (progress, totalBytes)
-      onSuccess:  null,     // ()
-      onError:    null,     // (errorMessage)
-
-      nextToSend: 0,
-      BlockBufferSize: 4,
-      packets:  [],
-      msgQueue: [],
-      isProcessing: false,
-      totalBytesData: 0,
       
       upload: async (hexText) => {
         if (!this.Uploader.isSupported()) {
@@ -267,7 +275,7 @@ export class LeanbotBLE {
 
         // === Reset state before uploading ===
         this.Uploader.nextToSend = 0;
-        this.Uploader.msgQueue = [];
+        this.Uploader.BLEPacketQueue = [];
         this.Uploader.isProcessing = false;
 
         console.log("Uploader: Start upload (4-block mode)");
@@ -282,7 +290,7 @@ export class LeanbotBLE {
         console.log("Waiting for Receive feedback...");
       },
 
-      setup: async () => {
+      setup: async (BLE_MaxLength, BLE_Interval) => {
         this.Uploader.Char_WebToLb = this.#chars[ this.Uploader.UUID_WebToLb ] || null;
         this.Uploader.Char_LbToWeb = this.#chars[ this.Uploader.UUID_LbToWeb ] || null;
 
@@ -296,121 +304,101 @@ export class LeanbotBLE {
           return;
         }
 
-        // Hàm xử lý queue
-        const processQueue = async () => {
-          if (this.Uploader.isProcessing) return;
-          this.Uploader.isProcessing = true;
+        // Hàm xử lý BLEPacket nhận được
+        const queueHandler = async () => {
+          if (this.Uploader.isQueueProcessing) return;
+          this.Uploader.isQueueProcessing = true;
 
-          while (this.Uploader.msgQueue.length > 0) {
-            const currentMsg = this.Uploader.msgQueue.shift();
-
-            const lines = currentMsg.split(/\r?\n/);
-            for (const line of lines) {
-              if (!line.trim()) continue;
-              const match = line.match(/Receive\s+(\d+)/i);
-              if (!match) continue;
-
-              const received = parseInt(match[1]);
-              console.log(`Uploader: Received feedback for block #${received}`);
-
-              // Nếu chưa tới lượt gửi → thoát
-              if (this.Uploader.nextToSend !== received + this.Uploader.BlockBufferSize) continue;
-
-              // Nếu đã gửi hết → thoát
-              if (this.Uploader.nextToSend >= this.Uploader.packets.length) continue;
-
-              console.log(`Uploader: Sending block #${this.Uploader.nextToSend}`);
-              await this.Uploader.Char_WebToLb.writeValueWithoutResponse(this.Uploader.packets[this.Uploader.nextToSend]);
-              this.Uploader.nextToSend++;
+          while (this.Uploader.BLEPacketQueue.length > 0) {
+            const BLEPacket = this.Uploader.BLEPacketQueue.shift();
+            const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(s => s);
+            for (const LineMessage of LineMessages) {
+              if (this.Uploader.onMessageInternal) await this.Uploader.onMessageInternal(LineMessage);
+              if (this.Uploader.onMessage)         this.Uploader.onMessage(LineMessage);
             }
           }
 
-          this.Uploader.isProcessing = false;
-        };
-
-        // Hàm xử lý msg nhận được
-        const processUploaderOnX = (msg) => {
-          // Phân tích dòng nhận được
-          const lines = msg.split(/\r?\n/);
-          for (const line of lines) {
-            if (!line.trim()) continue;
-
-            console.log(`Uploader Received: ${line}`);
-            if (this.Uploader.onMessage) this.Uploader.onMessage(line);
-
-            let m = null;
-            // ===== Transfer =====
-            if (m = line.match(/Receive\s+(\d+)/i)) {
-              const progress = parseInt(m[1]);
-              const totalBlocks = this.Uploader.packets.length - 1;
-              if (this.Uploader.onTransfer) this.Uploader.onTransfer(progress, totalBlocks);
-              continue;
-            }
-
-            // ===== Write =====
-            if (m = line.match(/Write\s+(\d+)\s*bytes/i)) {
-              const progress    = parseInt(m[1]);
-              const totalBytes  = this.Uploader.totalBytesData;
-              if (this.Uploader.onWrite) this.Uploader.onWrite(progress, totalBytes);
-              continue;
-            }
-
-            // ===== Verify =====
-            if (m = line.match(/Verify\s+(\d+)\s*bytes/i)) {
-              const progress    = parseInt(m[1]);
-              const totalBytes  = this.Uploader.totalBytesData;
-              if (this.Uploader.onVerify) this.Uploader.onVerify(progress, totalBytes);
-              continue;
-            }
-
-            // ===== Success =====
-            if (/Upload success/i.test(line)) {
-              if (this.Uploader.onSuccess) this.Uploader.onSuccess();
-              contiune;
-            }
-
-            // ===== Errors =====
-            if (/Write failed | Verify failed /i.test(line)) {
-              if (this.Uploader.onError) this.Uploader.onError(line);
-              continue;
-            }
-          }
+          this.Uploader.isQueueProcessing = false;
         }
 
         await this.Uploader.Char_LbToWeb.startNotifications();
         this.Uploader.Char_LbToWeb.addEventListener("characteristicvaluechanged", (event) => {
-          const msg = new TextDecoder().decode(event.target.value);
-
-          // Thêm message vào queue để xử lý tuần tự
-          this.Uploader.msgQueue.push(msg.trim());
-          processQueue();
-
-          // Xử lý các hàm Uploader.onX()
-          processUploaderOnX(msg);
+          const BLEPacket = new TextDecoder().decode(event.target.value);
+          this.Uploader.BLEPacketQueue.push(BLEPacket);
+          queueHandler();
         });
+
+        this.Uploader.onMessageInternal =  async (LineMessage) => {
+          let m = null;
+          // ===== Transfer =====
+          if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
+            const progress = parseInt(m[1]);
+            const totalBlocks = this.Uploader.packets.length - 1;
+            if (this.Uploader.onTransfer) this.Uploader.onTransfer(progress, totalBlocks);
+            if (this.Uploader.onTransferInternal) await this.Uploader.onTransferInternal(progress);
+            return;
+          }
+
+          // ===== Write =====
+          if (m = LineMessage.match(/Write\s+(\d+)\s*bytes/i)) {
+            const progress    = parseInt(m[1]);
+            const totalBytes  = this.Uploader.totalBytesData;
+            if (this.Uploader.onWrite) this.Uploader.onWrite(progress, totalBytes);
+            return;
+          }
+
+          // ===== Verify =====
+          if (m = LineMessage.match(/Verify\s+(\d+)\s*bytes/i)) {
+            const progress    = parseInt(m[1]);
+            const totalBytes  = this.Uploader.totalBytesData;
+            if (this.Uploader.onVerify) this.Uploader.onVerify(progress, totalBytes);
+            return;
+          }
+
+          // ===== Success =====
+          if (/Upload success/i.test(LineMessage)) {
+            if (this.Uploader.onSuccess) this.Uploader.onSuccess();
+            return;
+          }
+
+          // ===== Errors =====
+          if (/Write failed|Verify failed/i.test(LineMessage)) {
+            if (this.Uploader.onError) this.Uploader.onError(LineMessage);
+            return;
+          }
+        }
+
+        this.Uploader.onTransferInternal = async (received) => {
+          if (this.Uploader.nextToSend !== received + this.Uploader.BlockBufferSize) return;
+          if (this.Uploader.nextToSend >= this.Uploader.packets.length) return;
+
+          console.log(`Uploader: Sending block #${this.Uploader.nextToSend}`);
+          await this.Uploader.Char_WebToLb.writeValueWithoutResponse(this.Uploader.packets[this.Uploader.nextToSend]);
+          this.Uploader.nextToSend++;
+        };
 
         console.log("Callback Uploader.onMessage: Enabled");
 
         // Gửi text command sang Leanbot qua UUID Lb2Web để thiết lập tham số nếu có
-        if (window.BLE_Interval) {
-          const cmd = `SET BLE_INTERVAL ${window.BLE_Interval}`;
+        if (BLE_MaxLength) {
+          const cmd = `SET BLE_MAX_LENGTH ${BLE_MaxLength}`;
           await this.Uploader.Char_LbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
-          console.log(`Uploader: Set BLE Interval = ${window.BLE_Interval} ms`);
-        } 
-
-        if (window.BLE_MaxLength) {
-          const cmd = `SET BLE_MAX_LENGTH ${window.BLE_MaxLength}`;
-          await this.Uploader.Char_LbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
-          console.log(`Uploader: Set BLE Max Length = ${window.BLE_MaxLength} bytes`);
+          console.log(`Uploader: Set BLE Max Length = ${BLE_MaxLength} bytes`);
         }
+
+        if (BLE_Interval) {
+          const cmd = `SET BLE_INTERVAL ${BLE_Interval}`;
+          await this.Uploader.Char_LbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
+          console.log(`Uploader: Set BLE Interval = ${BLE_Interval} ms`);
+        } 
       },
     };
   }
 }
 
-function parseHexLine(line) {
-  if (!line.startsWith(":")) return null;
-  const hex = line.slice(1);
+function parseHexLine(LineMessage) {
+  if (!LineMessage.startsWith(":")) return null;
+  const hex = LineMessage.slice(1);
   const length = parseInt(hex.substr(0, 2), 16);
   const address = parseInt(hex.substr(2, 4), 16);
   const recordType = hex.substr(6, 2);
@@ -443,8 +431,8 @@ function hexLineToBytes(block) {
 
 /**
  * Convert Intel HEX text into optimized BLE packets
- * - Parse HEX lines → validate checksum
- * - Merge consecutive lines with continuous addresses
+ * - Parse HEX LinesMessage → validate checksum
+ * - Merge consecutive LinesMessage with continuous addresses
  * - Split into BLE packets of max 236 bytes
  * 
  * @param {string} hexText - HEX file content
@@ -454,13 +442,13 @@ function convertHexToBlePackets(hexText) {
   const BLE_MaxLength = window.BLE_MaxLength || 512; // Mặc định 512 nếu không có thiết lập
   console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
 
-  // --- STEP 0: Split HEX text into lines ---
-  const lines = hexText.split(/\r?\n/).filter(line => line.trim().length > 0);
+  // --- STEP 0: Split HEX text into LinesMessage ---
+  const LinesMessage = hexText.split(/\r?\n/).filter(LineMessage => LineMessage.trim().length > 0);
 
-  // --- STEP 1: Parse each HEX line ---
+  // --- STEP 1: Parse each HEX LineMessage ---
   const parsedLines = [];
-  for (let i = 0; i < lines.length; i++) {
-    const parsed = parseHexLine(lines[i].trim());
+  for (let i = 0; i < LinesMessage.length; i++) {
+    const parsed = parseHexLine(LinesMessage[i].trim());
     if (!parsed) continue;
     if (!verifyChecksum(parsed)) continue;
     const bytes = hexLineToBytes(parsed.data);
@@ -471,19 +459,19 @@ function convertHexToBlePackets(hexText) {
   const mergedBlocks = [];
   let current = null;
 
-  for (const line of parsedLines) {
+  for (const LineMessage of parsedLines) {
     if (!current) {
       // Dùng spread operator [...] để sao chép dữ liệu, tránh ảnh hưởng mảng gốc
-      current = { address: line.address, bytes: [...line.bytes] };
+      current = { address: LineMessage.address, bytes: [...LineMessage.bytes] };
       continue;
     }
 
     const expectedAddr = current.address + current.bytes.length;
-    if (line.address === expectedAddr) {
-      current.bytes.push(...line.bytes);
+    if (LineMessage.address === expectedAddr) {
+      current.bytes.push(...LineMessage.bytes);
     } else {
       mergedBlocks.push(current);
-      current = { address: line.address, bytes: [...line.bytes] };
+      current = { address: LineMessage.address, bytes: [...LineMessage.bytes] };
     }
   }
   if (current) mergedBlocks.push(current);

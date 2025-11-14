@@ -237,120 +237,87 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
 
-  UploadUI.open();
+  uploadOpen();
   await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });
 
 // =================== Upload Log =================== //
 leanbot.Uploader.onMessage = (msg) => {
-  UploadUI.addLog(msg);
+  UploaderLog.value += msg + "\n";
+  UploaderLog.scrollTop = UploaderLog.scrollHeight;
 };
 
 leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
-  const pct = Math.floor(progress / totalBlocks * 100);
-  UploadUI.updateTransfer(pct);
+  setBarColor(UploaderTransfer, progress + 1, totalBlocks);
 };
 
 leanbot.Uploader.onWrite = (progress, totalBytes) => {
-  const pct = Math.floor(progress / totalBytes * 100);
-  UploadUI.updateWrite(pct);
+  setBarColor(UploaderWrite, progress, totalBytes);
 };
 
 leanbot.Uploader.onVerify = (progress, totalBytes) => {
-  const pct = Math.floor(progress / totalBytes * 100);
-  UploadUI.updateVerify(pct);
+  setBarColor(UploaderVerify, progress, totalBytes);
 };
 
 leanbot.Uploader.onSuccess = () => {
-  UploadUI.markSuccess();
+  setTimeout(() => {
+    UploaderDialog.classList.add("fade-out");
+    setTimeout(() => { UploaderDialog.style.display = "none"; }, 600);
+  }, 1000);
 };
 
 leanbot.Uploader.onError = (err) => {
-  if (err === "Write failed")  return UploadUI.markWriteError();
-  if (err === "Verify failed") return UploadUI.markVerifyError();
+  if (err === "Write failed")  return setBarColor(UploaderWrite, 1, 1, true);
+  if (err === "Verify failed") return setBarColor(UploaderVerify, 1, 1, true);
 };
 
-// =================== Upload UI =================== //
-const UploadUI = {
-  el: {
-    dialog:     document.getElementById("uploadDialog"),
-    compile:    document.getElementById("progCompile"),
-    transfer:   document.getElementById("progTransfer"),
-    write:      document.getElementById("progWrite"),
-    verify:     document.getElementById("progVerify"),
-    log:        document.getElementById("uploadLog"),
-    btnClose:   document.getElementById("btnCloseUpload")
-  },
+// =================== Upload DOM Elements =================== //
+const UploaderDialog   = document.getElementById("uploadDialog");
+const UploaderCompile  = document.getElementById("progCompile");
+const UploaderTransfer = document.getElementById("progTransfer");
+const UploaderWrite    = document.getElementById("progWrite");
+const UploaderVerify   = document.getElementById("progVerify");
+const UploaderLog      = document.getElementById("uploadLog");
+const UploaderBtnClose = document.getElementById("btnCloseUpload");
 
-  open() {
-    this.success = false;
-    this.hasError = false;
+// =================== Upload UI Functions =================== //
+function uploadOpen() {
+  UploaderDialog.style.display = "flex";
+  UploaderDialog.classList.remove("fade-out");
 
-    this.el.dialog.style.display = "flex";
-    this.el.dialog.classList.remove("fade-out");
+  // reset progress bars
+  [UploaderCompile, UploaderTransfer, UploaderWrite, UploaderVerify].forEach(b => {
+    b.value = 0;
+    b.max   = 1;
+    b.className = "yellow";
+  });
 
-    // reset progress
-    const bars = [this.el.compile, this.el.transfer, this.el.write, this.el.verify];
-    bars.forEach(b => {
-      b.value = 0;
-      b.className = "yellow"; // reset color
-    });
+  // reset log
+  UploaderLog.value = "";
 
-    this.el.log.value = "";
+  // compile: 100%
+  setBarColor(UploaderCompile, 1, 1);
+}
 
-    // Compile luôn 100%
-    this.setColor(this.el.compile, 100);
-  },
+function setBarColor(bar, value, maxValue, error = false) {
+  bar.value = value;
+  bar.max   = maxValue;
 
-  close() {
-    this.el.dialog.style.display = "none";
-  },
+  if (error) {
+    bar.className = "red";
+    uploadHasError = true;
+  }
+  else if (value >= maxValue && maxValue > 0) {
+    bar.className = "green";
+  }
+  else {
+    bar.className = "yellow";
+  }
+}
 
-  fadeOutLater() {
-    setTimeout(() => {
-      this.el.dialog.classList.add("fade-out");
-      setTimeout(() => this.close(), 600);
-    }, 1000);
-  },
-
-  addLog(msg) {
-    this.el.log.value += msg + "\n";
-    this.el.log.scrollTop = this.el.log.scrollHeight;
-  },
-
-  setColor(bar, value, error = false) {
-    bar.value = value;
-
-    if (error) {
-      bar.className = "red";
-      this.hasError = true;
-    }
-    else if (value >= 100) {
-      bar.className = "green";
-    }
-    else {
-      bar.className = "yellow";
-    }
-  },
-
-  updateTransfer(pct) { this.setColor(this.el.transfer, pct); },
-  updateWrite(pct)    { this.setColor(this.el.write   , pct); },
-  updateVerify(pct)   { this.setColor(this.el.verify  , pct); },
-
-  markSuccess() {
-    this.fadeOutLater();
-  },
-
-  markWriteError() {
-    this.setColor(this.el.write, 0, true);
-  },
-
-  markVerifyError() {
-    this.setColor(this.el.verify, 0, true);
-  },
+UploaderBtnClose.onclick = () => {
+  UploaderDialog.style.display = "none";
 };
-
-UploadUI.el.btnClose.onclick = () => UploadUI.close();
 // End of main.js
 
 
