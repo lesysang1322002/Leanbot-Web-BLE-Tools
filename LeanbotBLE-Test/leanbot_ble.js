@@ -304,6 +304,13 @@ export class LeanbotBLE {
           return;
         }
 
+        await this.Uploader.Char_LbToWeb.startNotifications();
+        this.Uploader.Char_LbToWeb.addEventListener("characteristicvaluechanged", (event) => {
+          const BLEPacket = new TextDecoder().decode(event.target.value);
+          this.Uploader.BLEPacketQueue.push(BLEPacket);
+          queueHandler();
+        });
+
         // Hàm xử lý BLEPacket nhận được
         const queueHandler = async () => {
           if (this.Uploader.isQueueProcessing) return;
@@ -320,13 +327,6 @@ export class LeanbotBLE {
 
           this.Uploader.isQueueProcessing = false;
         }
-
-        await this.Uploader.Char_LbToWeb.startNotifications();
-        this.Uploader.Char_LbToWeb.addEventListener("characteristicvaluechanged", (event) => {
-          const BLEPacket = new TextDecoder().decode(event.target.value);
-          this.Uploader.BLEPacketQueue.push(BLEPacket);
-          queueHandler();
-        });
 
         this.Uploader.onMessageInternal =  async (LineMessage) => {
           let m = null;

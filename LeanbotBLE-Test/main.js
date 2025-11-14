@@ -241,36 +241,6 @@ btnUpload.addEventListener("click", async () => {
   await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });
 
-// =================== Upload Log =================== //
-leanbot.Uploader.onMessage = (msg) => {
-  UploaderLog.value += msg + "\n";
-  UploaderLog.scrollTop = UploaderLog.scrollHeight;
-};
-
-leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
-  setBarColor(UploaderTransfer, progress + 1, totalBlocks);
-};
-
-leanbot.Uploader.onWrite = (progress, totalBytes) => {
-  setBarColor(UploaderWrite, progress, totalBytes);
-};
-
-leanbot.Uploader.onVerify = (progress, totalBytes) => {
-  setBarColor(UploaderVerify, progress, totalBytes);
-};
-
-leanbot.Uploader.onSuccess = () => {
-  setTimeout(() => {
-    UploaderDialog.classList.add("fade-out");
-    setTimeout(() => { UploaderDialog.style.display = "none"; }, 600);
-  }, 1000);
-};
-
-leanbot.Uploader.onError = (err) => {
-  if (err === "Write failed")  return setBarColor(UploaderWrite, 1, 1, true);
-  if (err === "Verify failed") return setBarColor(UploaderVerify, 1, 1, true);
-};
-
 // =================== Upload DOM Elements =================== //
 const UploaderDialog   = document.getElementById("uploadDialog");
 const UploaderCompile  = document.getElementById("progCompile");
@@ -280,7 +250,7 @@ const UploaderVerify   = document.getElementById("progVerify");
 const UploaderLog      = document.getElementById("uploadLog");
 const UploaderBtnClose = document.getElementById("btnCloseUpload");
 
-// =================== Upload UI Functions =================== //
+// Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
 function uploadOpen() {
   UploaderDialog.style.display = "flex";
   UploaderDialog.classList.remove("fade-out");
@@ -296,27 +266,49 @@ function uploadOpen() {
   UploaderLog.value = "";
 
   // compile: 100%
-  setBarColor(UploaderCompile, 1, 1);
-}
-
-function setBarColor(bar, value, maxValue, error = false) {
-  bar.value = value;
-  bar.max   = maxValue;
-
-  if (error) {
-    bar.className = "red";
-    uploadHasError = true;
-  }
-  else if (value >= maxValue && maxValue > 0) {
-    bar.className = "green";
-  }
-  else {
-    bar.className = "yellow";
-  }
+  UploaderCompile.value = 1;
+  UploaderCompile.max = 1;
+  UploaderCompile.className = "green";
 }
 
 UploaderBtnClose.onclick = () => {
   UploaderDialog.style.display = "none";
+};
+
+// =================== Upload Log =================== //
+leanbot.Uploader.onMessage = (msg) => {
+  UploaderLog.value += msg + "\n";
+  UploaderLog.scrollTop = UploaderLog.scrollHeight;
+};
+
+leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
+  UploaderTransfer.value = progress + 1; // vì Received = N nghĩa là đã nhận N+1 block
+  UploaderTransfer.max = totalBlocks;
+  if (progress === totalBlocks) UploaderTransfer.className = "green";
+};
+
+leanbot.Uploader.onWrite = (progress, totalBytes) => {
+  UploaderWrite.value = progress;
+  UploaderWrite.max = totalBytes;
+  if (progress === totalBytes) UploaderWrite.className = "green";
+};
+
+leanbot.Uploader.onVerify = (progress, totalBytes) => {
+  UploaderVerify.value = progress;
+  UploaderVerify.max = totalBytes;
+  if (progress === totalBytes) UploaderVerify.className = "green";
+};
+
+leanbot.Uploader.onSuccess = () => {
+  setTimeout(() => {
+    UploaderDialog.classList.add("fade-out");
+    setTimeout(() => { UploaderDialog.style.display = "none"; }, 600);
+  }, 1000);
+};
+
+leanbot.Uploader.onError = (err) => {
+  if (err === "Write failed")  UploaderWrite.className = "red";
+  else if (err === "Verify failed") UploaderVerify.className = "red";
 };
 // End of main.js
 
