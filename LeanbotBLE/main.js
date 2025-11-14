@@ -337,7 +337,7 @@ const UploadUI = {
   updateVerify(pct)   { this.setColor(this.el.verify  , pct); },
 
   markSuccess() {
-    this.fadeOutLater();
+    // this.fadeOutLater();
   },
 
   markWriteError() {
@@ -351,5 +351,4 @@ const UploadUI = {
 
 UploadUI.el.btnClose.onclick = () => UploadUI.close();
 // End of main.js
-
 
