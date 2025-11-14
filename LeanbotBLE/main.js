@@ -1,4 +1,5 @@
 // main.js
+
 // Import LeanbotBLE SDK
 import { LeanbotBLE } from "https://lesysang1322002.github.io/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
 
@@ -337,7 +338,7 @@ const UploadUI = {
   updateVerify(pct)   { this.setColor(this.el.verify  , pct); },
 
   markSuccess() {
-    // this.fadeOutLater();
+    this.fadeOutLater();
   },
 
   markWriteError() {
