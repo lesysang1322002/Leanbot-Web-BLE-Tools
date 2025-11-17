@@ -10,11 +10,7 @@ export class LeanbotBLE {
   #server  = null;
   #service = null;
   #chars   = {};
-
-  get chars() {
-    return this.#chars;
-  }
-
+  
   // ---------------- BLE CORE ----------------
   async connect(deviceName = null) {
     try {
@@ -143,8 +139,8 @@ export class LeanbotBLE {
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
-    await this.Serial.setup();
-    await this.Uploader.setup(window.BLE_MaxLength, window.BLE_Interval);
+    await this.Serial.setup(this.#chars);
+    await this.Uploader.setup(this.#chars, window.BLE_MaxLength, window.BLE_Interval);
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
@@ -205,8 +201,8 @@ class Serial {
   }
 
   /** Thiết lập characteristic + notify **/
-  async setup() {
-    this.#Char = this.parent.chars[Serial.UUID] || null;
+  async setup(characteristics) {
+    this.#Char = characteristics[Serial.UUID] || null;
 
     if (!this.isSupported()) {
       console.log("Serial Notify: Serial not supported");
@@ -232,8 +228,8 @@ class Serial {
 // 🔹 SUBMODULE: UPLOADER
 // ======================================================
 class Uploader {
-  static UUID_WebToLb = '0000ffe2-0000-1000-8000-00805f9b34fb';
-  static UUID_LbToWeb = '0000ffe3-0000-1000-8000-00805f9b34fb';
+  static UUID_DataPipe = '0000ffe2-0000-1000-8000-00805f9b34fb';
+  static UUID_ControlPipe = '0000ffe3-0000-1000-8000-00805f9b34fb';
 
   // ---- PRIVATE MEMBERS ----
 
@@ -301,9 +297,9 @@ class Uploader {
   }
 
   /** Setup Char + Notify + Queue */
-  async setup(BLE_MaxLength, BLE_Interval) {
-    this.#Char_WebToLb = this.parent.chars[Uploader.UUID_WebToLb] || null;
-    this.#Char_LbToWeb = this.parent.chars[Uploader.UUID_LbToWeb] || null;
+  async setup(characteristics, BLE_MaxLength, BLE_Interval) {
+    this.#Char_WebToLb = characteristics[Uploader.UUID_DataPipe] || null;
+    this.#Char_LbToWeb = characteristics[Uploader.UUID_ControlPipe] || null;
 
     if (!this.isSupported()) {
       console.log("Uploader Notify: Uploader not supported");
@@ -319,7 +315,7 @@ class Uploader {
     this.#Char_LbToWeb.addEventListener("characteristicvaluechanged", (event) => {
       const packet = new TextDecoder().decode(event.target.value);
       this.#BLEPacketQueue.push(packet);
-      queueHandler();
+      this.queueHandler();
     });
 
     console.log("Callback Uploader.onMessage: Enabled");
@@ -336,77 +332,77 @@ class Uploader {
       await this.#Char_LbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
       console.log(`Uploader: Set BLE Interval = ${BLE_Interval}`);
     }
-
-    // ========== Queue handler ==========
-    const queueHandler = async () => {
-      if (this.#isQueueProcessing) return;
-      this.#isQueueProcessing = true;
-
-      while (this.#BLEPacketQueue.length > 0) {
-        const BLEPacket = this.#BLEPacketQueue.shift();
-        const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-
-        for (const LineMessage of LineMessages) {
-          await onMessageInternal(LineMessage);
-          if (this.onMessage) this.onMessage(LineMessage);
-        }
-      }
-
-      this.#isQueueProcessing = false;
-    };
-
-    // ========== Message Processor ==========
-    const onMessageInternal = async (LineMessage) => {
-      let m = null;
-
-      // Transfer
-      if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
-        const progress = parseInt(m[1]);
-        const totalBlocks = this.#packets.length - 1; // Không tính EOF block
-        await onTransferInternal(progress);
-        if (this.onTransfer) this.onTransfer(progress + 1, totalBlocks); // vì Received = N nghĩa là đã nhận N+1 block
-        return;
-      }
-
-      // Write
-      if (m = LineMessage.match(/Write\s+(\d+)\s*bytes/i)) {
-        const progress = parseInt(m[1]);
-        if (this.onWrite)
-          this.onWrite(progress, this.#totalBytesData);
-        return;
-      }
-
-      // Verify
-      if (m = LineMessage.match(/Verify\s+(\d+)\s*bytes/i)) {
-        const progress = parseInt(m[1]);
-        if (this.onVerify)
-          this.onVerify(progress, this.#totalBytesData);
-        return;
-      }
-
-      // Success
-      if (/Upload success/i.test(LineMessage)) {
-        if (this.onSuccess) this.onSuccess();
-        return;
-      }
-
-      // Errors
-      if (/Write failed|Verify failed/i.test(LineMessage)) {
-        if (this.onError) this.onError(LineMessage);
-        return;
-      }
-    };
-
-    // ========== Send next block ==========
-    const onTransferInternal = async (received) => {
-      if (this.#nextToSend !== received + this.#BlockBufferSize) return;
-      if (this.#nextToSend >= this.#packets.length) return;
-
-      console.log(`Uploader: Sending block #${this.#nextToSend}`);
-      await this.#Char_WebToLb.writeValueWithoutResponse(this.#packets[this.#nextToSend]);
-      this.#nextToSend++;
-    };
   }
+
+  // ========== Queue handler ==========
+  async queueHandler() {
+    if (this.#isQueueProcessing) return;
+    this.#isQueueProcessing = true;
+
+    while (this.#BLEPacketQueue.length > 0) {
+      const BLEPacket = this.#BLEPacketQueue.shift();
+      const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+      for (const LineMessage of LineMessages) {
+        await this.onMessageInternal(LineMessage);
+        if (this.onMessage) this.onMessage(LineMessage);
+      }
+    }
+
+    this.#isQueueProcessing = false;
+  };
+
+  // ========== Message Processor ==========
+  async onMessageInternal(LineMessage) {
+    let m = null;
+
+    // Transfer
+    if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
+      const progress = parseInt(m[1]);
+      const totalBlocks = this.#packets.length - 1; // Không tính EOF block
+      await this.onTransferInternal(progress);
+      if (this.onTransfer) this.onTransfer(progress + 1, totalBlocks); // vì Received = N nghĩa là đã nhận N+1 block
+      return;
+    }
+
+    // Write
+    if (m = LineMessage.match(/Write\s+(\d+)\s*bytes/i)) {
+      const progress = parseInt(m[1]);
+      if (this.onWrite)
+        this.onWrite(progress, this.#totalBytesData);
+      return;
+    }
+
+    // Verify
+    if (m = LineMessage.match(/Verify\s+(\d+)\s*bytes/i)) {
+      const progress = parseInt(m[1]);
+      if (this.onVerify)
+        this.onVerify(progress, this.#totalBytesData);
+      return;
+    }
+
+    // Success
+    if (/Upload success/i.test(LineMessage)) {
+      if (this.onSuccess) this.onSuccess();
+      return;
+    }
+
+    // Errors
+    if (/Write failed|Verify failed/i.test(LineMessage)) {
+      if (this.onError) this.onError(LineMessage);
+      return;
+    }
+  };
+
+  // ========== Send next block ==========
+  async onTransferInternal(received) {
+    if (this.#nextToSend !== received + this.#BlockBufferSize) return;
+    if (this.#nextToSend >= this.#packets.length) return;
+
+    console.log(`Uploader: Sending block #${this.#nextToSend}`);
+    await this.#Char_WebToLb.writeValueWithoutResponse(this.#packets[this.#nextToSend]);
+    this.#nextToSend++;
+  };
 }
 
 // ======================================================

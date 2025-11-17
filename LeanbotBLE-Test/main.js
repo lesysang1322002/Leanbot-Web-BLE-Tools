@@ -250,6 +250,7 @@ const UploaderVerify   = document.getElementById("progVerify");
 const UploaderLog      = document.getElementById("uploadLog");
 const UploaderAutoClose = document.getElementById("chkAutoClose");
 const UploaderBtnClose = document.getElementById("btnCloseUpload");
+const UploaderBtnShowLast = document.getElementById("btnShowLast");
 
 // Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
 function uploadOpen() {
@@ -274,6 +275,11 @@ function uploadOpen() {
 
 UploaderBtnClose.onclick = () => {
   UploaderDialog.style.display = "none";
+};
+
+UploaderBtnShowLast.onclick = () => {
+  UploaderDialog.classList.remove("fade-out");
+  UploaderDialog.style.display = "flex";
 };
 
 // =================== Upload Log =================== //
@@ -313,6 +319,20 @@ leanbot.Uploader.onError = (err) => {
   if (err === "Write failed")  UploaderWrite.className = "red";
   else if (err === "Verify failed") UploaderVerify.className = "red";
 };
+
+let compileStart = 0;
+let uploadStart = 0;
+let compileTimer = null;
+let uploadTimer = null;
+
+function updateCompileTime() {
+  const t = ((performance.now() - compileStart) / 1000).toFixed(1);
+  document.getElementById("compileTime").textContent = `${t} sec`;
+}
+function updateUploadTime() {
+  const t = ((performance.now() - uploadStart) / 1000).toFixed(1);
+  document.getElementById("uploadTime").textContent = `${t} sec`;
+}
 
 // End of main.js
 

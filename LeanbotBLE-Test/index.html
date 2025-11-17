@@ -11,6 +11,7 @@
   <div id="topBar">
     <div id="leftButtons">
       <button id="btnCode">{ } Code</button>
+      <button id="btnShowLast">Last Upload</button>
     </div>
 
     <div id="rightButtons">
@@ -69,21 +70,47 @@
 
       <h3>Uploading Firmware…</h3>
 
-      <label>Compile</label>
-      <progress id="progCompile" max="1" value="0"></progress>
+      <!-- GROUP 1: COMPILE -->
+      <div class="group">
+        <div class="group-header">
+          <span>Compile</span>
+          <span id="compileTime" class="time">0.0 sec</span>
+        </div>
 
-      <label>Transfer</label>
-      <progress id="progTransfer" max="1" value="0"></progress>
+        <div class="progress-wrapper">
+          <progress id="progCompile" max="1" value="0"></progress>
+          <span class="progress-label" id="lblCompile">Compile</span>
+        </div>
+      </div>
 
-      <label>Write</label>
-      <progress id="progWrite" max="1" value="0"></progress>
+      <!-- GROUP 2: UPLOAD -->
+      <div class="group">
+        <div class="group-header">
+          <span>Upload</span>
+          <span id="uploadTime" class="time">0.0 sec</span>
+        </div>
 
-      <label>Verify</label>
-      <progress id="progVerify" max="1" value="0"></progress>
+        <div class="progress-wrapper">
+          <progress id="progTransfer" max="1" value="0"></progress>
+          <span class="progress-label">Transfer</span>
+        </div>
 
-      <label>Uploader Messages</label>
+        <div class="progress-wrapper">
+          <progress id="progWrite" max="1" value="0"></progress>
+          <span class="progress-label">Write</span>
+        </div>
+
+        <div class="progress-wrapper">
+          <progress id="progVerify" max="1" value="0"></progress>
+          <span class="progress-label">Verify</span>
+        </div>
+      </div>
+
+      <!-- LOG -->
+      <label id="uploadLogLabel">Uploader Messages</label>
       <textarea id="uploadLog" readonly></textarea>
 
+      <!-- FOOTER -->
       <div class="upload-footer">
         <label class="auto-close">
           <input type="checkbox" id="chkAutoClose" checked>
@@ -92,10 +119,9 @@
 
         <button id="btnCloseUpload">Close</button>
       </div>
-      
+
     </div>
   </div>
-
 
   <!-- FILE SELECTION MODAL -->
   <div id="fileModal" class="hidden">
