@@ -10,7 +10,7 @@ export class LeanbotBLE {
   #server  = null;
   #service = null;
   #chars   = {};
-  
+
   // ---------------- BLE CORE ----------------
   async connect(deviceName = null) {
     try {
@@ -228,7 +228,7 @@ class Serial {
 // 🔹 SUBMODULE: UPLOADER
 // ======================================================
 class Uploader {
-  static UUID_DataPipe = '0000ffe2-0000-1000-8000-00805f9b34fb';
+  static UUID_DataPipe    = '0000ffe2-0000-1000-8000-00805f9b34fb';
   static UUID_ControlPipe = '0000ffe3-0000-1000-8000-00805f9b34fb';
 
   // ---- PRIVATE MEMBERS ----
