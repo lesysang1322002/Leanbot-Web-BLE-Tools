@@ -11,6 +11,10 @@ export class LeanbotBLE {
   #service = null;
   #chars   = {};
 
+  get chars() {
+    return this.#chars;
+  }
+
   // ---------------- BLE CORE ----------------
   async connect(deviceName = null) {
     try {
@@ -150,252 +154,251 @@ export class LeanbotBLE {
   constructor() {
     this.onConnect = null;
     this.onDisconnect = null;
-
-    // ======================================================
-    // 🔹 SUBMODULE: SERIAL
-    // ======================================================
-    this.Serial = {
-      // UUID riêng của Serial
-      get UUID() {
-        return '0000ffe1-0000-1000-8000-00805f9b34fb';
-      },
-
-      Char : null,
-
-      /** Kiểm tra hỗ trợ Serial */
-      isSupported: () => !!this.Serial.Char,
-
-      /** Callback khi nhận notify Serial */
-      onMessage: null,
-
-      /** Gửi dữ liệu qua đặc tính Serial mặc định (UUID)
-       * @param {string|Uint8Array} data - dữ liệu cần gửi
-       * @param {boolean} withResponse - true = gửi chờ phản hồi, false = gửi nhanh
-       */
-      send: async (data, withResponse = true) => {
-        try {
-          if (!this.Serial.isSupported()) {
-            console.log("Serial.Send Error: Serial not supported");
-            return;
-          }
-
-          // Chuyển dữ liệu sang Uint8Array nếu là chuỗi
-          const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
-
-          if (withResponse) {
-            await this.Serial.Char.writeValue(buffer);
-          } else {
-            await this.Serial.Char.writeValueWithoutResponse(buffer);
-          }
-        } catch (e) {
-          console.log(`Serial.Send Error: ${e}`);
-        }
-      },
-
-      setup: async () => {
-        this.Serial.Char = this.#chars[ this.Serial.UUID ] || null;
     
-        if (!this.Serial.isSupported()) {
-          console.log("Serial Notify: Serial not supported");
-          return;
+    this.Serial = new Serial(this);
+    this.Uploader = new Uploader(this);
+  }
+}
+
+// ======================================================
+// 🔹 SUBMODULE: SERIAL
+// ======================================================
+class Serial {
+  // UUID riêng của Serial
+  static UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
+  #Char = null;
+
+  constructor(parent) {
+    this.parent = parent;
+    this.onMessage = null;
+  }
+
+  isSupported() {
+    return !!this.#Char;
+  }
+
+  async send(data, withResponse = true) {
+    try {
+      if (!this.isSupported()) {
+        console.log("Serial.Send Error: Serial not supported");
+        return;
+      }
+
+      const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
+
+      if (withResponse) {
+        await this.#Char.writeValue(buffer);
+      } else {
+        await this.#Char.writeValueWithoutResponse(buffer);
+      }
+    } catch (e) {
+      console.log(`Serial.Send Error: ${e}`);
+    }
+  }
+
+  /** Thiết lập notify + characteristic */
+  async setup() {
+    this.#Char = this.parent.chars[Serial.UUID] || null;
+
+    if (!this.isSupported()) {
+      console.log("Serial Notify: Serial not supported");
+      return;
+    }
+
+    if (!this.#Char.properties.notify) {
+      console.log("Serial Notify: Not supported");
+      return;
+    }
+
+    await this.#Char.startNotifications();
+    this.#Char.addEventListener("characteristicvaluechanged", (event) => {
+      const BLEPacket = new TextDecoder().decode(event.target.value);
+      if (this.onMessage) this.onMessage(BLEPacket);
+    });
+
+    console.log("Callback Serial.onMessage: Enabled");
+  }
+}
+
+// ======================================================
+// 🔹 SUBMODULE: UPLOADER
+// ======================================================
+class Uploader {
+  static UUID_WebToLb = '0000ffe2-0000-1000-8000-00805f9b34fb';
+  static UUID_LbToWeb = '0000ffe3-0000-1000-8000-00805f9b34fb';
+
+  #Char_WebToLb      = null;
+  #Char_LbToWeb      = null;
+
+  #packets           = [];
+  #nextToSend        = 0;
+  #BlockBufferSize   = 4;
+  #totalBytesData    = 0;
+
+  #BLEPacketQueue    = [];
+  #isQueueProcessing = false;
+
+  constructor(parent) {
+    this.parent = parent;
+
+    // ===== User Callbacks =====
+    this.onMessage = null;
+    this.onTransfer = null;
+    this.onWrite = null;
+    this.onVerify = null;
+    this.onSuccess = null;
+    this.onError = null;
+  }
+
+  isSupported() {
+    return !!this.#Char_WebToLb && !!this.#Char_LbToWeb;
+  }
+
+  /** Upload HEX (gửi packet 4-block) */
+  async upload(hexText) {
+    if (!this.isSupported()) {
+      console.log("Uploader Error: Uploader characteristic not found.");
+      return;
+    }
+
+    console.log("Uploader: Start uploading HEX...");
+
+    this.#packets = convertHexToBlePackets(hexText);
+
+    const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
+    const dataBytes = totalBytes - this.#packets.length - 1;
+
+    this.#totalBytesData = Math.ceil(dataBytes / 128) * 128;
+
+    this.#nextToSend = 0;
+    this.#BLEPacketQueue = [];
+    this.#isQueueProcessing = false;
+
+    console.log("Uploader: Start upload (4-block mode)");
+
+    // gửi 4 block đầu
+    for (let i = 0; i < Math.min(this.#BlockBufferSize, this.#packets.length); i++) {
+      await this.#Char_WebToLb.writeValueWithoutResponse(this.#packets[i]);
+      console.log(`Uploader: Sent block #${i}`);
+      this.#nextToSend++;
+    }
+
+    console.log("Waiting for Receive feedback...");
+  }
+
+  /** Setup Notify + Char + Queue */
+  async setup(BLE_MaxLength, BLE_Interval) {
+    this.#Char_WebToLb = this.parent.chars[Uploader.UUID_WebToLb] || null;
+    this.#Char_LbToWeb = this.parent.chars[Uploader.UUID_LbToWeb] || null;
+
+    if (!this.isSupported()) {
+      console.log("Uploader Notify: Uploader not supported");
+      return;
+    }
+
+    if (!this.#Char_LbToWeb.properties.notify) {
+      console.log("Uploader Notify: Not supported");
+      return;
+    }
+
+    await this.#Char_LbToWeb.startNotifications();
+    this.#Char_LbToWeb.addEventListener("characteristicvaluechanged", (event) => {
+      const packet = new TextDecoder().decode(event.target.value);
+      this.#BLEPacketQueue.push(packet);
+      queueHandler();
+    });
+
+    console.log("Callback Uploader.onMessage: Enabled");
+
+    // Các lệnh thiết lập (nếu có)
+    if (BLE_MaxLength) {
+      const cmd = `SET BLE_MAX_LENGTH ${BLE_MaxLength}`;
+      await this.#Char_LbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
+      console.log(`Uploader: Set BLE Max Length = ${BLE_MaxLength}`);
+    }
+
+    if (BLE_Interval) {
+      const cmd = `SET BLE_INTERVAL ${BLE_Interval}`;
+      await this.#Char_LbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
+      console.log(`Uploader: Set BLE Interval = ${BLE_Interval}`);
+    }
+
+    // ========== Queue handler ==========
+    const queueHandler = async () => {
+      if (this.#isQueueProcessing) return;
+      this.#isQueueProcessing = true;
+
+      while (this.#BLEPacketQueue.length > 0) {
+        const BLEPacket = this.#BLEPacketQueue.shift();
+        const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+        for (const LineMessage of LineMessages) {
+          await onMessageInternal(LineMessage);
+          if (this.onMessage) this.onMessage(LineMessage);
         }
+      }
 
-        if (!this.Serial.Char.properties.notify) {
-          console.log("Serial Notify: Not supported");
-          return;
-        }
-
-        await this.Serial.Char.startNotifications();
-        this.Serial.Char.addEventListener("characteristicvaluechanged", (event) => {
-          const BLEPacket = new TextDecoder().decode(event.target.value);
-          if (this.Serial.onMessage) this.Serial.onMessage(BLEPacket);
-        });
-
-        console.log("Callback Serial.onMessage: Enabled");
-      },
+      this.#isQueueProcessing = false;
     };
 
-    // ======================================================
-    // 🔹 SUBMODULE: UPLOADER
-    // ======================================================
-    this.Uploader = {
-      // UUID riêng của Uploader
-      get UUID_WebToLb() {
-        return '0000ffe2-0000-1000-8000-00805f9b34fb';
-      },
-      get UUID_LbToWeb() {
-        return '0000ffe3-0000-1000-8000-00805f9b34fb';
-      },
+    // ========== Message Processor ==========
+    const onMessageInternal = async (LineMessage) => {
+      let m = null;
 
-      // ===== Characteristics =====
-      Char_WebToLb: null,
-      Char_LbToWeb: null,
+      // Transfer
+      if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
+        const progress = parseInt(m[1]);
+        const totalBlocks = this.#packets.length - 1; // Không tính EOF block
+        await onTransferInternal(progress);
+        if (this.onTransfer) this.onTransfer(progress + 1, totalBlocks); // // vì Received = N nghĩa là đã nhận N+1 block
+        return;
+      }
 
-      // ===== Data =====
-      packets: [],
-      nextBlockToSend: 0,
-      BlockBufferSize: 4,
-      totalBytesData: 0,
+      // Write
+      if (m = LineMessage.match(/Write\s+(\d+)\s*bytes/i)) {
+        const progress = parseInt(m[1]);
+        if (this.onWrite)
+          this.onWrite(progress, this.#totalBytesData);
+        return;
+      }
 
-      // ===== Queue =====
-      BLEPacketQueue: [],
-      isQueueProcessing: false,
+      // Verify
+      if (m = LineMessage.match(/Verify\s+(\d+)\s*bytes/i)) {
+        const progress = parseInt(m[1]);
+        if (this.onVerify)
+          this.onVerify(progress, this.#totalBytesData);
+        return;
+      }
 
-      // ===== User Callbacks =====
-      onMessage: null,
-      onTransfer: null,
-      onWrite: null,
-      onVerify: null,
-      onSuccess: null,
-      onError: null,
+      // Success
+      if (/Upload success/i.test(LineMessage)) {
+        if (this.onSuccess) this.onSuccess();
+        return;
+      }
 
-      // ===== Internal Callbacks =====
-      onMessageInternal: null,
-      onTransferInternal: null,
+      // Errors
+      if (/Write failed|Verify failed/i.test(LineMessage)) {
+        if (this.onError) this.onError(LineMessage);
+        return;
+      }
+    };
 
-      /** Kiểm tra hỗ trợ Uploader */
-      isSupported: () => !!this.Uploader.Char_WebToLb && !!this.Uploader.Char_LbToWeb,
-      
-      upload: async (hexText) => {
-        if (!this.Uploader.isSupported()) {
-          console.log("Uploader Error: Uploader characteristic not found.");
-          return;
-        }
+    // ========== Send next block ==========
+    const onTransferInternal = async (received) => {
+      if (this.#nextToSend !== received + this.#BlockBufferSize) return;
+      if (this.#nextToSend >= this.#packets.length) return;
 
-        console.log("Uploader: Start uploading HEX...");
-
-        // Chuyển toàn bộ HEX sang gói BLE
-        this.Uploader.packets = convertHexToBlePackets(hexText);
-        
-        const totalBytes = this.Uploader.packets.reduce((sum, p) => sum + p.length, 0);
-        // Dữ liệu thực không tính header (1 byte mỗi packet) - EOF không tính
-        const dataBytes = totalBytes - this.Uploader.packets.length - 1;
-        // Làm tròn lên 128 bytes
-        this.Uploader.totalBytesData = Math.ceil(dataBytes / 128) * 128;
-
-        // === Reset state before uploading ===
-        this.Uploader.nextToSend = 0;
-        this.Uploader.BLEPacketQueue = [];
-        this.Uploader.isProcessing = false;
-
-        console.log("Uploader: Start upload (4-block mode)");
-
-        // --- Gửi 4 block đầu tiên ---
-        for (let i = 0; i < Math.min(this.Uploader.BlockBufferSize, this.Uploader.packets.length); i++) {
-          await this.Uploader.Char_WebToLb.writeValueWithoutResponse(this.Uploader.packets[i]);
-          console.log(`Uploader: Sent block #${i}`);
-          this.Uploader.nextToSend++;
-        }
-
-        console.log("Waiting for Receive feedback...");
-      },
-
-      setup: async (BLE_MaxLength, BLE_Interval) => {
-        this.Uploader.Char_WebToLb = this.#chars[ this.Uploader.UUID_WebToLb ] || null;
-        this.Uploader.Char_LbToWeb = this.#chars[ this.Uploader.UUID_LbToWeb ] || null;
-
-        if (!this.Uploader.isSupported()) {
-          console.log("Uploader Notify: Uploader not supported");
-          return;
-        }
-
-        if (!this.Uploader.Char_LbToWeb.properties.notify) {
-          console.log("Uploader Notify: Not supported");
-          return;
-        }
-
-        await this.Uploader.Char_LbToWeb.startNotifications();
-        this.Uploader.Char_LbToWeb.addEventListener("characteristicvaluechanged", (event) => {
-          const BLEPacket = new TextDecoder().decode(event.target.value);
-          this.Uploader.BLEPacketQueue.push(BLEPacket);
-          queueHandler();
-        });
-
-        // Hàm xử lý BLEPacket nhận được
-        const queueHandler = async () => {
-          if (this.Uploader.isQueueProcessing) return;
-          this.Uploader.isQueueProcessing = true;
-
-          while (this.Uploader.BLEPacketQueue.length > 0) {
-            const BLEPacket = this.Uploader.BLEPacketQueue.shift();
-            const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(s => s);
-            for (const LineMessage of LineMessages) {
-              if (this.Uploader.onMessageInternal) await this.Uploader.onMessageInternal(LineMessage);
-              if (this.Uploader.onMessage)         this.Uploader.onMessage(LineMessage);
-            }
-          }
-
-          this.Uploader.isQueueProcessing = false;
-        }
-
-        this.Uploader.onMessageInternal =  async (LineMessage) => {
-          let m = null;
-          // ===== Transfer =====
-          if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
-            const progress = parseInt(m[1]);
-            const totalBlocks = this.Uploader.packets.length - 1;
-            if (this.Uploader.onTransferInternal) await this.Uploader.onTransferInternal(progress);
-            if (this.Uploader.onTransfer) this.Uploader.onTransfer(progress, totalBlocks);
-            return;
-          }
-
-          // ===== Write =====
-          if (m = LineMessage.match(/Write\s+(\d+)\s*bytes/i)) {
-            const progress    = parseInt(m[1]);
-            const totalBytes  = this.Uploader.totalBytesData;
-            if (this.Uploader.onWrite) this.Uploader.onWrite(progress, totalBytes);
-            return;
-          }
-
-          // ===== Verify =====
-          if (m = LineMessage.match(/Verify\s+(\d+)\s*bytes/i)) {
-            const progress    = parseInt(m[1]);
-            const totalBytes  = this.Uploader.totalBytesData;
-            if (this.Uploader.onVerify) this.Uploader.onVerify(progress, totalBytes);
-            return;
-          }
-
-          // ===== Success =====
-          if (/Upload success/i.test(LineMessage)) {
-            if (this.Uploader.onSuccess) this.Uploader.onSuccess();
-            return;
-          }
-
-          // ===== Errors =====
-          if (/Write failed|Verify failed/i.test(LineMessage)) {
-            if (this.Uploader.onError) this.Uploader.onError(LineMessage);
-            return;
-          }
-        }
-
-        this.Uploader.onTransferInternal = async (received) => {
-          if (this.Uploader.nextToSend !== received + this.Uploader.BlockBufferSize) return;
-          if (this.Uploader.nextToSend >= this.Uploader.packets.length) return;
-
-          console.log(`Uploader: Sending block #${this.Uploader.nextToSend}`);
-          await this.Uploader.Char_WebToLb.writeValueWithoutResponse(this.Uploader.packets[this.Uploader.nextToSend]);
-          this.Uploader.nextToSend++;
-        };
-
-        console.log("Callback Uploader.onMessage: Enabled");
-
-        // Gửi text command sang Leanbot qua UUID Lb2Web để thiết lập tham số nếu có
-        if (BLE_MaxLength) {
-          const cmd = `SET BLE_MAX_LENGTH ${BLE_MaxLength}`;
-          await this.Uploader.Char_LbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
-          console.log(`Uploader: Set BLE Max Length = ${BLE_MaxLength} bytes`);
-        }
-
-        if (BLE_Interval) {
-          const cmd = `SET BLE_INTERVAL ${BLE_Interval}`;
-          await this.Uploader.Char_LbToWeb.writeValueWithoutResponse(new TextEncoder().encode(cmd));
-          console.log(`Uploader: Set BLE Interval = ${BLE_Interval} ms`);
-        } 
-      },
+      console.log(`Uploader: Sending block #${this.#nextToSend}`);
+      await this.#Char_WebToLb.writeValueWithoutResponse(this.#packets[this.#nextToSend]);
+      this.#nextToSend++;
     };
   }
 }
 
+// ======================================================
+// 🔹 HEX TO BLE PACKETS CONVERTER
+// ======================================================
 function parseHexLine(LineMessage) {
   if (!LineMessage.startsWith(":")) return null;
   const hex = LineMessage.slice(1);

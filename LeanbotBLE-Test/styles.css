@@ -244,4 +244,19 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   cursor: pointer;
 }
 
+.upload-footer {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Auto close checkbox */
+.auto-close {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
 

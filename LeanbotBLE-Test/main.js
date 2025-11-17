@@ -248,6 +248,7 @@ const UploaderTransfer = document.getElementById("progTransfer");
 const UploaderWrite    = document.getElementById("progWrite");
 const UploaderVerify   = document.getElementById("progVerify");
 const UploaderLog      = document.getElementById("uploadLog");
+const UploaderAutoClose = document.getElementById("chkAutoClose");
 const UploaderBtnClose = document.getElementById("btnCloseUpload");
 
 // Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
@@ -281,35 +282,38 @@ leanbot.Uploader.onMessage = (msg) => {
   UploaderLog.scrollTop = UploaderLog.scrollHeight;
 };
 
+function updateProgressUI(element, progress, total) {
+  element.value = progress;
+  element.max = total;
+  if (progress === total) element.className = "green";
+}
+
 leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
-  UploaderTransfer.value = progress + 1; // vì Received = N nghĩa là đã nhận N+1 block
-  UploaderTransfer.max = totalBlocks;
-  if (progress === totalBlocks) UploaderTransfer.className = "green";
+  updateProgressUI(UploaderTransfer, progress, totalBlocks);
 };
 
 leanbot.Uploader.onWrite = (progress, totalBytes) => {
-  UploaderWrite.value = progress;
-  UploaderWrite.max = totalBytes;
-  if (progress === totalBytes) UploaderWrite.className = "green";
+  updateProgressUI(UploaderWrite, progress, totalBytes);
 };
 
 leanbot.Uploader.onVerify = (progress, totalBytes) => {
-  UploaderVerify.value = progress;
-  UploaderVerify.max = totalBytes;
-  if (progress === totalBytes) UploaderVerify.className = "green";
+  updateProgressUI(UploaderVerify, progress, totalBytes);
 };
 
 leanbot.Uploader.onSuccess = () => {
-  setTimeout(() => {
-    UploaderDialog.classList.add("fade-out");
-    setTimeout(() => { UploaderDialog.style.display = "none"; }, 600);
-  }, 1000);
+  if (UploaderAutoClose.checked) {
+    setTimeout(() => {
+      UploaderDialog.classList.add("fade-out");
+      setTimeout(() => { UploaderDialog.style.display = "none"; }, 600);
+    }, 1000);
+  }
 };
 
 leanbot.Uploader.onError = (err) => {
   if (err === "Write failed")  UploaderWrite.className = "red";
   else if (err === "Verify failed") UploaderVerify.className = "red";
 };
+
 // End of main.js
 
 
