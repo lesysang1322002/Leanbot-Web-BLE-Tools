@@ -238,19 +238,36 @@ btnUpload.addEventListener("click", async () => {
   }
 
   uploadOpen();
+  compileStart = performance.now();
+  await leanbot.Uploader.compile();
+  uploadStart = performance.now();
   await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });
 
 // =================== Upload DOM Elements =================== //
-const UploaderDialog   = document.getElementById("uploadDialog");
-const UploaderCompile  = document.getElementById("progCompile");
-const UploaderTransfer = document.getElementById("progTransfer");
-const UploaderWrite    = document.getElementById("progWrite");
-const UploaderVerify   = document.getElementById("progVerify");
-const UploaderLog      = document.getElementById("uploadLog");
-const UploaderAutoClose = document.getElementById("chkAutoClose");
-const UploaderBtnClose = document.getElementById("btnCloseUpload");
+const UploaderDialog      = document.getElementById("uploadDialog");
+const UploaderCompile     = document.getElementById("progCompile");
+const UploaderTransfer    = document.getElementById("progTransfer");
+const UploaderWrite       = document.getElementById("progWrite");
+const UploaderVerify      = document.getElementById("progVerify");
+const UploaderLog         = document.getElementById("uploadLog");
+const UploaderAutoClose   = document.getElementById("chkAutoClose");
+const UploaderBtnClose    = document.getElementById("btnCloseUpload");
 const UploaderBtnShowLast = document.getElementById("btnShowLast");
+const UploaderTimeCompile = document.getElementById("compileTime");
+const UploaderTimeUpload  = document.getElementById("uploadTime");
+
+let compileStart = 0;
+let uploadStart = 0;
+
+function updateCompileTime() {
+  const t = ((performance.now() - compileStart) / 1000).toFixed(1);
+  UploaderTimeCompile.textContent = `${t} sec`;
+}
+function updateUploadTime() {
+  const t = ((performance.now() - uploadStart) / 1000).toFixed(1);
+  UploaderTimeUpload.textContent = `${t} sec`;
+}
 
 // Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
 function uploadOpen() {
@@ -266,11 +283,11 @@ function uploadOpen() {
 
   // reset log
   UploaderLog.value = "";
-
-  // compile: 100%
-  UploaderCompile.value = 1;
-  UploaderCompile.max = 1;
-  UploaderCompile.className = "green";
+  // reset button text
+  UploaderBtnClose.innerText = "Cancel";
+  // reset times
+  UploaderTimeCompile.textContent = "0.0 sec";
+  UploaderTimeUpload.textContent  = "0.0 sec";
 }
 
 UploaderBtnClose.onclick = () => {
@@ -294,19 +311,28 @@ function updateProgressUI(element, progress, total) {
   if (progress === total) element.className = "green";
 }
 
+leanbot.Uploader.onCompile = (progress, totalSteps) => {
+  updateProgressUI(UploaderCompile, progress, totalSteps);
+  updateCompileTime();
+};
+
 leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
   updateProgressUI(UploaderTransfer, progress, totalBlocks);
+  updateUploadTime();
 };
 
 leanbot.Uploader.onWrite = (progress, totalBytes) => {
   updateProgressUI(UploaderWrite, progress, totalBytes);
+  updateUploadTime();
 };
 
 leanbot.Uploader.onVerify = (progress, totalBytes) => {
   updateProgressUI(UploaderVerify, progress, totalBytes);
+  updateUploadTime();
 };
 
 leanbot.Uploader.onSuccess = () => {
+  UploaderBtnClose.innerText = "Close";
   if (UploaderAutoClose.checked) {
     setTimeout(() => {
       UploaderDialog.classList.add("fade-out");
@@ -316,23 +342,10 @@ leanbot.Uploader.onSuccess = () => {
 };
 
 leanbot.Uploader.onError = (err) => {
+  UploaderBtnClose.innerText = "Close";
   if (err === "Write failed")  UploaderWrite.className = "red";
   else if (err === "Verify failed") UploaderVerify.className = "red";
 };
-
-let compileStart = 0;
-let uploadStart = 0;
-let compileTimer = null;
-let uploadTimer = null;
-
-function updateCompileTime() {
-  const t = ((performance.now() - compileStart) / 1000).toFixed(1);
-  document.getElementById("compileTime").textContent = `${t} sec`;
-}
-function updateUploadTime() {
-  const t = ((performance.now() - uploadStart) / 1000).toFixed(1);
-  document.getElementById("uploadTime").textContent = `${t} sec`;
-}
 
 // End of main.js
 
