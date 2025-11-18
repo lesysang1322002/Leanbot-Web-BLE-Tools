@@ -239,7 +239,7 @@ btnUpload.addEventListener("click", async () => {
 
   uploadOpen();
   compileStart = performance.now();
-  await leanbot.Uploader.compile();
+  await simulateCompiler();
   uploadStart = performance.now();
   await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });
@@ -258,16 +258,11 @@ const UploaderTimeCompile = document.getElementById("compileTime");
 const UploaderTimeUpload  = document.getElementById("uploadTime");
 
 let compileStart = 0;
-let uploadStart = 0;
+let uploadStart  = 0;
 
-function updateCompileTime() {
-  const t = ((performance.now() - compileStart) / 1000).toFixed(1);
-  UploaderTimeCompile.textContent = `${t} sec`;
-}
-function updateUploadTime() {
-  const t = ((performance.now() - uploadStart) / 1000).toFixed(1);
-  UploaderTimeUpload.textContent = `${t} sec`;
-}
+const updateTime = (start, el) => {
+  el.textContent = `${((performance.now() - start) / 1000).toFixed(1)} sec`;
+};
 
 // Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
 function uploadOpen() {
@@ -300,39 +295,42 @@ UploaderBtnShowLast.onclick = () => {
 };
 
 // =================== Upload Log =================== //
+async function simulateCompiler() {
+  const total = 3;
+  for (let i = 1; i <= total; i++) {
+    await new Promise(r => setTimeout(r, 100));
+    updateProgressWithTime(UploaderCompile, i, total, compileStart, UploaderTimeCompile);
+  }
+}
+
+function updateProgressWithTime(element, progress, total, startTime, timeElement) {
+  updateTime(startTime, timeElement);
+  element.value = progress;
+  element.max   = total;
+  if (progress === total) element.className = "green";
+}
+
+leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
+  updateProgressWithTime(UploaderTransfer, progress, totalBlocks, uploadStart, UploaderTimeUpload);
+};
+
+leanbot.Uploader.onWrite = (progress, totalBytes) => {
+  updateProgressWithTime(UploaderWrite, progress, totalBytes, uploadStart, UploaderTimeUpload);
+};
+
+leanbot.Uploader.onVerify = (progress, totalBytes) => {
+  updateProgressWithTime(UploaderVerify, progress, totalBytes, uploadStart, UploaderTimeUpload);
+};
+
 leanbot.Uploader.onMessage = (msg) => {
   UploaderLog.value += msg + "\n";
   UploaderLog.scrollTop = UploaderLog.scrollHeight;
 };
 
-function updateProgressUI(element, progress, total) {
-  element.value = progress;
-  element.max = total;
-  if (progress === total) element.className = "green";
-}
-
-leanbot.Uploader.onCompile = (progress, totalSteps) => {
-  updateProgressUI(UploaderCompile, progress, totalSteps);
-  updateCompileTime();
-};
-
-leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
-  updateProgressUI(UploaderTransfer, progress, totalBlocks);
-  updateUploadTime();
-};
-
-leanbot.Uploader.onWrite = (progress, totalBytes) => {
-  updateProgressUI(UploaderWrite, progress, totalBytes);
-  updateUploadTime();
-};
-
-leanbot.Uploader.onVerify = (progress, totalBytes) => {
-  updateProgressUI(UploaderVerify, progress, totalBytes);
-  updateUploadTime();
-};
-
 leanbot.Uploader.onSuccess = () => {
+  updateTime(uploadStart, UploaderTimeUpload);
   UploaderBtnClose.innerText = "Close";
+
   if (UploaderAutoClose.checked) {
     setTimeout(() => {
       UploaderDialog.classList.add("fade-out");
@@ -342,7 +340,9 @@ leanbot.Uploader.onSuccess = () => {
 };
 
 leanbot.Uploader.onError = (err) => {
+  updateTime(uploadStart, UploaderTimeUpload);
   UploaderBtnClose.innerText = "Close";
+  
   if (err === "Write failed")  UploaderWrite.className = "red";
   else if (err === "Verify failed") UploaderVerify.className = "red";
 };

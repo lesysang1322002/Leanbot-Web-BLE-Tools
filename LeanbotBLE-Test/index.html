@@ -61,45 +61,43 @@
   <div id="uploadDialog" class="upload-dialog">
     <div class="upload-box">
 
-      <h3>Uploading Firmware...</h3>
-
       <!-- COMPILE GROUP -->
       <div class="group-box">
         <div class="group-header">
-          <span>Compile</span>
-          <span id="compileTime" class="time">0.0 sec</span>
+          <div class="spacer"></div>
+          <span class="title">Compile</span>
+          <span class="time" id="compileTime">0.0 sec</span>
         </div>
 
         <div class="progress-wrapper">
           <progress id="progCompile" class="yellow"></progress>
-          <div class="progress-label">Compile progress</div>
         </div>
       </div>
 
       <!-- UPLOAD GROUP -->
       <div class="group-box">
         <div class="group-header">
-          <span>Upload</span>
-          <span id="uploadTime" class="time">0.0 sec</span>
+          <div class="spacer"></div>
+          <span class="title">Upload</span>
+          <span class="time" id="uploadTime">0.0 sec</span>
         </div>
 
         <div class="progress-wrapper">
           <progress id="progTransfer" class="yellow"></progress>
-          <div class="progress-label">Transfer progress</div>
+          <div class="progress-label">Transfer</div>
         </div>
 
         <div class="progress-wrapper">
           <progress id="progWrite" class="yellow"></progress>
-          <div class="progress-label">Write progress</div>
+          <div class="progress-label">Write</div>
         </div>
 
         <div class="progress-wrapper">
           <progress id="progVerify" class="yellow"></progress>
-          <div class="progress-label">Verify progress</div>
+          <div class="progress-label">Verify</div>
         </div>
 
         <div class="details-block">
-          <div class="details-title">Details</div>
           <textarea id="uploadLog" readonly></textarea>
         </div>
       </div>

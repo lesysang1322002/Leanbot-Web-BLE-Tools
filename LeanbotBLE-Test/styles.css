@@ -174,8 +174,7 @@ button:hover {
   margin-top: 12px;
 }
 
-/* Overlay */
-/* Overlay */
+/* --- UPLOAD DIALOG --- */
 .upload-dialog {
   display: none;
   position: fixed;
@@ -214,9 +213,23 @@ button:hover {
 
 .group-header {
   display: flex;
-  justify-content: space-between;
-  font-weight: bold;
+  align-items: center;
   margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.group-header .spacer {
+  flex: 1;  /* tạo cột ảo bên trái */
+}
+
+.group-header .title {
+  flex: 0;
+  text-align: center;
+}
+
+.group-header .time {
+  flex: 1;          /* cột ảo bên phải */
+  text-align: right; /* đẩy time sang phải */
 }
 
 /* PROGRESS WRAPPER: chứa progress + text */
@@ -264,6 +277,7 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
 .details-title {
   font-weight: bold;
   margin-bottom: 4px;
+  font-size: 14px;
 }
 
 #uploadLog {

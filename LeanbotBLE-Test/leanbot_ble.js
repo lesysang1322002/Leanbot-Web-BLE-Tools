@@ -161,8 +161,8 @@ export class LeanbotBLE {
 // ======================================================
 class Serial {
   // UUID riêng của Serial
-  static Leanbot_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
-  #Leanbot_char = null;
+  static SerialPipe_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+  #SerialPipe_char = null;
 
   constructor(parent) {
     this.parent = parent;
@@ -170,7 +170,7 @@ class Serial {
 
   /** Kiểm tra hỗ trợ Serial */
   isSupported() {
-    return !!this.#Leanbot_char;
+    return !!this.#SerialPipe_char;
   }
 
   /** Callback khi nhận notify Serial */
@@ -190,11 +190,7 @@ class Serial {
       // Chuyển dữ liệu sang Uint8Array nếu là chuỗi
       const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
 
-      if (withResponse) {
-        await this.#Leanbot_char.writeValue(buffer);
-      } else {
-        await this.#Leanbot_char.writeValueWithoutResponse(buffer);
-      }
+      await this.#SerialPipe_sendToLeanbot(buffer, withResponse);
     } catch (e) {
       console.log(`Serial.Send Error: ${e}`);
     }
@@ -202,25 +198,37 @@ class Serial {
 
   /** Thiết lập characteristic + notify **/
   async setup(characteristics) {
-    this.#Leanbot_char = characteristics[Serial.Leanbot_UUID] || null;
+    this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || null;
 
     if (!this.isSupported()) {
       console.log("Serial Notify: Serial not supported");
       return;
     }
 
-    if (!this.#Leanbot_char.properties.notify) {
+    if (!this.#SerialPipe_char.properties.notify) {
       console.log("Serial Notify: Not supported");
       return;
     }
 
-    await this.#Leanbot_char.startNotifications();
-    this.#Leanbot_char.addEventListener("characteristicvaluechanged", (event) => {
+    await this.#SerialPipe_char.startNotifications();
+    this.#SerialPipe_char.addEventListener("characteristicvaluechanged", (event) => {
       const BLEPacket = new TextDecoder().decode(event.target.value);
-      if (this.onMessage) this.onMessage(BLEPacket);
+      this.#SerialPipe_onReceiveFromLeanbot(BLEPacket);
     });
 
     console.log("Callback Serial.onMessage: Enabled");
+  }
+
+  async #SerialPipe_sendToLeanbot(packet, withResponse) {
+    if (withResponse) {
+      await this.#SerialPipe_char.writeValue(packet);
+    } else {
+      await this.#SerialPipe_char.writeValueWithoutResponse(packet);
+    }
+  }
+
+  async #SerialPipe_onReceiveFromLeanbot(packet){
+    if (this.onMessage) this.onMessage(packet);
   }
 }
 
@@ -253,7 +261,6 @@ class Uploader {
 
   // ===== User Callbacks =====
   onMessage  = null;
-  onCompile  = null;
   onTransfer = null;
   onWrite    = null;
   onVerify   = null;
@@ -263,14 +270,6 @@ class Uploader {
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
     return !!this.#DataPipe_char && !!this.#ControlPipe_char;
-  }
-
-  async compile() {
-    const total = 5;
-    for (let i = 1; i <= total; i++) {
-      await new Promise(r => setTimeout(r, 100));
-      if (this.onCompile) this.onCompile(i, total);
-    }
   }
 
   /** Upload HEX (gửi packet 4-block) */
@@ -297,7 +296,7 @@ class Uploader {
     console.log("Uploader: Start upload (4-block mode)");
     // gửi 4 block đầu
     for (let i = 0; i < Math.min(this.#BlockBufferSize, this.#packets.length); i++) {
-      await this.#DataPipe_char.writeValueWithoutResponse(this.#packets[i]);
+      await this.#DataPipe_sendToLeanbot(this.#packets[i]);
       console.log(`Uploader: Sent block #${i}`);
       this.#nextToSend++;
     }
@@ -323,8 +322,7 @@ class Uploader {
     await this.#ControlPipe_char.startNotifications();
     this.#ControlPipe_char.addEventListener("characteristicvaluechanged", (event) => {
       const packet = new TextDecoder().decode(event.target.value);
-      this.#BLEPacketQueue.push(packet);
-      this.queueHandler();
+      this.#ControlPipe_onReceiveFromLeanbot(packet);
     });
 
     console.log("Callback Uploader.onMessage: Enabled");
@@ -332,19 +330,19 @@ class Uploader {
     // Các lệnh thiết lập (nếu có)
     if (BLE_MaxLength) {
       const cmd = `SET BLE_MAX_LENGTH ${BLE_MaxLength}`;
-      await this.#ControlPipe_char.writeValueWithoutResponse(new TextEncoder().encode(cmd));
+      await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
       console.log(`Uploader: Set BLE Max Length = ${BLE_MaxLength}`);
     }
 
     if (BLE_Interval) {
       const cmd = `SET BLE_INTERVAL ${BLE_Interval}`;
-      await this.#ControlPipe_char.writeValueWithoutResponse(new TextEncoder().encode(cmd));
+      await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
       console.log(`Uploader: Set BLE Interval = ${BLE_Interval}`);
     }
   }
 
   // ========== Queue handler ==========
-  async queueHandler() {
+  async #queueHandler() {
     if (this.#isQueueProcessing) return;
     this.#isQueueProcessing = true;
 
@@ -353,7 +351,7 @@ class Uploader {
       const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
       for (const LineMessage of LineMessages) {
-        await this.onMessageInternal(LineMessage);
+        await this.#onMessageInternal(LineMessage);
         if (this.onMessage) this.onMessage(LineMessage);
       }
     }
@@ -362,14 +360,14 @@ class Uploader {
   };
 
   // ========== Message Processor ==========
-  async onMessageInternal(LineMessage) {
+  async #onMessageInternal(LineMessage) {
     let m = null;
 
     // Transfer
     if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
       const progress = parseInt(m[1]);
       const totalBlocks = this.#packets.length - 1; // Không tính EOF block
-      await this.onTransferInternal(progress);
+      await this.#onTransferInternal(progress);
       if (this.onTransfer) this.onTransfer(progress + 1, totalBlocks); // vì Received = N nghĩa là đã nhận N+1 block
       return;
     }
@@ -404,14 +402,27 @@ class Uploader {
   };
 
   // ========== Send next block ==========
-  async onTransferInternal(received) {
+  async #onTransferInternal(received) {
     if (this.#nextToSend !== received + this.#BlockBufferSize) return;
     if (this.#nextToSend >= this.#packets.length) return;
 
     console.log(`Uploader: Sending block #${this.#nextToSend}`);
-    await this.#DataPipe_char.writeValueWithoutResponse(this.#packets[this.#nextToSend]);
+    await this.#DataPipe_sendToLeanbot(this.#packets[this.#nextToSend]);
     this.#nextToSend++;
   };
+
+  async #ControlPipe_sendToLeanbot(packet) {
+    await this.#ControlPipe_char.writeValueWithoutResponse(packet);
+  }
+
+  async #ControlPipe_onReceiveFromLeanbot(packet){
+    this.#BLEPacketQueue.push(packet);
+    this.#queueHandler();
+  }
+
+  async #DataPipe_sendToLeanbot(packet) {
+    await this.#DataPipe_char.writeValueWithoutResponse(packet);
+  }
 }
 
 // ======================================================
