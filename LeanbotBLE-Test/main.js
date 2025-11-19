@@ -238,9 +238,14 @@ btnUpload.addEventListener("click", async () => {
   }
 
   uiUploadDialogOpen();
+
   compileStart = performance.now();
-  await uiSimulateCompiler();
+  UploaderTitleCompile.className = "yellow";
+  await SimulateCompiler();
+  UploaderTitleCompile.className = "green";
+
   uploadStart = performance.now();
+  UploaderTitleUpload.className = "yellow";
   await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });
 
@@ -297,14 +302,13 @@ function uiUploadDialogOpen() {
   UploaderTitleCompile.className  = "black";
 }
 
-async function uiSimulateCompiler() {
+async function SimulateCompiler() {
   const total = 3;
   for (let i = 1; i <= total; i++) {
     await new Promise(r => setTimeout(r, 100));
     uiUpdateTime(compileStart, UploaderTimeCompile);
-    uiUpdateProgressWithTime(UploaderCompile, i, total, compileStart, UploaderTimeCompile, UploaderTitleCompile);
+    uiUpdateProgress(UploaderCompile, i, total);
   }
-  UploaderTitleCompile.className = "green";
 }
 
 let compileStart = 0;
@@ -314,35 +318,35 @@ function uiUpdateTime(start, el) {
   el.textContent = `${((performance.now() - start) / 1000).toFixed(1)} sec`;
 };
 
-function uiUpdateProgressWithTime(element, progress, total, startTime, timeElement, title) {
-  uiUpdateTime(startTime, timeElement);
-  title.className = "yellow";
+function uiUpdateRSSI(rssi) {
+  UploaderRSSI.textContent = `${rssi} dBm`;
+}
+
+function uiUpdateProgress(element, progress, total) {
   element.value = progress;
   element.max   = total;
   if (progress === total) element.className = "green";
 }
 
+leanbot.Uploader.onRSSI = (rssi) => {
+  uiUpdateRSSI(rssi);
+};
+
 leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
-  uiUpdateProgressWithTime(UploaderTransfer, progress, totalBlocks, uploadStart, UploaderTimeUpload, UploaderTitleUpload);
+  uiUpdateProgress(UploaderTransfer, progress, totalBlocks);
 };
 
 leanbot.Uploader.onWrite = (progress, totalBytes) => {
-  uiUpdateProgressWithTime(UploaderWrite, progress, totalBytes, uploadStart, UploaderTimeUpload, UploaderTitleUpload);
+  uiUpdateProgress(UploaderWrite, progress, totalBytes);
 };
 
 leanbot.Uploader.onVerify = (progress, totalBytes) => {
-  uiUpdateProgressWithTime(UploaderVerify, progress, totalBytes, uploadStart, UploaderTimeUpload, UploaderTitleUpload);
+  uiUpdateProgress(UploaderVerify, progress, totalBytes);
 };
 
 leanbot.Uploader.onMessage = (msg) => {
-  // --- extract RSSI from msg ---
-  const rssiMatch = msg.match(/\[(-?\d+)\]/); // chỉ lấy số nguyên trong dấu []
-  if (rssiMatch) {
-    const rssi = rssiMatch[1];
-    UploaderRSSI.textContent = `${rssi} dBm`;
-  }
+  uiUpdateTime(uploadStart, UploaderTimeUpload);
 
-  // --- log ---
   UploaderLog.value += "\n" + msg;
   UploaderLog.scrollTop = UploaderLog.scrollHeight;
 };

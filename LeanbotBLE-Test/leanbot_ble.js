@@ -126,6 +126,7 @@ export class LeanbotBLE {
     /** ---------- DISCONNECT EVENT ---------- */
     console.log("Callback onDisconnect: Enabled");
     this.#device.addEventListener("gattserverdisconnected", () => {
+      console.log("Device disconnected", this.#device.name);
       if (this.onDisconnect) this.onDisconnect();
     });
     
@@ -249,7 +250,7 @@ class Uploader {
   // Upload state
   #packets           = [];
   #nextToSend        = 0;
-  #BlockBufferSize   = 4;
+  #PacketBufferSize  = 4;
   #totalBytesData    = 0;
   
   // Queue state
@@ -265,6 +266,7 @@ class Uploader {
   onTransfer = null;
   onWrite    = null;
   onVerify   = null;
+  onRSSI     = null;
   onSuccess  = null;
   onError    = null;
 
@@ -273,7 +275,7 @@ class Uploader {
     return !!this.#DataPipe_char && !!this.#ControlPipe_char;
   }
 
-  /** Upload HEX (gửi packet 4-block) */
+  /** Upload HEX */
   async upload(hexText) {
     if (!this.isSupported()) {
       console.log("Uploader Error: Uploader characteristic not found.");
@@ -286,7 +288,7 @@ class Uploader {
     this.#packets = convertHexToBlePackets(hexText);
 
     const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
-    const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 block)
+    const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
     this.#totalBytesData = Math.ceil(dataBytes / 128) * 128; // Làm tròn lên bội số của 128 bytes
 
     // Reset trạng thái upload
@@ -294,11 +296,11 @@ class Uploader {
     this.#BLEPacketQueue = [];
     this.#isQueueProcessing = false;
 
-    console.log("Uploader: Start upload (4-block mode)");
-    // gửi 4 block đầu
-    for (let i = 0; i < Math.min(this.#BlockBufferSize, this.#packets.length); i++) {
+    console.log("Uploader: Start uploading");
+
+    for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
       await this.#DataPipe_sendToLeanbot(this.#packets[i]);
-      console.log(`Uploader: Sent block #${i}`);
+      console.log(`Uploader: Sent packet #${i}`);
       this.#nextToSend++;
     }
 
@@ -364,28 +366,34 @@ class Uploader {
   async #onMessageInternal(LineMessage) {
     let m = null;
 
+    // RSSI
+    if (m = [...LineMessage.matchAll(/\[(-?\d+(?:\.\d+)?)\]/g)]) {
+      // LineMessage = [2.897] [-54.3] Receive 56
+      // m[0][0] = [2.897], m[1][0] = [-54.3]
+      const rssi = m[1][1]; // rssi = -54.3
+      if(this.onRSSI) this.onRSSI(rssi);
+    }
+
     // Transfer
     if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
       const progress = parseInt(m[1]);
-      const totalBlocks = this.#packets.length - 1; // Không tính EOF block
+      const totalPackets = this.#packets.length - 1; // Không tính EOF packet
       await this.#onTransferInternal(progress);
-      if (this.onTransfer) this.onTransfer(progress + 1, totalBlocks); // vì Received = N nghĩa là đã nhận N+1 block
+      if (this.onTransfer) this.onTransfer(progress + 1, totalPackets); // vì Received = N nghĩa là đã nhận N+1 packet
       return;
     }
 
     // Write
     if (m = LineMessage.match(/Write\s+(\d+)\s*bytes/i)) {
       const progress = parseInt(m[1]);
-      if (this.onWrite)
-        this.onWrite(progress, this.#totalBytesData);
+      if (this.onWrite) this.onWrite(progress, this.#totalBytesData);
       return;
     }
 
     // Verify
     if (m = LineMessage.match(/Verify\s+(\d+)\s*bytes/i)) {
       const progress = parseInt(m[1]);
-      if (this.onVerify)
-        this.onVerify(progress, this.#totalBytesData);
+      if (this.onVerify) this.onVerify(progress, this.#totalBytesData);
       return;
     }
 
@@ -400,14 +408,15 @@ class Uploader {
       if (this.onError) this.onError(LineMessage);
       return;
     }
+
   };
 
-  // ========== Send next block ==========
+  // ========== Send next packet ==========
   async #onTransferInternal(received) {
-    if (this.#nextToSend !== received + this.#BlockBufferSize) return;
+    if (this.#nextToSend !== received + this.#PacketBufferSize) return;
     if (this.#nextToSend >= this.#packets.length) return;
 
-    console.log(`Uploader: Sending block #${this.#nextToSend}`);
+    console.log(`Uploader: Sending packet #${this.#nextToSend}`);
     await this.#DataPipe_sendToLeanbot(this.#packets[this.#nextToSend]);
     this.#nextToSend++;
   };
@@ -419,7 +428,7 @@ class Uploader {
 
   async #ControlPipe_onReceiveFromLeanbot(packet){
     this.#BLEPacketQueue.push(packet);
-    await this.#queueHandler();
+    setTimeout(async () => await this.#queueHandler(), 0);
   }
 
   // ========== Data Pipe Communication ==========

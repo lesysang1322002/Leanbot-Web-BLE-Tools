@@ -37,27 +37,6 @@ button:hover {
   background-color: #f1f1f1;
 }
 
-/* --- UPLOAD LOG --- */
-#uploadSection {
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  background: #fff;
-  border-radius: 5px;
-  padding: 10px;
-}
-
-#uploadLog {
-  height: 100px;
-  background: #111;
-  color: rgb(247, 126, 74);
-  font-family: monospace;
-  padding: 8px;
-  overflow-y: auto;
-  border-radius: 4px;
-  border: 1px solid #888;
-  white-space: pre-wrap;
-}
-
 /* --- SERIAL MONITOR --- */
 #serialSection {
   flex: 1;
