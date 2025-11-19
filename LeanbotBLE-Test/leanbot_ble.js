@@ -219,6 +219,7 @@ class Serial {
     console.log("Callback Serial.onMessage: Enabled");
   }
 
+  // ========== Serial Pipe Communication ==========
   async #SerialPipe_sendToLeanbot(packet, withResponse) {
     if (withResponse) {
       await this.#SerialPipe_char.writeValue(packet);
@@ -411,15 +412,17 @@ class Uploader {
     this.#nextToSend++;
   };
 
+  // ========== Control Pipe Communication ==========
   async #ControlPipe_sendToLeanbot(packet) {
     await this.#ControlPipe_char.writeValueWithoutResponse(packet);
   }
 
   async #ControlPipe_onReceiveFromLeanbot(packet){
     this.#BLEPacketQueue.push(packet);
-    this.#queueHandler();
+    await this.#queueHandler();
   }
 
+  // ========== Data Pipe Communication ==========
   async #DataPipe_sendToLeanbot(packet) {
     await this.#DataPipe_char.writeValueWithoutResponse(packet);
   }

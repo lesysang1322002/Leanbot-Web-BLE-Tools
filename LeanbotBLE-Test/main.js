@@ -237,53 +237,33 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
 
-  uploadOpen();
+  uiUploadDialogOpen();
   compileStart = performance.now();
-  await simulateCompiler();
+  await uiSimulateCompiler();
   uploadStart = performance.now();
   await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });
 
 // =================== Upload DOM Elements =================== //
 const UploaderDialog      = document.getElementById("uploadDialog");
+
 const UploaderCompile     = document.getElementById("progCompile");
 const UploaderTransfer    = document.getElementById("progTransfer");
 const UploaderWrite       = document.getElementById("progWrite");
 const UploaderVerify      = document.getElementById("progVerify");
 const UploaderLog         = document.getElementById("uploadLog");
+
 const UploaderAutoClose   = document.getElementById("chkAutoClose");
 const UploaderBtnClose    = document.getElementById("btnCloseUpload");
+
 const UploaderBtnShowLast = document.getElementById("btnShowLast");
+
 const UploaderTimeCompile = document.getElementById("compileTime");
+const UploaderRSSI        = document.getElementById("uploadRSSI");
 const UploaderTimeUpload  = document.getElementById("uploadTime");
+const UploaderTitleUpload = document.getElementById("uploadTitle");
 
-let compileStart = 0;
-let uploadStart  = 0;
-
-const updateTime = (start, el) => {
-  el.textContent = `${((performance.now() - start) / 1000).toFixed(1)} sec`;
-};
-
-// Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
-function uploadOpen() {
-  UploaderDialog.style.display = "flex";
-  UploaderDialog.classList.remove("fade-out");
-
-  // reset progress bars
-  [UploaderCompile, UploaderTransfer, UploaderWrite, UploaderVerify].forEach(b => {
-    b.value = 0;
-    b.max   = 1;
-    b.className = "yellow";
-  });
-
-  // reset log
-  UploaderLog.value = "";
-  // reset button text
-  UploaderBtnClose.innerText = "Cancel";
-  // reset times
-  UploaderTimeCompile.textContent = "0.0 sec";
-  UploaderTimeUpload.textContent  = "0.0 sec";
-}
+const UploaderTitleCompile = document.getElementById("compileTitle");
 
 UploaderBtnClose.onclick = () => {
   UploaderDialog.style.display = "none";
@@ -294,43 +274,83 @@ UploaderBtnShowLast.onclick = () => {
   UploaderDialog.style.display = "flex";
 };
 
-// =================== Upload Log =================== //
-async function simulateCompiler() {
+// Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
+function uiUploadDialogOpen() {
+  UploaderDialog.style.display = "flex";
+  UploaderDialog.classList.remove("fade-out");
+
+  // reset progress bars
+  [UploaderCompile, UploaderTransfer, UploaderWrite, UploaderVerify].forEach(b => {
+    b.value = 0;
+    b.max   = 1;
+    b.className = "yellow";
+  });
+
+  // reset 
+  UploaderLog.value = "";
+  UploaderBtnClose.innerText      = "Cancel";
+  UploaderTimeCompile.textContent = "0.0 sec";
+  UploaderTimeUpload.textContent  = "0.0 sec";
+  UploaderTitleUpload.textContent = "Upload to " + leanbot.getLeanbotID();
+  UploaderRSSI.textContent        = "0 dBm";
+  UploaderTitleUpload.className   = "black";
+  UploaderTitleCompile.className  = "black";
+}
+
+async function uiSimulateCompiler() {
   const total = 3;
   for (let i = 1; i <= total; i++) {
     await new Promise(r => setTimeout(r, 100));
-    updateProgressWithTime(UploaderCompile, i, total, compileStart, UploaderTimeCompile);
+    uiUpdateTime(compileStart, UploaderTimeCompile);
+    uiUpdateProgressWithTime(UploaderCompile, i, total, compileStart, UploaderTimeCompile, UploaderTitleCompile);
   }
+  UploaderTitleCompile.className = "green";
 }
 
-function updateProgressWithTime(element, progress, total, startTime, timeElement) {
-  updateTime(startTime, timeElement);
+let compileStart = 0;
+let uploadStart  = 0;
+
+function uiUpdateTime(start, el) { 
+  el.textContent = `${((performance.now() - start) / 1000).toFixed(1)} sec`;
+};
+
+function uiUpdateProgressWithTime(element, progress, total, startTime, timeElement, title) {
+  uiUpdateTime(startTime, timeElement);
+  title.className = "yellow";
   element.value = progress;
   element.max   = total;
   if (progress === total) element.className = "green";
 }
 
 leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
-  updateProgressWithTime(UploaderTransfer, progress, totalBlocks, uploadStart, UploaderTimeUpload);
+  uiUpdateProgressWithTime(UploaderTransfer, progress, totalBlocks, uploadStart, UploaderTimeUpload, UploaderTitleUpload);
 };
 
 leanbot.Uploader.onWrite = (progress, totalBytes) => {
-  updateProgressWithTime(UploaderWrite, progress, totalBytes, uploadStart, UploaderTimeUpload);
+  uiUpdateProgressWithTime(UploaderWrite, progress, totalBytes, uploadStart, UploaderTimeUpload, UploaderTitleUpload);
 };
 
 leanbot.Uploader.onVerify = (progress, totalBytes) => {
-  updateProgressWithTime(UploaderVerify, progress, totalBytes, uploadStart, UploaderTimeUpload);
+  uiUpdateProgressWithTime(UploaderVerify, progress, totalBytes, uploadStart, UploaderTimeUpload, UploaderTitleUpload);
 };
 
 leanbot.Uploader.onMessage = (msg) => {
-  UploaderLog.value += msg + "\n";
+  // --- extract RSSI from msg ---
+  const rssiMatch = msg.match(/\[(-?\d+)\]/); // chỉ lấy số nguyên trong dấu []
+  if (rssiMatch) {
+    const rssi = rssiMatch[1];
+    UploaderRSSI.textContent = `${rssi} dBm`;
+  }
+
+  // --- log ---
+  UploaderLog.value += "\n" + msg;
   UploaderLog.scrollTop = UploaderLog.scrollHeight;
 };
 
 leanbot.Uploader.onSuccess = () => {
-  updateTime(uploadStart, UploaderTimeUpload);
+  uiUpdateTime(uploadStart, UploaderTimeUpload);
+  UploaderTitleUpload.className = "green";
   UploaderBtnClose.innerText = "Close";
-
   if (UploaderAutoClose.checked) {
     setTimeout(() => {
       UploaderDialog.classList.add("fade-out");
@@ -340,9 +360,9 @@ leanbot.Uploader.onSuccess = () => {
 };
 
 leanbot.Uploader.onError = (err) => {
-  updateTime(uploadStart, UploaderTimeUpload);
+  uiUpdateTime(uploadStart, UploaderTimeUpload);
   UploaderBtnClose.innerText = "Close";
-  
+  UploaderTitleUpload.className = "red";
   if (err === "Write failed")  UploaderWrite.className = "red";
   else if (err === "Verify failed") UploaderVerify.className = "red";
 };

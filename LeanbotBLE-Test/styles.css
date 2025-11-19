@@ -196,7 +196,7 @@ button:hover {
 /* Upload box */
 .upload-box {
   background: #fff;
-  width: 420px;
+  width: 500px;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 0 20px rgba(0,0,0,0.2);
@@ -218,13 +218,14 @@ button:hover {
   font-weight: bold;
 }
 
-.group-header .spacer {
+.group-header .rssi {
   flex: 1;  /* tạo cột ảo bên trái */
 }
 
 .group-header .title {
   flex: 0;
   text-align: center;
+  white-space: nowrap;
 }
 
 .group-header .time {
@@ -269,6 +270,12 @@ progress.green::-moz-progress-bar { background: #4caf50; }
 progress.red::-webkit-progress-value { background: #d32f2f; }
 progress.red::-moz-progress-bar { background: #d32f2f; }
 
+/* TITLE COLORS */
+.black  { color: #000; }
+.yellow { color: #f4c542; }
+.green  { color: #4caf50; }
+.red    { color: #d32f2f; }
+
 /* DETAILS */
 .details-block {
   margin-top: 10px;
@@ -282,7 +289,7 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
 
 #uploadLog {
   width: 100%;
-  height: 110px;
+  height: 130px;
   background: #fafafa;
   border: 1px solid #bbb;
   border-radius: 6px;
@@ -318,7 +325,7 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   cursor: pointer;
 }
 
-.time {
+.time,.rssi {
   font-size: 12px;
   opacity: 0.7;
 }
