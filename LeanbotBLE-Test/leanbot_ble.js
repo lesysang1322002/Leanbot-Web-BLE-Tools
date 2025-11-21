@@ -29,11 +29,6 @@ export class LeanbotBLE {
           }],
         });
       }
-
-      // Lưu tên thiết bị vào localStorage để reconnect sau này
-      console.log("Saving device to localStorage:", this.#device.name);
-      localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
-
       // Thiết lập kết nối BLE
       await this.#setupConnection();
       return {  
@@ -128,6 +123,11 @@ export class LeanbotBLE {
     this.#device.addEventListener("gattserverdisconnected", () => {
       console.log("Device disconnected", this.#device.name);
       if (this.onDisconnect) this.onDisconnect();
+      
+      if (this.Uploader.isTransferring === false) {
+        if(this.Uploader.onTransferError) this.Uploader.onTransferError();
+      }
+      
     });
     
     /** ---------- GATT CONNECTION ---------- */
@@ -140,12 +140,16 @@ export class LeanbotBLE {
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
-    await this.Serial.setup(this.#chars);
-    await this.Uploader.setup(this.#chars, window.BLE_MaxLength, window.BLE_Interval);
+    await this.Serial.setupConnection(this.#chars);
+    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval);
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
     if (this.onConnect) this.onConnect();
+
+    //** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
+    console.log("Saving device to localStorage:", this.#device.name);
+    localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
   }
 
   constructor() {
@@ -164,10 +168,6 @@ class Serial {
   // UUID riêng của Serial
   static SerialPipe_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
   #SerialPipe_char = null;
-
-  constructor(parent) {
-    this.parent = parent;
-  }
 
   /** Kiểm tra hỗ trợ Serial */
   isSupported() {
@@ -198,7 +198,7 @@ class Serial {
   }
 
   /** Thiết lập characteristic + notify **/
-  async setup(characteristics) {
+  async setupConnection(characteristics) {
     this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || null;
 
     if (!this.isSupported()) {
@@ -257,10 +257,6 @@ class Uploader {
   #BLEPacketQueue    = [];
   #isQueueProcessing = false;
 
-  constructor(parent) {
-    this.parent = parent;
-  }
-
   // ===== User Callbacks =====
   onMessage  = null;
   onTransfer = null;
@@ -269,6 +265,11 @@ class Uploader {
   onRSSI     = null;
   onSuccess  = null;
   onError    = null;
+  
+  isTransferring  = null;
+  onTransferError = null;
+  onWriteError    = null;
+  onVerifyError   = null;
 
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
@@ -308,7 +309,7 @@ class Uploader {
   }
 
   /** Setup Char + Notify + Queue */
-  async setup(characteristics, BLE_MaxLength, BLE_Interval) {
+  async setupConnection(characteristics, BLE_MaxLength, BLE_Interval) {
     this.#DataPipe_char    = characteristics[Uploader.DataPipe_UUID] || null;
     this.#ControlPipe_char = characteristics[Uploader.ControlPipe_UUID] || null;
 
@@ -378,6 +379,10 @@ class Uploader {
     if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
       const progress = parseInt(m[1]);
       const totalPackets = this.#packets.length - 1; // Không tính EOF packet
+
+      this.isTransferring = false;
+      if (progress === totalPackets) this.isTransferring = true;
+      
       await this.#onTransferInternal(progress);
       if (this.onTransfer) this.onTransfer(progress + 1, totalPackets); // vì Received = N nghĩa là đã nhận N+1 packet
       return;
@@ -406,9 +411,17 @@ class Uploader {
     // Errors
     if (/Write failed|Verify failed/i.test(LineMessage)) {
       if (this.onError) this.onError(LineMessage);
+    }
+
+    if (/Write failed/i.test(LineMessage)) {
+      if (this.onWriteError) this.onWriteError();
       return;
     }
 
+    if (/Verify failed/i.test(LineMessage)) {
+      if (this.onVerifyError) this.onVerifyError();
+      return;
+    }
   };
 
   // ========== Send next packet ==========

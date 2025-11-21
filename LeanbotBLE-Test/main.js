@@ -28,6 +28,7 @@ leanbot.onConnect = () => {
 
 leanbot.onDisconnect = () => {
   leanbotStatus.style.color = "red";
+  UploaderTitleUpload.className = "red";
 }
 
 btnConnect.onclick   = async () => connectLeanbot();
@@ -336,12 +337,24 @@ leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
   uiUpdateProgress(UploaderTransfer, progress, totalBlocks);
 };
 
+leanbot.Uploader.onTransferError = () => {
+  UploaderTransfer.className = "red";
+};
+
 leanbot.Uploader.onWrite = (progress, totalBytes) => {
   uiUpdateProgress(UploaderWrite, progress, totalBytes);
 };
 
+leanbot.Uploader.onWriteError = () => {
+  UploaderWrite.className = "red";
+};
+
 leanbot.Uploader.onVerify = (progress, totalBytes) => {
   uiUpdateProgress(UploaderVerify, progress, totalBytes);
+};
+
+leanbot.Uploader.onVerifyError = () => {
+  UploaderVerify.className = "red";
 };
 
 leanbot.Uploader.onMessage = (msg) => {
@@ -352,7 +365,6 @@ leanbot.Uploader.onMessage = (msg) => {
 };
 
 leanbot.Uploader.onSuccess = () => {
-  uiUpdateTime(uploadStart, UploaderTimeUpload);
   UploaderTitleUpload.className = "green";
   UploaderBtnClose.innerText = "Close";
   if (UploaderAutoClose.checked) {
@@ -364,7 +376,6 @@ leanbot.Uploader.onSuccess = () => {
 };
 
 leanbot.Uploader.onError = (err) => {
-  uiUpdateTime(uploadStart, UploaderTimeUpload);
   UploaderBtnClose.innerText = "Close";
   UploaderTitleUpload.className = "red";
   if (err === "Write failed")  UploaderWrite.className = "red";
