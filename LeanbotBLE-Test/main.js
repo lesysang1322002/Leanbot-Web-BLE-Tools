@@ -84,10 +84,10 @@ function showSerialLog(text) {
   if (text == "LB999999\n") {
     // Add "\n" before last line (works with TimestampPrefix too)
     let lines = serialLog.value.split('\n');
-    lines[lines.length - 1] = "\n" + lines[lines.length - 1];
+    // lines[lines.length - 1] = "\n" + lines[lines.length - 1];
     serialLog.value = lines.join('\n');
 
-    logBuffer += ">>> Leanbot ready >>>\n";
+    logBuffer += "\n>>> Leanbot ready >>>\n";
     return;
   }
   // ================================================
@@ -237,6 +237,10 @@ btnUpload.addEventListener("click", async () => {
     alert("Please connect to Leanbot first!");
     return;
   }
+
+  // // reset serial monitor state
+  nextIsNewline = true; 
+  lastTimestamp = null;
 
   uiUploadDialogOpen();
 
