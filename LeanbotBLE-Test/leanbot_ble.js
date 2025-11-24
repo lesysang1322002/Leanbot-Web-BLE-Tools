@@ -177,6 +177,9 @@ class Serial {
   /** Callback khi nhận notify Serial */
   onMessage = null;
 
+  // Queue nhận dữ liệu
+  #SerialPacketQueue = [];
+
   /** Gửi dữ liệu qua đặc tính Serial mặc định (UUID)
    * @param {string|Uint8Array} data - dữ liệu cần gửi
    * @param {boolean} withResponse - true = gửi chờ phản hồi, false = gửi nhanh
@@ -220,6 +223,12 @@ class Serial {
     console.log("Callback Serial.onMessage: Enabled");
   }
 
+  #queueHandler() {
+    const merged = this.#SerialPacketQueue.join("");
+    this.#SerialPacketQueue = [];
+    if (this.onMessage) this.onMessage(merged);
+  }
+
   // ========== Serial Pipe Communication ==========
   async #SerialPipe_sendToLeanbot(packet, withResponse) {
     if (withResponse) {
@@ -230,7 +239,8 @@ class Serial {
   }
 
   async #SerialPipe_onReceiveFromLeanbot(packet){
-    if (this.onMessage) this.onMessage(packet);
+    this.#SerialPacketQueue.push(packet);
+    setTimeout(() => this.#queueHandler(), 0);
   }
 }
 

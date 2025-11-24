@@ -74,6 +74,7 @@ button:hover {
   box-sizing: border-box;
   display: block;
   resize: none;
+  caret-color: transparent;
 }
 
 #serialBottom {
@@ -309,8 +310,3 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   font-size: 12px;
   opacity: 0.7;
 }
-
-
-
-
-

@@ -27,6 +27,7 @@ leanbot.onConnect = () => {
 }
 
 leanbot.onDisconnect = () => {
+  restoreFullSerialLog();
   leanbotStatus.style.color = "red";
   UploaderTitleUpload.className = "red";
 }
@@ -48,7 +49,7 @@ async function reconnectLeanbot() {
 }
 
 // =================== Serial Monitor =================== //
-let nextIsNewline   = true;
+let nextIsNewline   = false;
 let lastTimestamp   = null;
 
 const serialLog           = document.getElementById("serialLog");
@@ -65,38 +66,21 @@ leanbot.Serial.onMessage = msg => {
 btnClear.onclick = () => clearSerialLog();
 btnCopy.onclick  = () => copySerialLog();
 
-let logBuffer = "";
-
-setInterval(() => {
-  if (logBuffer) {
-    serialLog.value += logBuffer;
-    logBuffer = "";
-
-    if (checkboxAutoScroll.checked) serialLog.scrollTop = serialLog.scrollHeight;
-  }
-}, 20); // update mỗi 20ms
-
 function showSerialLog(text) {
-  // Goal: Replace the Leanbot initialization message sequence
-  // "\nAT+NAME\nLB999999\n" with "\n>>> Leanbot ready >>>\n"
+  // Ignore "AT+NAME\n"
   if (text == "AT+NAME\n") return;
-
+  // Replace "LB999999\n" with ">>> Leanbot ready >>>\n\n"
   if (text == "LB999999\n") {
-    // Add "\n" before last line (works with TimestampPrefix too)
-    let lines = serialLog.value.split('\n');
-    // lines[lines.length - 1] = "\n" + lines[lines.length - 1];
-    serialLog.value = lines.join('\n');
-
-    logBuffer += "\n>>> Leanbot ready >>>\n";
-    return;
+    text = '>>> Leanbot ready >>>\n\n';
   }
+
   // ================================================
   if (nextIsNewline) {
     text = '\n' + text;
     nextIsNewline = false;
   }
   if (text.endsWith('\n')) {
-    text = text.slice(0, -1); // Skipped "\n", Leanbot initialization message = "AT+NAME\nLB999999\n"
+    text = text.slice(0, -1);
     nextIsNewline = true;
   }
 
@@ -126,7 +110,9 @@ function showSerialLog(text) {
     }).join('\n');
   }
 
-  logBuffer += text;
+  serialLog.value += text;
+  if (checkboxAutoScroll.checked) serialLog.scrollTop = serialLog.scrollHeight;
+  
   lastTimestamp = now;
 }
 
@@ -139,6 +125,26 @@ function copySerialLog() {
   navigator.clipboard.writeText(serialLog.value)
     .then(()   => console.log("Copied!"))
     .catch(err => console.error("Copy failed:", err));
+}
+
+let fullSerialBackup = null;
+
+function trimSerialLogTo30() {
+  const lines = serialLog.value.split("\n");
+  if (lines.length <= 30) return;
+
+  if (fullSerialBackup === null) fullSerialBackup = serialLog.value;
+
+  const last30 = lines.slice(-30);
+  serialLog.value = last30.join("\n");
+}
+
+// Phục hồi lại toàn bộ serial log từ bản sao lưu
+function restoreFullSerialLog() {
+  if (fullSerialBackup !== null) {
+    serialLog.value = fullSerialBackup;
+    fullSerialBackup = null;
+  }
 }
 
 // ================== Send Command ==================
@@ -237,11 +243,8 @@ btnUpload.addEventListener("click", async () => {
     alert("Please connect to Leanbot first!");
     return;
   }
-
-  // // reset serial monitor state
-  nextIsNewline = true; 
-  lastTimestamp = null;
-
+  
+  trimSerialLogTo30();
   uiUploadDialogOpen();
 
   compileStart = performance.now();
@@ -369,6 +372,7 @@ leanbot.Uploader.onMessage = (msg) => {
 };
 
 leanbot.Uploader.onSuccess = () => {
+  restoreFullSerialLog();
   UploaderTitleUpload.className = "green";
   UploaderBtnClose.innerText = "Close";
   if (UploaderAutoClose.checked) {
@@ -380,6 +384,7 @@ leanbot.Uploader.onSuccess = () => {
 };
 
 leanbot.Uploader.onError = (err) => {
+  restoreFullSerialLog();
   UploaderBtnClose.innerText = "Close";
   UploaderTitleUpload.className = "red";
   if (err === "Write failed")  UploaderWrite.className = "red";
