@@ -112,7 +112,7 @@ function showSerialLog(text) {
 
   serialLog.value += text;
   if (checkboxAutoScroll.checked) serialLog.scrollTop = serialLog.scrollHeight;
-  
+
   lastTimestamp = now;
 }
 
@@ -387,8 +387,6 @@ leanbot.Uploader.onError = (err) => {
   restoreFullSerialLog();
   UploaderBtnClose.innerText = "Close";
   UploaderTitleUpload.className = "red";
-  if (err === "Write failed")  UploaderWrite.className = "red";
-  else if (err === "Verify failed") UploaderVerify.className = "red";
 };
 
 // End of main.js
