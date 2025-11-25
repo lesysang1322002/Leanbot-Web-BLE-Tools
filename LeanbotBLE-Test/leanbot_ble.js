@@ -141,7 +141,7 @@ export class LeanbotBLE {
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
-    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval);
+    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.TX_POWER);
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
@@ -319,7 +319,7 @@ class Uploader {
   }
 
   /** Setup Char + Notify + Queue */
-  async setupConnection(characteristics, BLE_MaxLength, BLE_Interval) {
+  async setupConnection(characteristics, BLE_MaxLength, BLE_Interval, TX_POWER) {
     this.#DataPipe_char    = characteristics[Uploader.DataPipe_UUID] || null;
     this.#ControlPipe_char = characteristics[Uploader.ControlPipe_UUID] || null;
 
@@ -352,6 +352,12 @@ class Uploader {
       const cmd = `SET BLE_INTERVAL ${BLE_Interval}`;
       await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
       console.log(`Uploader: Set BLE Interval = ${BLE_Interval}`);
+    }
+
+    if(TX_POWER){
+      const cmd = `SET TX_POWER ${TX_POWER}`;
+      await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
+      console.log(`Uploader: Set TX Power = ${TX_POWER}`);
     }
   }
 

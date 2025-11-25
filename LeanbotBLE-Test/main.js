@@ -5,10 +5,12 @@ import { LeanbotBLE } from "./leanbot_ble.js";
 
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
-window.BLE_Interval = parseInt(params.get("BLE_Interval"));
+window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
+window.TX_POWER      = parseInt(params.get("TX_POWER"));
 
 console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
+console.log(`TX_POWER = ${window.TX_POWER}`);
 
 // =================== BLE Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");
