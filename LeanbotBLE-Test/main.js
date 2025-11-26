@@ -28,7 +28,7 @@ leanbot.onConnect = () => {
 
 leanbot.onDisconnect = () => {
   restoreFullSerialLog();
-  leanbotStatus.style.color = "red";
+  leanbotStatus.style.color     = "red";
   UploaderTitleUpload.className = "red";
 }
 
@@ -77,8 +77,7 @@ function copySerialLog() {
     .catch(err => console.error("Copy failed:", err));
 }
 
-// Giới hạn log chỉ còn 30 dòng gần nhất khi upload
-
+// Giới hạn log chỉ còn 30 dòng gần nhất khi upload và khôi phục sau khi upload xong
 let fullSerialBackup = null;
 
 function trimSerialLogTo30() {
@@ -108,7 +107,6 @@ btnSend.onclick = () => send();
 async function send() {
   const newline = checkboxNewline.checked ? "\n" : "";
   await leanbot.Serial.send(inputCommand.value + newline);
-
   inputCommand.value = "";
 }
 
@@ -340,7 +338,6 @@ leanbot.Uploader.onError = (err) => {
   UploaderBtnClose.innerText = "Close";
   UploaderTitleUpload.className = "red";
 };
-
 // End of main.js
 
 
