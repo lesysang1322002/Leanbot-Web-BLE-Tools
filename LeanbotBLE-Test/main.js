@@ -80,6 +80,8 @@ function copySerialLog() {
     .catch(err => console.error("Copy failed:", err));
 }
 
+// Giới hạn log chỉ còn 30 dòng gần nhất khi upload
+
 let fullSerialBackup = null;
 
 function trimSerialLogTo30() {
