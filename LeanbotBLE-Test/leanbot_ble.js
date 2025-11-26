@@ -403,6 +403,15 @@ class Uploader {
     this.#ControlPipe_busy = false;
   };
 
+  async #ControlPipe_Handler(BLEPacket) {
+    const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    for (const LineMessage of LineMessages) {
+      await this.#onMessageInternal(LineMessage);
+      if (this.onMessage) this.onMessage(LineMessage);
+    }
+  };
+
+
   // ========== Message Processor ==========
   async #onMessageInternal(LineMessage) {
     let m = null;
@@ -466,12 +475,13 @@ class Uploader {
 
   // ========== Send next packet ==========
   async #onTransferInternal(received) {
-    if (this.#nextToSend !== received + this.#PacketBufferSize) return;
-    if (this.#nextToSend >= this.#packets.length) return;
-
-    console.log(`Uploader: Sending packet #${this.#nextToSend}`);
-    await this.#DataPipe_sendToLeanbot(this.#packets[this.#nextToSend]);
-    this.#nextToSend++;
+    // if (this.#nextToSend !== received + this.#PacketBufferSize) return;
+    // if (this.#nextToSend >= this.#packets.length) return;
+    const packetSend = received + this.#PacketBufferSize;
+    if (packetSend >= this.#packets.length) return;
+    console.log(`Uploader: Sending packet #${packetSend}`);
+    await this.#DataPipe_sendToLeanbot(this.#packets[packetSend]);
+    // this.#nextToSend++;
   };
 
   // ========== Control Pipe Communication ==========
@@ -480,8 +490,9 @@ class Uploader {
   }
 
   async #ControlPipe_onReceiveFromLeanbot(packet){
-    this.#ControlPipe_rxQueue.push(packet);
-    setTimeout(async () => await this.#ControlPipe_rxQueueHandler(), 0);
+    // this.#ControlPipe_rxQueue.push(packet);
+    // setTimeout(async () => await this.#ControlPipe_rxQueueHandler(), 0);
+    await this.#ControlPipe_Handler(packet);
   }
 
   // ========== Data Pipe Communication ==========
