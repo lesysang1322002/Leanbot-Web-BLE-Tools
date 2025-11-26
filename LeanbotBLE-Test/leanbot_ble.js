@@ -178,7 +178,7 @@ class Serial {
   onMessage = null;
 
   // Queue nhận dữ liệu
-  #SerialPipe_rxQueue = [];
+  #SerialPipe_rxQueue   = [];
   #SerialPipe_rxTSQueue = [];
   #SerialPipe_busy   = false;
   #SerialPipe_buffer = "";
@@ -233,7 +233,6 @@ class Serial {
     this.#SerialPipe_busy = true;
 
     while (this.#SerialPipe_rxQueue.length > 0) {
-
       let BLEPacket = this.#SerialPipe_rxQueue.shift();
       const PacketTS  = this.#SerialPipe_rxTSQueue.shift();
 
