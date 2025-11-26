@@ -49,9 +49,6 @@ async function reconnectLeanbot() {
 }
 
 // =================== Serial Monitor =================== //
-let nextIsNewline   = false;
-let lastTimestamp   = null;
-
 const serialLog           = document.getElementById("serialLog");
 const checkboxAutoScroll  = document.getElementById("autoScroll");
 const checkboxTimestamp   = document.getElementById("showTimestamp");
@@ -212,25 +209,24 @@ btnUpload.addEventListener("click", async () => {
 });
 
 // =================== Upload DOM Elements =================== //
-const UploaderDialog      = document.getElementById("uploadDialog");
+const UploaderDialog       = document.getElementById("uploadDialog");
+const UploaderBtnShowLast  = document.getElementById("btnShowLast");
 
-const UploaderCompile     = document.getElementById("progCompile");
-const UploaderTransfer    = document.getElementById("progTransfer");
-const UploaderWrite       = document.getElementById("progWrite");
-const UploaderVerify      = document.getElementById("progVerify");
-const UploaderLog         = document.getElementById("uploadLog");
-
-const UploaderAutoClose   = document.getElementById("chkAutoClose");
-const UploaderBtnClose    = document.getElementById("btnCloseUpload");
-
-const UploaderBtnShowLast = document.getElementById("btnShowLast");
-
-const UploaderTimeCompile = document.getElementById("compileTime");
-const UploaderRSSI        = document.getElementById("uploadRSSI");
-const UploaderTimeUpload  = document.getElementById("uploadTime");
-const UploaderTitleUpload = document.getElementById("uploadTitle");
-
+const UploaderTitleUpload  = document.getElementById("uploadTitle");
 const UploaderTitleCompile = document.getElementById("compileTitle");
+
+const UploaderCompile      = document.getElementById("progCompile");
+const UploaderTransfer     = document.getElementById("progTransfer");
+const UploaderWrite        = document.getElementById("progWrite");
+const UploaderVerify       = document.getElementById("progVerify");
+const UploaderLog          = document.getElementById("uploadLog");
+
+const UploaderAutoClose    = document.getElementById("chkAutoClose");
+const UploaderBtnClose     = document.getElementById("btnCloseUpload");
+
+const UploaderTimeCompile  = document.getElementById("compileTime");
+const UploaderRSSI         = document.getElementById("uploadRSSI");
+const UploaderTimeUpload   = document.getElementById("uploadTime");
 
 UploaderBtnClose.onclick = () => {
   UploaderDialog.style.display = "none";
@@ -273,6 +269,7 @@ async function SimulateCompiler() {
   }
 }
 
+// =================== Uploader UI Updates =================== //
 let compileStart = 0;
 let uploadStart  = 0;
 
@@ -289,6 +286,14 @@ function uiUpdateProgress(element, progress, total) {
   element.max   = total;
   if (progress === total) element.className = "green";
 }
+
+// =================== Uploader Event Handlers =================== //
+leanbot.Uploader.onMessage = (msg) => {
+  uiUpdateTime(uploadStart, UploaderTimeUpload);
+
+  UploaderLog.value += "\n" + msg;
+  UploaderLog.scrollTop = UploaderLog.scrollHeight;
+};
 
 leanbot.Uploader.onRSSI = (rssi) => {
   uiUpdateRSSI(rssi);
@@ -316,13 +321,6 @@ leanbot.Uploader.onVerify = (progress, totalBytes) => {
 
 leanbot.Uploader.onVerifyError = () => {
   UploaderVerify.className = "red";
-};
-
-leanbot.Uploader.onMessage = (msg) => {
-  uiUpdateTime(uploadStart, UploaderTimeUpload);
-
-  UploaderLog.value += "\n" + msg;
-  UploaderLog.scrollTop = UploaderLog.scrollHeight;
 };
 
 leanbot.Uploader.onSuccess = () => {
