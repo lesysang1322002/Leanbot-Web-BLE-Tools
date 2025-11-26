@@ -222,6 +222,8 @@ class Serial {
     this.#SerialPipe_char.addEventListener("characteristicvaluechanged", (event) => {
       const BLEPacket = new TextDecoder().decode(event.target.value);
       const Packet_TS = new Date();
+      const Event_TS  = event.timeStamp;
+      console.log(`Packet_TS: `, Packet_TS, `, Event_TS: `, Event_TS);
       this.#SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS);
     });
 
@@ -249,11 +251,11 @@ class Serial {
       this.#SerialPipe_lastTS = PacketTS;
 
       let lines = this.#SerialPipe_buffer.split("\n");
-      this.#SerialPipe_buffer = "";
+      this.#SerialPipe_buffer = lines.pop();       // Giữ lại phần chưa hoàn chỉnh vào buffer
 
-      for (let i = 0; i < lines.length - 1; i++) { // Khi split thì thừa 1 dòng rỗng ở cuối nên bỏ qua
+      for (let i = 0; i < lines.length; i++) { 
         const line = lines[i] + "\n";
-        const timegap = i === 0 ? gap : 0;         // Chỉ dòng đầu tiên mới có timegap, các dòng sau là 0
+        const timegap = i === 0 ? gap : 0;
         if (this.onMessage) this.onMessage(line, timestamp, timegap.toFixed(3));
       }
     }
