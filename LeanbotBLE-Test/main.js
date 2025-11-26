@@ -6,11 +6,9 @@ import { LeanbotBLE } from "./leanbot_ble.js";
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
-window.TX_POWER      = parseInt(params.get("TX_POWER"));
 
 console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
-console.log(`TX_POWER = ${window.TX_POWER}`);
 
 // =================== BLE Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");
@@ -60,63 +58,21 @@ const checkboxTimestamp   = document.getElementById("showTimestamp");
 const btnClear            = document.getElementById("btnClear");
 const btnCopy             = document.getElementById("btnCopy");
 
-leanbot.Serial.onMessage = msg => {
-  msg = msg.replace(/\r/g, '');
-  showSerialLog(msg);
-}
-
 btnClear.onclick = () => clearSerialLog();
 btnCopy.onclick  = () => copySerialLog();
 
-function showSerialLog(text) {
-  // Ignore "AT+NAME\n"
-  if (text == "AT+NAME\n") return;
-  // Replace "LB999999\n" with ">>> Leanbot ready >>>\n\n"
-  if (text == "LB999999\n") {
-    text = '>>> Leanbot ready >>>\n\n';
+leanbot.Serial.onMessage = (message, timestamp, timegap) => {
+  let prefix = "";
+  if (checkboxTimestamp.checked) prefix = `${timestamp} (+${timegap}) -> `;
+
+  serialLog.value += prefix + message;
+
+  if (checkboxAutoScroll.checked) {
+    setTimeout(() => {
+      serialLog.scrollTop = serialLog.scrollHeight;
+    }, 0);
   }
-
-  // ================================================
-  if (nextIsNewline) {
-    text = '\n' + text;
-    nextIsNewline = false;
-  }
-  if (text.endsWith('\n')) {
-    text = text.slice(0, -1);
-    nextIsNewline = true;
-  }
-
-  let now = new Date();
-  let gap = 0;
-
-  if (lastTimestamp) gap = (now - lastTimestamp) / 1000;
-
-  if (checkboxTimestamp.checked) {
-    const hours        = String(now.getHours()).padStart(2, '0');
-    const minutes      = String(now.getMinutes()).padStart(2, '0');
-    const seconds      = String(now.getSeconds()).padStart(2, '0');
-    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-    const gapStr       = `(+${gap.toFixed(3)})`;
-
-    text = text.split('\n').map((line, idx) => {
-      if (idx === 0) {
-        // Keep the first line unchanged
-        return line;
-      } else if (idx === 1) {
-        // Second line -> use the actual gapStr
-        return `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> ${line}`;
-      } else {
-        // From the third line onward -> force gap = 0
-        return `${hours}:${minutes}:${seconds}.${milliseconds} (+0.000) -> ${line}`;
-      }
-    }).join('\n');
-  }
-
-  serialLog.value += text;
-  if (checkboxAutoScroll.checked) serialLog.scrollTop = serialLog.scrollHeight;
-
-  lastTimestamp = now;
-}
+};
 
 function clearSerialLog() {
   serialLog.value = "";

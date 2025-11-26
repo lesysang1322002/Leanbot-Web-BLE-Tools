@@ -141,7 +141,7 @@ export class LeanbotBLE {
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
-    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.TX_POWER);
+    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval);
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
@@ -178,7 +178,11 @@ class Serial {
   onMessage = null;
 
   // Queue nhận dữ liệu
-  #SerialPacketQueue = [];
+  #SerialPipe_rxQueue = [];
+  #SerialPipe_rxTSQueue = [];
+  #SerialPipe_busy   = false;
+  #SerialPipe_buffer = "";
+  #SerialPipe_lastTS = null;
 
   /** Gửi dữ liệu qua đặc tính Serial mặc định (UUID)
    * @param {string|Uint8Array} data - dữ liệu cần gửi
@@ -217,16 +221,47 @@ class Serial {
     await this.#SerialPipe_char.startNotifications();
     this.#SerialPipe_char.addEventListener("characteristicvaluechanged", (event) => {
       const BLEPacket = new TextDecoder().decode(event.target.value);
-      this.#SerialPipe_onReceiveFromLeanbot(BLEPacket);
+      const Packet_TS = new Date();
+      this.#SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS);
     });
 
     console.log("Callback Serial.onMessage: Enabled");
   }
 
-  #queueHandler() {
-    const merged = this.#SerialPacketQueue.join("");
-    this.#SerialPacketQueue = [];
-    if (this.onMessage) this.onMessage(merged);
+  #SerialPipe_rxQueueHandler() {
+    if (this.#SerialPipe_busy) return;
+    this.#SerialPipe_busy = true;
+
+    while (this.#SerialPipe_rxQueue.length > 0) {
+
+      let BLEPacket = this.#SerialPipe_rxQueue.shift();
+      console.log("Serial RX Packet:", BLEPacket);
+      
+      const PacketTS  = this.#SerialPipe_rxTSQueue.shift();
+
+      if (BLEPacket === "AT+NAME\r\n")  continue;
+      if (BLEPacket === "LB999999\r\n") BLEPacket = ">>> Leanbot ready >>>\n\n";
+
+      this.#SerialPipe_buffer += BLEPacket;
+
+      if (!BLEPacket.includes("\n")) continue;
+
+      const timestamp = formatTimestamp(PacketTS);
+
+      let gap = this.#SerialPipe_lastTS ? (PacketTS - this.#SerialPipe_lastTS) / 1000 : 0;
+      this.#SerialPipe_lastTS = PacketTS;
+
+      let lines = this.#SerialPipe_buffer.split("\n");
+      this.#SerialPipe_buffer = "";
+
+      for (let i = 0; i < lines.length - 1; i++) {
+        const line = lines[i] + "\n";
+        const timegap = i === 0 ? gap : 0;
+        if (this.onMessage) this.onMessage(line, timestamp, timegap.toFixed(3));
+      }
+    }
+
+    this.#SerialPipe_busy = false;
   }
 
   // ========== Serial Pipe Communication ==========
@@ -238,9 +273,10 @@ class Serial {
     }
   }
 
-  async #SerialPipe_onReceiveFromLeanbot(packet){
-    this.#SerialPacketQueue.push(packet);
-    setTimeout(() => this.#queueHandler(), 0);
+  async #SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS){
+    this.#SerialPipe_rxQueue.push(BLEPacket);
+    this.#SerialPipe_rxTSQueue.push(Packet_TS);
+    setTimeout(() => this.#SerialPipe_rxQueueHandler(), 0);
   }
 }
 
@@ -264,8 +300,8 @@ class Uploader {
   #totalBytesData    = 0;
   
   // Queue state
-  #BLEPacketQueue    = [];
-  #isQueueProcessing = false;
+  #ControlPipe_rxQueue = [];
+  #ControlPipe_busy = false;
 
   // ===== User Callbacks =====
   onMessage  = null;
@@ -304,8 +340,8 @@ class Uploader {
 
     // Reset trạng thái upload
     this.#nextToSend = 0;
-    this.#BLEPacketQueue = [];
-    this.#isQueueProcessing = false;
+    this.#ControlPipe_rxQueue = [];
+    this.#ControlPipe_busy = false;
 
     console.log("Uploader: Start uploading");
 
@@ -319,7 +355,7 @@ class Uploader {
   }
 
   /** Setup Char + Notify + Queue */
-  async setupConnection(characteristics, BLE_MaxLength, BLE_Interval, TX_POWER) {
+  async setupConnection(characteristics, BLE_MaxLength, BLE_Interval) {
     this.#DataPipe_char    = characteristics[Uploader.DataPipe_UUID] || null;
     this.#ControlPipe_char = characteristics[Uploader.ControlPipe_UUID] || null;
 
@@ -335,8 +371,8 @@ class Uploader {
 
     await this.#ControlPipe_char.startNotifications();
     this.#ControlPipe_char.addEventListener("characteristicvaluechanged", (event) => {
-      const packet = new TextDecoder().decode(event.target.value);
-      this.#ControlPipe_onReceiveFromLeanbot(packet);
+      const BLEPacket = new TextDecoder().decode(event.target.value);
+      this.#ControlPipe_onReceiveFromLeanbot(BLEPacket);
     });
 
     console.log("Callback Uploader.onMessage: Enabled");
@@ -353,21 +389,15 @@ class Uploader {
       await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
       console.log(`Uploader: Set BLE Interval = ${BLE_Interval}`);
     }
-
-    if(TX_POWER){
-      const cmd = `SET TX_POWER ${TX_POWER}`;
-      await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
-      console.log(`Uploader: Set TX Power = ${TX_POWER}`);
-    }
   }
 
   // ========== Queue handler ==========
-  async #queueHandler() {
-    if (this.#isQueueProcessing) return;
-    this.#isQueueProcessing = true;
+  async #ControlPipe_rxQueueHandler() {
+    if (this.#ControlPipe_busy) return;
+    this.#ControlPipe_busy = true;
 
-    while (this.#BLEPacketQueue.length > 0) {
-      const BLEPacket = this.#BLEPacketQueue.shift();
+    while (this.#ControlPipe_rxQueue.length > 0) {
+      const BLEPacket = this.#ControlPipe_rxQueue.shift();
       const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
       for (const LineMessage of LineMessages) {
@@ -376,7 +406,7 @@ class Uploader {
       }
     }
 
-    this.#isQueueProcessing = false;
+    this.#ControlPipe_busy = false;
   };
 
   // ========== Message Processor ==========
@@ -456,14 +486,25 @@ class Uploader {
   }
 
   async #ControlPipe_onReceiveFromLeanbot(packet){
-    this.#BLEPacketQueue.push(packet);
-    setTimeout(async () => await this.#queueHandler(), 0);
+    this.#ControlPipe_rxQueue.push(packet);
+    setTimeout(async () => await this.#ControlPipe_rxQueueHandler(), 0);
   }
 
   // ========== Data Pipe Communication ==========
   async #DataPipe_sendToLeanbot(packet) {
     await this.#DataPipe_char.writeValueWithoutResponse(packet);
   }
+}
+
+// ======================================================
+// 🔹 TIMESTAMP FORMATTE
+// ======================================================
+function formatTimestamp(ts) {
+  const hours        = String(ts.getHours()).padStart(2,'0');
+  const minutes      = String(ts.getMinutes()).padStart(2,'0');
+  const seconds      = String(ts.getSeconds()).padStart(2,'0');
+  const milliseconds = String(ts.getMilliseconds()).padStart(3,'0');
+  return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
 
 // ======================================================
