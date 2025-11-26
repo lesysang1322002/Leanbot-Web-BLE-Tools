@@ -235,8 +235,6 @@ class Serial {
     while (this.#SerialPipe_rxQueue.length > 0) {
 
       let BLEPacket = this.#SerialPipe_rxQueue.shift();
-      console.log("Serial RX Packet:", BLEPacket);
-      
       const PacketTS  = this.#SerialPipe_rxTSQueue.shift();
 
       if (BLEPacket === "AT+NAME\r\n")  continue;
