@@ -475,13 +475,10 @@ class Uploader {
 
   // ========== Send next packet ==========
   async #onTransferInternal(received) {
-    // if (this.#nextToSend !== received + this.#PacketBufferSize) return;
-    // if (this.#nextToSend >= this.#packets.length) return;
-    const packetSend = received + this.#PacketBufferSize;
-    if (packetSend >= this.#packets.length) return;
-    console.log(`Uploader: Sending packet #${packetSend}`);
-    await this.#DataPipe_sendToLeanbot(this.#packets[packetSend]);
-    // this.#nextToSend++;
+    const nextPacketIndex = received + this.#PacketBufferSize;
+    if (nextPacketIndex >= this.#packets.length) return;
+    console.log(`Uploader: Sending packet #${nextPacketIndex}`);
+    await this.#DataPipe_sendToLeanbot(this.#packets[nextPacketIndex]);
   };
 
   // ========== Control Pipe Communication ==========
