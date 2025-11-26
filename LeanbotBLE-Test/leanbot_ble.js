@@ -251,7 +251,7 @@ class Serial {
       let lines = this.#SerialPipe_buffer.split("\n");
       this.#SerialPipe_buffer = "";
 
-      for (let i = 0; i < lines.length - 1; i++) { // Khi split thì thừa 1 dòng rỗng ở cuối rỗng nên bỏ qua
+      for (let i = 0; i < lines.length - 1; i++) { // Khi split thì thừa 1 dòng rỗng ở cuối nên bỏ qua
         const line = lines[i] + "\n";
         const timegap = i === 0 ? gap : 0;         // Chỉ dòng đầu tiên mới có timegap, các dòng sau là 0
         if (this.onMessage) this.onMessage(line, timestamp, timegap.toFixed(3));
