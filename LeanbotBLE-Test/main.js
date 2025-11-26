@@ -18,19 +18,36 @@ const btnReconnect  = document.getElementById("btnReconnect");
 // Khởi tạo đối tượng LeanbotBLE
 const leanbot = new LeanbotBLE();
 
-console.log("Getting Leanbot ID:", leanbot.getLeanbotID());
-leanbotStatus.textContent = leanbot.getLeanbotID();
+function getLeanbotIDWithoutBLE() {
+  return leanbot.getLeanbotID().replace(" BLE", "");
+}
+
+if (leanbot.getLeanbotID() === "No Leanbot"){
+  leanbotStatus.style.display = "inline-block";
+  leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
+}
+else{
+  btnReconnect.style.display  = "inline-block";
+  btnReconnect.textContent    = "Reconnect " + getLeanbotIDWithoutBLE();
+}
 
 leanbot.onConnect = () => {
-  leanbotStatus.textContent = leanbot.getLeanbotID();
-  leanbotStatus.style.color = "green";
+  leanbotStatus.style.display = "inline-block";
+  leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
+  leanbotStatus.style.color   = "green";
+
+  btnReconnect.style.display  = "none";
 }
 
 leanbot.onDisconnect = () => {
   restoreFullSerialLog();
-  leanbotStatus.style.color     = "red";
   UploaderTitleUpload.className = "red";
-}
+
+  leanbotStatus.style.display = "none";
+
+  btnReconnect.style.display  = "inline-block";
+  btnReconnect.textContent    = "Reconnect " + getLeanbotIDWithoutBLE();
+};
 
 btnConnect.onclick   = async () => connectLeanbot();
 btnReconnect.onclick = async () => reconnectLeanbot();
@@ -58,9 +75,9 @@ const btnCopy             = document.getElementById("btnCopy");
 btnClear.onclick = () => clearSerialLog();
 btnCopy.onclick  = () => copySerialLog();
 
-leanbot.Serial.onMessage = (message, timestamp, timegap) => {
+leanbot.Serial.onMessage = (message, timeStamp, timeGapMs) => {
   let prefix = "";
-  if (checkboxTimestamp.checked) prefix = `${timestamp} (+${timegap}) -> `;
+  if (checkboxTimestamp.checked) prefix = `${timeStamp} (+${timeGapMs.toString().padStart(3, "0")}) -> `;
 
   serialLog.value += prefix + message;
   if (checkboxAutoScroll.checked) setTimeout(() => { serialLog.scrollTop = serialLog.scrollHeight;}, 0);
@@ -252,7 +269,7 @@ function uiUploadDialogOpen() {
   UploaderBtnClose.innerText      = "Cancel";
   UploaderTimeCompile.textContent = "0.0 sec";
   UploaderTimeUpload.textContent  = "0.0 sec";
-  UploaderTitleUpload.textContent = "Upload to " + leanbot.getLeanbotID();
+  UploaderTitleUpload.textContent = "Upload to " + getLeanbotIDWithoutBLE();
   UploaderRSSI.textContent        = "0 dBm";
   UploaderTitleUpload.className   = "black";
   UploaderTitleCompile.className  = "black";

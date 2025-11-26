@@ -110,7 +110,7 @@ export class LeanbotBLE {
 
   getLeanbotID() {
     // Nếu phiên làm việc hiện tại có thiết bị thì trả về tên thiết bị đó
-    if (this.#device) return this.#device.name;
+    if (this.#device) return this.#device.name
     
     // Ngược lại lấy từ localStorage
     const lastDevice = localStorage.getItem("leanbot_device");
@@ -222,8 +222,6 @@ class Serial {
     this.#SerialPipe_char.addEventListener("characteristicvaluechanged", (event) => {
       const BLEPacket = new TextDecoder().decode(event.target.value);
       const Packet_TS = new Date();
-      const Event_TS  = event.timeStamp;
-      console.log(`Packet_TS: `, Packet_TS, `, Event_TS: `, Event_TS);
       this.#SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS);
     });
 
@@ -235,28 +233,25 @@ class Serial {
     this.#SerialPipe_busy = true;
 
     while (this.#SerialPipe_rxQueue.length > 0) {
-      let BLEPacket = this.#SerialPipe_rxQueue.shift();
-      const PacketTS  = this.#SerialPipe_rxTSQueue.shift();
-
-      if (BLEPacket === "AT+NAME\r\n")  continue;
-      if (BLEPacket === "LB999999\r\n") BLEPacket = ">>> Leanbot ready >>>\n\n";
-
+      const BLEPacket = this.#SerialPipe_rxQueue.shift();
       this.#SerialPipe_buffer += BLEPacket;
 
-      if (!BLEPacket.includes("\n")) continue;
-
-      const timestamp = formatTimestamp(PacketTS);
-
-      let gap = this.#SerialPipe_lastTS ? (PacketTS - this.#SerialPipe_lastTS) / 1000 : 0;
+      const PacketTS  = this.#SerialPipe_rxTSQueue.shift();
+      const timeStamp = formatTimestamp(PacketTS);
+      let gap = this.#SerialPipe_lastTS ? (PacketTS - this.#SerialPipe_lastTS) : 0;
       this.#SerialPipe_lastTS = PacketTS;
 
       let lines = this.#SerialPipe_buffer.split("\n");
-      this.#SerialPipe_buffer = lines.pop();       // Giữ lại phần chưa hoàn chỉnh vào buffer
+      this.#SerialPipe_buffer = lines.pop();
 
       for (let i = 0; i < lines.length; i++) { 
-        const line = lines[i] + "\n";
-        const timegap = i === 0 ? gap : 0;
-        if (this.onMessage) this.onMessage(line, timestamp, timegap.toFixed(3));
+        let line = lines[i] + "\n";
+        const timeGapMs = i === 0 ? gap : 0;
+
+        if (line === "AT+NAME\r\n")  continue;
+        if (line === "LB999999\r\n") line = ">>> Leanbot ready >>>\n\n";
+
+        if (this.onMessage) this.onMessage(line, timeStamp, timeGapMs);
       }
     }
 
