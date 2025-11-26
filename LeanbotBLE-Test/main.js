@@ -66,12 +66,7 @@ leanbot.Serial.onMessage = (message, timestamp, timegap) => {
   if (checkboxTimestamp.checked) prefix = `${timestamp} (+${timegap}) -> `;
 
   serialLog.value += prefix + message;
-
-  if (checkboxAutoScroll.checked) {
-    setTimeout(() => {
-      serialLog.scrollTop = serialLog.scrollHeight;
-    }, 0);
-  }
+  if (checkboxAutoScroll.checked) setTimeout(() => { serialLog.scrollTop = serialLog.scrollHeight;}, 0);
 };
 
 function clearSerialLog() {
@@ -97,7 +92,6 @@ function trimSerialLogTo30() {
   serialLog.value = last30.join("\n");
 }
 
-// Phục hồi lại toàn bộ serial log từ bản sao lưu
 function restoreFullSerialLog() {
   if (fullSerialBackup !== null) {
     serialLog.value = fullSerialBackup;
