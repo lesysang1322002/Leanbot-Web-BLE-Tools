@@ -249,7 +249,12 @@ class Serial {
         const timeGapMs = i === 0 ? gap : 0;
 
         if (line === "AT+NAME\r\n")  continue;
-        if (line === "LB999999\r\n") line = ">>> Leanbot ready >>>\n\n";
+        if (line === "LB999999\r\n") {
+          line = ">>> Leanbot ready >>>\n";
+          if (this.onMessage) this.onMessage(line, timeStamp, timeGapMs);
+          if (this.onMessage) this.onMessage("\n", timeStamp, 0);
+          continue;
+        }
 
         if (this.onMessage) this.onMessage(line, timeStamp, timeGapMs);
       }
@@ -403,15 +408,6 @@ class Uploader {
     this.#ControlPipe_busy = false;
   };
 
-  async #ControlPipe_Handler(BLEPacket) {
-    const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-    for (const LineMessage of LineMessages) {
-      await this.#onMessageInternal(LineMessage);
-      if (this.onMessage) this.onMessage(LineMessage);
-    }
-  };
-
-
   // ========== Message Processor ==========
   async #onMessageInternal(LineMessage) {
     let m = null;
@@ -475,10 +471,18 @@ class Uploader {
 
   // ========== Send next packet ==========
   async #onTransferInternal(received) {
-    const nextPacketIndex = received + this.#PacketBufferSize;
-    if (nextPacketIndex >= this.#packets.length) return;
-    console.log(`Uploader: Sending packet #${nextPacketIndex}`);
-    await this.#DataPipe_sendToLeanbot(this.#packets[nextPacketIndex]);
+    while(this.#nextToSend <= received + this.#PacketBufferSize && this.#nextToSend < this.#packets.length){
+      console.log(`Uploader: Sending packet #${this.#nextToSend}`);
+      await this.#DataPipe_sendToLeanbot(this.#packets[this.#nextToSend]);
+      this.#nextToSend++;
+    }
+
+    if (this.#nextToSend > received + this.#PacketBufferSize) {
+      for(let i = received + 1; i < this.#nextToSend; i++){
+        console.log(`Uploader: Re-sending packet #${i}`);
+        await this.#DataPipe_sendToLeanbot(this.#packets[i]);
+      }
+    }
   };
 
   // ========== Control Pipe Communication ==========
@@ -487,9 +491,8 @@ class Uploader {
   }
 
   async #ControlPipe_onReceiveFromLeanbot(packet){
-    // this.#ControlPipe_rxQueue.push(packet);
-    // setTimeout(async () => await this.#ControlPipe_rxQueueHandler(), 0);
-    await this.#ControlPipe_Handler(packet);
+    this.#ControlPipe_rxQueue.push(packet);
+    setTimeout(async () => await this.#ControlPipe_rxQueueHandler(), 0);
   }
 
   // ========== Data Pipe Communication ==========
