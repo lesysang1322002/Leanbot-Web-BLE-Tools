@@ -420,7 +420,7 @@ class Uploader {
     }
 
     // Transfer
-    if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
+    if (m = LineMessage.match(/Receive\s+(-?\d+)/i)) {
       const progress = parseInt(m[1]);
       const totalPackets = this.#packets.length - 1; // Không tính EOF packet
 
@@ -470,6 +470,8 @@ class Uploader {
 
   // ========== Send next packet ==========
   async #onTransferInternal(received) {
+    console.log(`Uploader: Received packet #${received}`);
+
     if (this.#nextToSend > received + this.#PacketBufferSize) {
       for (let i = received + 1; i <= received + this.#PacketBufferSize; i++) {
         if (i >= this.#packets.length) return;
