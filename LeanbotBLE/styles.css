@@ -37,27 +37,6 @@ button:hover {
   background-color: #f1f1f1;
 }
 
-/* --- UPLOAD LOG --- */
-#uploadSection {
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  background: #fff;
-  border-radius: 5px;
-  padding: 10px;
-}
-
-#uploadLog {
-  height: 100px;
-  background: #111;
-  color: rgb(247, 126, 74);
-  font-family: monospace;
-  padding: 8px;
-  overflow-y: auto;
-  border-radius: 4px;
-  border: 1px solid #888;
-  white-space: pre-wrap;
-}
-
 /* --- SERIAL MONITOR --- */
 #serialSection {
   flex: 1;
@@ -95,6 +74,7 @@ button:hover {
   box-sizing: border-box;
   display: block;
   resize: none;
+  caret-color: transparent;
 }
 
 #serialBottom {
@@ -133,6 +113,7 @@ button:hover {
 #leanbotStatus {
   font-weight: bold;
   color: red;
+  display: none;
 }
 
 /* --- MODAL (File Selection) --- */
@@ -174,7 +155,7 @@ button:hover {
   margin-top: 12px;
 }
 
-/* Overlay */
+/* --- UPLOAD DIALOG --- */
 .upload-dialog {
   display: none;
   position: fixed;
@@ -193,49 +174,131 @@ button:hover {
   opacity: 0;
 }
 
-/* Box */
+/* Upload box */
 .upload-box {
   background: #fff;
-  width: 420px;
+  width: 500px;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 0 20px rgba(0,0,0,0.2);
 }
 
-/* Progress bars */
-.upload-box progress {
-  width: 100%;
-  height: 14px;
-  appearance: none;
-  -webkit-appearance: none;
-  margin-bottom: 8px;
+/* GROUP BOX */
+.group-box {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: #fff;
 }
 
-/* Default (yellow) */
+.group-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.group-header .rssi {
+  flex: 1;  /* tạo cột ảo bên trái */
+}
+
+.group-header .title {
+  flex: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.group-header .time {
+  flex: 1;          /* cột ảo bên phải */
+  text-align: right; /* đẩy time sang phải */
+}
+
+/* PROGRESS WRAPPER: chứa progress + text */
+.progress-wrapper {
+  position: relative;
+  margin: 6px 0 12px;
+  height: 30px; /* tăng độ cao */
+}
+
+/* Progress bar */
+.progress-wrapper progress {
+  width: 100%;
+  height: 30px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Label nằm giữa progress bar */
+.progress-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  color: white;
+  pointer-events: none;
+  font-weight: 500;
+}
+
+/* Progress màu */
 progress.yellow::-webkit-progress-value { background: #f4c542; }
 progress.yellow::-moz-progress-bar { background: #f4c542; }
 
-/* Green */
 progress.green::-webkit-progress-value { background: #4caf50; }
 progress.green::-moz-progress-bar { background: #4caf50; }
 
-/* Red */
 progress.red::-webkit-progress-value { background: #d32f2f; }
 progress.red::-moz-progress-bar { background: #d32f2f; }
 
-#uploadLog {
-  width: 100%;
-  height: 120px;
-  resize: none;
-  margin-top: 5px;
-  padding: 5px;
-  font-family: monospace;
-  background: #fafafa;
+/* TITLE COLORS */
+.black  { color: #000; }
+.yellow { color: #f4c542; }
+.green  { color: #4caf50; }
+.red    { color: #d32f2f; }
+
+/* DETAILS */
+.details-block {
+  margin-top: 10px;
 }
 
+.details-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+#uploadLog {
+  width: 100%;
+  height: 130px;
+  background: #fafafa;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  padding: 6px;
+  font-family: monospace;
+  resize: none;
+  box-sizing: border-box;
+  caret-color: transparent;
+}
+
+/* FOOTER */
+.upload-footer {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Checkbox */
+.auto-close {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+/* Close button */
 #btnCloseUpload {
-  margin-top: 12px;
-  float: right;
   padding: 6px 14px;
   border: none;
   background: #1976d2;
@@ -244,3 +307,12 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   cursor: pointer;
 }
 
+.time,.rssi {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+#btnReconnect{
+  display:none;
+  color:#d32f2f;
+}

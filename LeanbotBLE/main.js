@@ -1,11 +1,11 @@
 // main.js
 
 // Import LeanbotBLE SDK
-import { LeanbotBLE } from "https://lesysang1322002.github.io/Leanbot-Web-BLE-Tools/sdk_leanbot/leanbot_ble.js";
+import { LeanbotBLE } from "./leanbot_ble.js";
 
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
-window.BLE_Interval = parseInt(params.get("BLE_Interval"));
+window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
 
 console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
@@ -18,17 +18,36 @@ const btnReconnect  = document.getElementById("btnReconnect");
 // Khởi tạo đối tượng LeanbotBLE
 const leanbot = new LeanbotBLE();
 
-console.log("Getting Leanbot ID:", leanbot.getLeanbotID());
-leanbotStatus.textContent = leanbot.getLeanbotID();
+function getLeanbotIDWithoutBLE() {
+  return leanbot.getLeanbotID().replace(" BLE", "");
+}
+
+if (leanbot.getLeanbotID() === "No Leanbot"){
+  leanbotStatus.style.display = "inline-block";
+  leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
+}
+else{
+  btnReconnect.style.display  = "inline-block";
+  btnReconnect.textContent    = "Reconnect " + getLeanbotIDWithoutBLE();
+}
 
 leanbot.onConnect = () => {
-  leanbotStatus.textContent = leanbot.getLeanbotID();
-  leanbotStatus.style.color = "green";
+  leanbotStatus.style.display = "inline-block";
+  leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
+  leanbotStatus.style.color   = "green";
+
+  btnReconnect.style.display  = "none";
 }
 
 leanbot.onDisconnect = () => {
-  leanbotStatus.style.color = "red";
-}
+  restoreFullSerialLog();
+  UploaderTitleUpload.className = "red";
+
+  leanbotStatus.style.display = "none";
+
+  btnReconnect.style.display  = "inline-block";
+  btnReconnect.textContent    = "Reconnect " + getLeanbotIDWithoutBLE();
+};
 
 btnConnect.onclick   = async () => connectLeanbot();
 btnReconnect.onclick = async () => reconnectLeanbot();
@@ -47,87 +66,22 @@ async function reconnectLeanbot() {
 }
 
 // =================== Serial Monitor =================== //
-let nextIsNewline   = true;
-let lastTimestamp   = null;
-
 const serialLog           = document.getElementById("serialLog");
 const checkboxAutoScroll  = document.getElementById("autoScroll");
 const checkboxTimestamp   = document.getElementById("showTimestamp");
 const btnClear            = document.getElementById("btnClear");
 const btnCopy             = document.getElementById("btnCopy");
 
-leanbot.Serial.onMessage = msg => {
-  msg = msg.replace(/\r/g, '');
-  showSerialLog(msg);
-}
-
 btnClear.onclick = () => clearSerialLog();
 btnCopy.onclick  = () => copySerialLog();
 
-let logBuffer = "";
+leanbot.Serial.onMessage = (message, timeStamp, timeGapMs) => {
+  let prefix = "";
+  if (checkboxTimestamp.checked) prefix = `${timeStamp} (+${timeGapMs.toString().padStart(3, "0")}) -> `;
 
-setInterval(() => {
-  if (logBuffer) {
-    serialLog.value += logBuffer;
-    logBuffer = "";
-
-    if (checkboxAutoScroll.checked) serialLog.scrollTop = serialLog.scrollHeight;
-  }
-}, 20); // update mỗi 20ms
-
-function showSerialLog(text) {
-  // Goal: Replace the Leanbot initialization message sequence
-  // "\nAT+NAME\nLB999999\n" with "\n>>> Leanbot ready >>>\n"
-  if (text == "AT+NAME\n") return;
-
-  if (text == "LB999999\n") {
-    // Add "\n" before last line (works with TimestampPrefix too)
-    let lines = serialLog.value.split('\n');
-    lines[lines.length - 1] = "\n" + lines[lines.length - 1];
-    serialLog.value = lines.join('\n');
-
-    logBuffer += ">>> Leanbot ready >>>\n";
-    return;
-  }
-  // ================================================
-  if (nextIsNewline) {
-    text = '\n' + text;
-    nextIsNewline = false;
-  }
-  if (text.endsWith('\n')) {
-    text = text.slice(0, -1); // Skipped "\n", Leanbot initialization message = "AT+NAME\nLB999999\n"
-    nextIsNewline = true;
-  }
-
-  let now = new Date();
-  let gap = 0;
-
-  if (lastTimestamp) gap = (now - lastTimestamp) / 1000;
-
-  if (checkboxTimestamp.checked) {
-    const hours        = String(now.getHours()).padStart(2, '0');
-    const minutes      = String(now.getMinutes()).padStart(2, '0');
-    const seconds      = String(now.getSeconds()).padStart(2, '0');
-    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-    const gapStr       = `(+${gap.toFixed(3)})`;
-
-    text = text.split('\n').map((line, idx) => {
-      if (idx === 0) {
-        // Keep the first line unchanged
-        return line;
-      } else if (idx === 1) {
-        // Second line -> use the actual gapStr
-        return `${hours}:${minutes}:${seconds}.${milliseconds} ${gapStr} -> ${line}`;
-      } else {
-        // From the third line onward -> force gap = 0
-        return `${hours}:${minutes}:${seconds}.${milliseconds} (+0.000) -> ${line}`;
-      }
-    }).join('\n');
-  }
-
-  logBuffer += text;
-  lastTimestamp = now;
-}
+  serialLog.value += prefix + message;
+  if (checkboxAutoScroll.checked) setTimeout(() => { serialLog.scrollTop = serialLog.scrollHeight;}, 0);
+};
 
 function clearSerialLog() {
   serialLog.value = "";
@@ -140,6 +94,26 @@ function copySerialLog() {
     .catch(err => console.error("Copy failed:", err));
 }
 
+// Giới hạn log chỉ còn 30 dòng gần nhất khi upload và khôi phục sau khi upload xong
+let fullSerialBackup = null;
+
+function trimSerialLogTo30() {
+  const lines = serialLog.value.split("\n");
+  if (lines.length <= 30) return;
+
+  if (fullSerialBackup === null) fullSerialBackup = serialLog.value;
+
+  const last30 = lines.slice(-30);
+  serialLog.value = last30.join("\n");
+}
+
+function restoreFullSerialLog() {
+  if (fullSerialBackup !== null) {
+    serialLog.value = fullSerialBackup;
+    fullSerialBackup = null;
+  }
+}
+
 // ================== Send Command ==================
 const inputCommand    = document.getElementById("serialInput");
 const btnSend         = document.getElementById("btnSend");
@@ -150,7 +124,6 @@ btnSend.onclick = () => send();
 async function send() {
   const newline = checkboxNewline.checked ? "\n" : "";
   await leanbot.Serial.send(inputCommand.value + newline);
-
   inputCommand.value = "";
 }
 
@@ -236,120 +209,152 @@ btnUpload.addEventListener("click", async () => {
     alert("Please connect to Leanbot first!");
     return;
   }
+  
+  trimSerialLogTo30();
+  uiUploadDialogOpen();
 
-  UploadUI.open();
+  compileStart = performance.now();
+  UploaderTitleCompile.className = "yellow";
+  await SimulateCompiler();
+  UploaderTitleCompile.className = "green";
+
+  uploadStart = performance.now();
+  UploaderTitleUpload.className = "yellow";
   await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
 });
 
-// =================== Upload Log =================== //
+// =================== Upload DOM Elements =================== //
+const UploaderDialog       = document.getElementById("uploadDialog");
+const UploaderBtnShowLast  = document.getElementById("btnShowLast");
+
+const UploaderTitleUpload  = document.getElementById("uploadTitle");
+const UploaderTitleCompile = document.getElementById("compileTitle");
+
+const UploaderCompile      = document.getElementById("progCompile");
+const UploaderTransfer     = document.getElementById("progTransfer");
+const UploaderWrite        = document.getElementById("progWrite");
+const UploaderVerify       = document.getElementById("progVerify");
+const UploaderLog          = document.getElementById("uploadLog");
+
+const UploaderAutoClose    = document.getElementById("chkAutoClose");
+const UploaderBtnClose     = document.getElementById("btnCloseUpload");
+
+const UploaderTimeCompile  = document.getElementById("compileTime");
+const UploaderRSSI         = document.getElementById("uploadRSSI");
+const UploaderTimeUpload   = document.getElementById("uploadTime");
+
+UploaderBtnClose.onclick = () => {
+  UploaderDialog.style.display = "none";
+};
+
+UploaderBtnShowLast.onclick = () => {
+  UploaderDialog.classList.remove("fade-out");
+  UploaderDialog.style.display = "flex";
+};
+
+// Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
+function uiUploadDialogOpen() {
+  UploaderDialog.style.display = "flex";
+  UploaderDialog.classList.remove("fade-out");
+
+  // reset progress bars
+  [UploaderCompile, UploaderTransfer, UploaderWrite, UploaderVerify].forEach(b => {
+    b.value = 0;
+    b.max   = 1;
+    b.className = "yellow";
+  });
+
+  // reset 
+  UploaderLog.value = "";
+  UploaderBtnClose.innerText      = "Cancel";
+  UploaderTimeCompile.textContent = "0.0 sec";
+  UploaderTimeUpload.textContent  = "0.0 sec";
+  UploaderTitleUpload.textContent = "Upload to " + getLeanbotIDWithoutBLE();
+  UploaderRSSI.textContent        = "0 dBm";
+  UploaderTitleUpload.className   = "black";
+  UploaderTitleCompile.className  = "black";
+}
+
+async function SimulateCompiler() {
+  const total = 3;
+  for (let i = 1; i <= total; i++) {
+    await new Promise(r => setTimeout(r, 100));
+    uiUpdateTime(compileStart, UploaderTimeCompile);
+    uiUpdateProgress(UploaderCompile, i, total);
+  }
+}
+
+// =================== Uploader UI Updates =================== //
+let compileStart = 0;
+let uploadStart  = 0;
+
+function uiUpdateTime(start, el) { 
+  el.textContent = `${((performance.now() - start) / 1000).toFixed(1)} sec`;
+};
+
+function uiUpdateRSSI(rssi) {
+  UploaderRSSI.textContent = `${rssi} dBm`;
+}
+
+function uiUpdateProgress(element, progress, total) {
+  element.value = progress;
+  element.max   = total;
+  if (progress === total) element.className = "green";
+}
+
+// =================== Uploader Event Handlers =================== //
 leanbot.Uploader.onMessage = (msg) => {
-  UploadUI.addLog(msg);
+  uiUpdateTime(uploadStart, UploaderTimeUpload);
+
+  UploaderLog.value += "\n" + msg;
+  UploaderLog.scrollTop = UploaderLog.scrollHeight;
+};
+
+leanbot.Uploader.onRSSI = (rssi) => {
+  uiUpdateRSSI(rssi);
 };
 
 leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
-  const pct = Math.floor(progress / totalBlocks * 100);
-  UploadUI.updateTransfer(pct);
+  uiUpdateProgress(UploaderTransfer, progress, totalBlocks);
+};
+
+leanbot.Uploader.onTransferError = () => {
+  UploaderTransfer.className = "red";
 };
 
 leanbot.Uploader.onWrite = (progress, totalBytes) => {
-  const pct = Math.floor(progress / totalBytes * 100);
-  UploadUI.updateWrite(pct);
+  uiUpdateProgress(UploaderWrite, progress, totalBytes);
+};
+
+leanbot.Uploader.onWriteError = () => {
+  UploaderWrite.className = "red";
 };
 
 leanbot.Uploader.onVerify = (progress, totalBytes) => {
-  const pct = Math.floor(progress / totalBytes * 100);
-  UploadUI.updateVerify(pct);
+  uiUpdateProgress(UploaderVerify, progress, totalBytes);
+};
+
+leanbot.Uploader.onVerifyError = () => {
+  UploaderVerify.className = "red";
 };
 
 leanbot.Uploader.onSuccess = () => {
-  UploadUI.markSuccess();
+  restoreFullSerialLog();
+  UploaderTitleUpload.className = "green";
+  UploaderBtnClose.innerText = "Close";
+  if (UploaderAutoClose.checked) {
+    setTimeout(() => {
+      UploaderDialog.classList.add("fade-out");
+      setTimeout(() => { UploaderDialog.style.display = "none"; }, 600);
+    }, 1000);
+  }
 };
 
 leanbot.Uploader.onError = (err) => {
-  if (err === "Write failed")  return UploadUI.markWriteError();
-  if (err === "Verify failed") return UploadUI.markVerifyError();
+  restoreFullSerialLog();
+  UploaderBtnClose.innerText = "Close";
+  UploaderTitleUpload.className = "red";
 };
-
-// =================== Upload UI =================== //
-const UploadUI = {
-  el: {
-    dialog:     document.getElementById("uploadDialog"),
-    compile:    document.getElementById("progCompile"),
-    transfer:   document.getElementById("progTransfer"),
-    write:      document.getElementById("progWrite"),
-    verify:     document.getElementById("progVerify"),
-    log:        document.getElementById("uploadLog"),
-    btnClose:   document.getElementById("btnCloseUpload")
-  },
-
-  open() {
-    this.success = false;
-    this.hasError = false;
-
-    this.el.dialog.style.display = "flex";
-    this.el.dialog.classList.remove("fade-out");
-
-    // reset progress
-    const bars = [this.el.compile, this.el.transfer, this.el.write, this.el.verify];
-    bars.forEach(b => {
-      b.value = 0;
-      b.className = "yellow"; // reset color
-    });
-
-    this.el.log.value = "";
-
-    // Compile luôn 100%
-    this.setColor(this.el.compile, 100);
-  },
-
-  close() {
-    this.el.dialog.style.display = "none";
-  },
-
-  fadeOutLater() {
-    setTimeout(() => {
-      this.el.dialog.classList.add("fade-out");
-      setTimeout(() => this.close(), 600);
-    }, 1000);
-  },
-
-  addLog(msg) {
-    this.el.log.value += msg + "\n";
-    this.el.log.scrollTop = this.el.log.scrollHeight;
-  },
-
-  setColor(bar, value, error = false) {
-    bar.value = value;
-
-    if (error) {
-      bar.className = "red";
-      this.hasError = true;
-    }
-    else if (value >= 100) {
-      bar.className = "green";
-    }
-    else {
-      bar.className = "yellow";
-    }
-  },
-
-  updateTransfer(pct) { this.setColor(this.el.transfer, pct); },
-  updateWrite(pct)    { this.setColor(this.el.write   , pct); },
-  updateVerify(pct)   { this.setColor(this.el.verify  , pct); },
-
-  markSuccess() {
-    this.fadeOutLater();
-  },
-
-  markWriteError() {
-    this.setColor(this.el.write, 0, true);
-  },
-
-  markVerifyError() {
-    this.setColor(this.el.verify, 0, true);
-  },
-};
-
-UploadUI.el.btnClose.onclick = () => UploadUI.close();
 // End of main.js
+
 

@@ -11,6 +11,7 @@
   <div id="topBar">
     <div id="leftButtons">
       <button id="btnCode">{ } Code</button>
+      <button id="btnShowLast">Show Last Upload</button>
     </div>
 
     <div id="rightButtons">
@@ -21,15 +22,8 @@
     </div>
   </div>
 
-  <!-- UPLOAD LOG -->
-  <!-- <div id="uploadSection">
-    <h3>Upload Log:</h3>
-    <div id="uploadLog"></div>
-  </div> -->
-
   <!-- SERIAL MONITOR -->
   <div id="serialSection">
-    <!-- <h3>Serial Monitor:</h3> -->
     <div id="serialTop">
       <div id="serialOptions">
         <label><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
@@ -59,35 +53,67 @@
     <div id="rightButtons">
       <span id="leanbotStatus" class="disconnected">No Leanbot</span>
       <button id="btnReconnect">Reconnect</button>
-      <button id="btnConnect">Connect ...</button>
+      <button id="btnConnect">Connect...</button>
     </div>
   </div>
 
-  <!-- Upload Dialog -->
+  <!-- UPLOAD DIALOG -->
   <div id="uploadDialog" class="upload-dialog">
     <div class="upload-box">
 
-      <h3>Uploading Firmware…</h3>
+      <!-- COMPILE GROUP -->
+      <div class="group-box">
+        <div class="group-header">
+          <div class="rssi"></div>
+          <span class="title" id="compileTitle">Compile</span>
+          <span class="time" id="compileTime">0.0 sec</span>
+        </div>
 
-      <label>Compile</label>
-      <progress id="progCompile" max="100" value="0"></progress>
+        <div class="progress-wrapper">
+          <progress id="progCompile" class="yellow"></progress>
+        </div>
+      </div>
 
-      <label>Transfer</label>
-      <progress id="progTransfer" max="100" value="0"></progress>
+      <!-- UPLOAD GROUP -->
+      <div class="group-box">
+        <div class="group-header">
+          <div class="rssi" id="uploadRSSI">0 dBm</div>
+          <span class="title" id="uploadTitle">Upload</span>
+          <span class="time" id="uploadTime">0.0 sec</span>
+        </div>
 
-      <label>Write</label>
-      <progress id="progWrite" max="100" value="0"></progress>
+        <div class="progress-wrapper">
+          <progress id="progTransfer" class="yellow"></progress>
+          <div class="progress-label">Transfer</div>
+        </div>
 
-      <label>Verify</label>
-      <progress id="progVerify" max="100" value="0"></progress>
+        <div class="progress-wrapper">
+          <progress id="progWrite" class="yellow"></progress>
+          <div class="progress-label">Write</div>
+        </div>
 
-      <label>Uploader Messages</label>
-      <textarea id="uploadLog" readonly></textarea>
+        <div class="progress-wrapper">
+          <progress id="progVerify" class="yellow"></progress>
+          <div class="progress-label">Verify</div>
+        </div>
 
-      <button id="btnCloseUpload">Close</button>
+        <div class="details-block">
+          <textarea id="uploadLog" readonly></textarea>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="upload-footer">
+        <label class="auto-close">
+          <input type="checkbox" id="chkAutoClose" checked>
+          Auto Close on success
+        </label>
+
+        <button id="btnCloseUpload">Cancel</button>
+      </div>
+
     </div>
   </div>
-
 
   <!-- FILE SELECTION MODAL -->
   <div id="fileModal" class="hidden">
@@ -100,6 +126,18 @@
       <button class="fileOption"
         data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/advanced.hex">
         Test Leanbot Advanced
+      </button>
+      <button class="fileOption"
+        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/gripperDemo.hex">
+        Gripper Demo
+      </button>
+      <button class="fileOption"
+        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/motionDemo.hex">
+        Motion Demo
+      </button>
+      <button class="fileOption"
+        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/ledDemo.hex">
+        LED Demo
       </button>
       <button id="closeModal">Cancel</button>
     </div>
