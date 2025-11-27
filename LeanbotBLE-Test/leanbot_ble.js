@@ -249,6 +249,7 @@ class Serial {
         const timeGapMs = i === 0 ? gap : 0;
 
         if (line === "AT+NAME\r\n")  continue;
+        // if (line === "LB999999\r\n") line = ">>> Leanbot ready >>>\n\n";
         if (line === "LB999999\r\n") {
           line = ">>> Leanbot ready >>>\n";
           if (this.onMessage) this.onMessage(line, timeStamp, timeGapMs);
@@ -471,17 +472,22 @@ class Uploader {
 
   // ========== Send next packet ==========
   async #onTransferInternal(received) {
+    console.log(`Received: ${received}`);
+
+    if (this.#nextToSend > received + this.#PacketBufferSize) {
+      for (let i = received + 1; i <= received + this.#PacketBufferSize; i++) {
+        if (i >= this.#packets.length) return;
+        console.log(`Uploader: Re-sending packet #${i}`);
+        await this.#DataPipe_sendToLeanbot(this.#packets[i]);
+      }
+      this.#nextToSend = received + this.#PacketBufferSize + 1;
+      return;
+    }
+
     while(this.#nextToSend <= received + this.#PacketBufferSize && this.#nextToSend < this.#packets.length){
       console.log(`Uploader: Sending packet #${this.#nextToSend}`);
       await this.#DataPipe_sendToLeanbot(this.#packets[this.#nextToSend]);
       this.#nextToSend++;
-    }
-
-    if (this.#nextToSend > received + this.#PacketBufferSize) {
-      for(let i = received + 1; i < this.#nextToSend; i++){
-        console.log(`Uploader: Re-sending packet #${i}`);
-        await this.#DataPipe_sendToLeanbot(this.#packets[i]);
-      }
     }
   };
 
