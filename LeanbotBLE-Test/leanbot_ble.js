@@ -238,15 +238,13 @@ class Serial {
 
       const PacketTS  = this.#SerialPipe_rxTSQueue.shift();
       const timeStamp = formatTimestamp(PacketTS);
-      let gap = this.#SerialPipe_lastTS ? (PacketTS - this.#SerialPipe_lastTS) : 0;
-      this.#SerialPipe_lastTS = PacketTS;
 
       let lines = this.#SerialPipe_buffer.split("\n");
       this.#SerialPipe_buffer = lines.pop();
 
       for (let i = 0; i < lines.length; i++) { 
         let line = lines[i] + "\n";
-        const timeGapMs = i === 0 ? gap : 0;
+        let timeGapMs = this.#SerialPipe_lastTS ? (PacketTS - this.#SerialPipe_lastTS) : 0;
 
         if (line === "AT+NAME\r\n")  continue;
         if (line === "LB999999\r\n") {
@@ -257,6 +255,7 @@ class Serial {
         }
 
         if (this.onMessage) this.onMessage(line, timeStamp, timeGapMs);
+        this.#SerialPipe_lastTS = PacketTS;
       }
     }
 
