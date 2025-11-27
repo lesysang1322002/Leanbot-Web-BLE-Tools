@@ -41,7 +41,6 @@ leanbot.onConnect = () => {
 
 leanbot.onDisconnect = () => {
   restoreFullSerialLog();
-  UploaderTitleUpload.className = "red";
 
   leanbotStatus.style.display = "none";
 
@@ -320,6 +319,7 @@ leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
 
 leanbot.Uploader.onTransferError = () => {
   UploaderTransfer.className = "red";
+  UploaderTitleUpload.className = "red";
 };
 
 leanbot.Uploader.onWrite = (progress, totalBytes) => {
