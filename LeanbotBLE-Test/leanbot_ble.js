@@ -422,7 +422,7 @@ class Uploader {
     // Transfer
     if (m = LineMessage.match(/Receive\s+(\d+)/i)) {
       const progress = parseInt(m[1]);
-      const totalPackets = this.#packets.length;
+      const totalPackets = this.#packets.length - 1; // Không tính EOF packet
 
       this.isTransferring = false;
       if (progress === totalPackets) this.isTransferring = true;
