@@ -472,8 +472,6 @@ class Uploader {
 
   // ========== Send next packet ==========
   async #onTransferInternal(received) {
-    console.log(`Received: ${received}`);
-
     if (this.#nextToSend > received + this.#PacketBufferSize) {
       for (let i = received + 1; i <= received + this.#PacketBufferSize; i++) {
         if (i >= this.#packets.length) return;
