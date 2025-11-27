@@ -249,7 +249,6 @@ class Serial {
         const timeGapMs = i === 0 ? gap : 0;
 
         if (line === "AT+NAME\r\n")  continue;
-        // if (line === "LB999999\r\n") line = ">>> Leanbot ready >>>\n\n";
         if (line === "LB999999\r\n") {
           line = ">>> Leanbot ready >>>\n";
           if (this.onMessage) this.onMessage(line, timeStamp, timeGapMs);
