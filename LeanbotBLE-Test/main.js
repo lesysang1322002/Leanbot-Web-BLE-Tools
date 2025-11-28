@@ -74,9 +74,17 @@ const btnCopy             = document.getElementById("btnCopy");
 btnClear.onclick = () => clearSerialLog();
 btnCopy.onclick  = () => copySerialLog();
 
+function formatTimestamp(ts) {
+  const hours        = String(ts.getHours()).padStart(2,'0');
+  const minutes      = String(ts.getMinutes()).padStart(2,'0');
+  const seconds      = String(ts.getSeconds()).padStart(2,'0');
+  const milliseconds = String(ts.getMilliseconds()).padStart(3,'0');
+  return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
+
 leanbot.Serial.onMessage = (message, timeStamp, timeGapMs) => {
   let prefix = "";
-  if (checkboxTimestamp.checked) prefix = `${timeStamp} (+${timeGapMs.toString().padStart(3, "0")}) -> `;
+  if (checkboxTimestamp.checked) prefix = `${formatTimestamp(timeStamp)} (+${timeGapMs.toString().padStart(3, "0")}) -> `;
 
   serialLog.value += prefix + message;
   if (checkboxAutoScroll.checked) setTimeout(() => { serialLog.scrollTop = serialLog.scrollHeight;}, 0);
@@ -356,5 +364,3 @@ leanbot.Uploader.onError = (err) => {
   UploaderTitleUpload.className = "red";
 };
 // End of main.js
-
-

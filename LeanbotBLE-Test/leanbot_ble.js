@@ -221,7 +221,7 @@ class Serial {
     await this.#SerialPipe_char.startNotifications();
     this.#SerialPipe_char.addEventListener("characteristicvaluechanged", (event) => {
       const BLEPacket = new TextDecoder().decode(event.target.value);
-      const Packet_TS = new Date();
+      const Packet_TS = new Date(performance.timeOrigin + event.timeStamp);
       this.#SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS);
     });
 
@@ -237,7 +237,6 @@ class Serial {
       this.#SerialPipe_buffer += BLEPacket;
 
       const PacketTS  = this.#SerialPipe_rxTSQueue.shift();
-      const timeStamp = formatTimestamp(PacketTS);
 
       let lines = this.#SerialPipe_buffer.split("\n");
       this.#SerialPipe_buffer = lines.pop();
@@ -249,12 +248,12 @@ class Serial {
         if (line === "AT+NAME\r\n")  continue;
         if (line === "LB999999\r\n") {
           line = ">>> Leanbot ready >>>\n";
-          if (this.onMessage) this.onMessage(line, timeStamp, timeGapMs);
-          if (this.onMessage) this.onMessage("\n", timeStamp, 0);
+          if (this.onMessage) this.onMessage(line, PacketTS, timeGapMs);
+          if (this.onMessage) this.onMessage("\n", PacketTS, 0);
           continue;
         }
 
-        if (this.onMessage) this.onMessage(line, timeStamp, timeGapMs);
+        if (this.onMessage) this.onMessage(line, PacketTS, timeGapMs);
         this.#SerialPipe_lastTS = PacketTS;
       }
     }
@@ -503,17 +502,6 @@ class Uploader {
   async #DataPipe_sendToLeanbot(packet) {
     await this.#DataPipe_char.writeValueWithoutResponse(packet);
   }
-}
-
-// ======================================================
-// 🔹 TIMESTAMP FORMATTE
-// ======================================================
-function formatTimestamp(ts) {
-  const hours        = String(ts.getHours()).padStart(2,'0');
-  const minutes      = String(ts.getMinutes()).padStart(2,'0');
-  const seconds      = String(ts.getSeconds()).padStart(2,'0');
-  const milliseconds = String(ts.getMilliseconds()).padStart(3,'0');
-  return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
 
 // ======================================================
