@@ -344,11 +344,11 @@ class Uploader {
 
     for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
       await this.#DataPipe_sendToLeanbot(this.#packets[i]);
-      console.log(`Uploader: Sent packet #${i}`);
+      console.log(`[ INIT ] Uploader: Sending packet #${i}`);
       this.#nextToSend++;
     }
 
-    console.log("Waiting for Receive feedback...");
+    // console.log("Waiting for Receive feedback...");
   }
 
   /** Setup Char + Notify + Queue */
@@ -469,20 +469,22 @@ class Uploader {
 
   // ========== Send next packet ==========
   async #onTransferInternal(received) {
-    console.log(`Uploader: Received packet #${received}`);
+    // console.log(`Uploader: Received packet #${received}`);
 
     if (this.#nextToSend > received + this.#PacketBufferSize) {
+      console.log("--------------------------");
       for (let i = received + 1; i <= received + this.#PacketBufferSize; i++) {
         if (i >= this.#packets.length) return;
-        console.log(`Uploader: Re-sending packet #${i}`);
+        console.log(`[RECV ${received}] Uploader: Re-sending packet #${i}`);
         await this.#DataPipe_sendToLeanbot(this.#packets[i]);
       }
+      console.log("--------------------------");
       this.#nextToSend = received + this.#PacketBufferSize + 1;
       return;
     }
 
     while(this.#nextToSend <= received + this.#PacketBufferSize && this.#nextToSend < this.#packets.length){
-      console.log(`Uploader: Sending packet #${this.#nextToSend}`);
+      console.log(`[RECV ${received}] Uploader: Sending packet #${this.#nextToSend}`);
       await this.#DataPipe_sendToLeanbot(this.#packets[this.#nextToSend]);
       this.#nextToSend++;
     }
