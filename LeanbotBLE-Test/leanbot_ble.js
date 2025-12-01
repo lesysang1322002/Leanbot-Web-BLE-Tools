@@ -338,15 +338,16 @@ class Uploader {
     // Reset trạng thái upload
     this.#nextToSend = 0;
     this.#ControlPipe_rxQueue = [];
-    this.#ControlPipe_busy = false;
+    this.#ControlPipe_busy = true;
 
     console.log("Uploader: Start uploading");
-
     for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
       await this.#DataPipe_sendToLeanbot(this.#packets[i]);
       console.log(`[ INIT ] Uploader: Sending packet #${i}`);
       this.#nextToSend++;
     }
+    
+    this.#ControlPipe_busy = false;
 
     // console.log("Waiting for Receive feedback...");
   }
@@ -503,6 +504,12 @@ class Uploader {
   // ========== Data Pipe Communication ==========
   async #DataPipe_sendToLeanbot(packet) {
     await this.#DataPipe_char.writeValueWithoutResponse(packet);
+  }
+
+  cancel() {
+    this.#ControlPipe_rxQueue = []; 
+    this.#nextToSend = this.#packets.length;
+    this.#ControlPipe_busy = true;
   }
 }
 

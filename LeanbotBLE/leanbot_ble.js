@@ -340,7 +340,7 @@ class Uploader {
     // Reset trạng thái upload
     this.#nextToSend = 0;
     this.#ControlPipe_rxQueue = [];
-    this.#ControlPipe_busy = false;
+    this.#ControlPipe_busy = true;
 
     console.log("Uploader: Start uploading");
 
@@ -349,6 +349,8 @@ class Uploader {
       console.log(`Uploader: Sent packet #${i}`);
       this.#nextToSend++;
     }
+
+    this.#ControlPipe_busy = false;
 
     console.log("Waiting for Receive feedback...");
   }
@@ -393,6 +395,7 @@ class Uploader {
   // ========== Queue handler ==========
   async #ControlPipe_rxQueueHandler() {
     if (this.#ControlPipe_busy) return;
+    console.log("Uploader: Processing ControlPipe RX Queue...");
     this.#ControlPipe_busy = true;
 
     while (this.#ControlPipe_rxQueue.length > 0) {
