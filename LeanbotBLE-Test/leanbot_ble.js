@@ -409,16 +409,6 @@ class Uploader {
     this.#ControlPipe_busy = false;
   };
 
-  #calcPacketsHash(maxIndex) {
-    const md5 = new SparkMD5.ArrayBuffer();
-
-    for (let i = 0; i <= maxIndex; i++) {
-      md5.append(this.#packets[i].buffer);
-    }
-
-    return md5.end().toUpperCase();
-  }
-
   // ========== Message Processor ==========
   async #onMessageInternal(LineMessage) {
     let m = null;
@@ -439,7 +429,7 @@ class Uploader {
       console.log(`recvived Hash = ${recvHash}`);
 
       if (recvHash) {
-        const expected = this.#calcPacketsHash(progress);
+        const expected = calcPacketsHash(progress);
         console.log(`expected Hash = ${expected}`);
         if (recvHash !== expected) {
           console.error(
@@ -688,4 +678,14 @@ let packetsSent = [];
 
 function onSendPacket(bytes) {
   packetsSent.push(bytes);
+}
+
+function calcPacketsHash(maxIndex) {
+  const md5 = new SparkMD5.ArrayBuffer();
+
+  for (let i = 0; i <= maxIndex; i++) {
+    md5.append(packetsSent[i].buffer);
+  }
+
+  return md5.end().toUpperCase();
 }
