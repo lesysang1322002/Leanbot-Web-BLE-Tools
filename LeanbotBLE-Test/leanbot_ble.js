@@ -292,6 +292,7 @@ class Uploader {
 
   // Upload state
   #packets           = [];
+  #packetHashes      = [];
   #nextToSend        = 0;
   #PacketBufferSize  = 4;
   #totalBytesData    = 0;
@@ -331,6 +332,24 @@ class Uploader {
     // Chuyển toàn bộ HEX sang gói BLE
     this.#packets = convertHexToBlePackets(hexText);
 
+    // Compute packet hash (MD5 tích lũy 0 → i cho từng packet)
+    const md5 = new SparkMD5.ArrayBuffer();
+    md5.reset();   // reset trạng thái MD5 về ban đầu
+
+    for (let i = 0; i < this.#packets.length; i++) {
+      // Cộng dồn thêm packet i vào hash tổng
+      md5.append(this.#packets[i].buffer);
+
+      // Lưu trạng thái hiện tại để tí nữa khôi phục (tiếp tục hash)
+      const state = md5.getState();
+
+      // MD5 tạm thời từ packet 0 → i
+      this.#packetHashes[i] = md5.end().toUpperCase().substring(0, 8);
+
+      // Khôi phục lại state để vòng sau append tiếp (không hash lại từ đầu)
+      md5.setState(state);
+    }
+
     const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
     const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
     this.#totalBytesData = Math.ceil(dataBytes / 128) * 128; // Làm tròn lên bội số của 128 bytes
@@ -339,8 +358,6 @@ class Uploader {
     this.#nextToSend = 0;
     this.#ControlPipe_rxQueue = [];
     this.#ControlPipe_busy = true;
-    this.isTransferring = false;
-    packetsSent = [];
 
     console.log("Uploader: Start uploading");
     for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
@@ -429,7 +446,7 @@ class Uploader {
       console.log(`recvived Hash = ${recvHash}`);
 
       if (recvHash) {
-        const expected = calcPacketsHash(progress);
+        const expected = this.#packetHashes[progress];
         console.log(`expected Hash = ${expected}`);
         if (recvHash !== expected) {
           console.error(
@@ -520,7 +537,7 @@ class Uploader {
   // ========== Data Pipe Communication ==========
   async #DataPipe_sendToLeanbot(packet) {
     await this.#DataPipe_char.writeValueWithoutResponse(packet);
-    onSendPacket(packet);
+    // onSendPacket(packet);
   }
 
   cancel() {
@@ -669,23 +686,4 @@ function convertHexToBlePackets(hexText) {
     lastAddr = block.address + data.length;
   }
   return packets;
-}
-
-// ======================================================
-// 🔹 PACKETS HASH CALCULATOR (MD5)
-// ======================================================
-let packetsSent = [];
-
-function onSendPacket(bytes) {
-  packetsSent.push(bytes);
-}
-
-function calcPacketsHash(maxIndex) {
-  const md5 = new SparkMD5.ArrayBuffer();
-
-  for (let i = 0; i <= maxIndex; i++) {
-    md5.append(packetsSent[i].buffer);
-  }
-
-  return md5.end().toUpperCase();
 }
