@@ -409,6 +409,16 @@ class Uploader {
     this.#ControlPipe_busy = false;
   };
 
+  #calcPacketsHash(maxIndex) {
+    const md5 = new SparkMD5.ArrayBuffer();
+
+    for (let i = 0; i <= maxIndex; i++) {
+      md5.append(this.#packets[i].buffer);
+    }
+
+    return md5.end().toUpperCase();
+  }
+
   // ========== Message Processor ==========
   async #onMessageInternal(LineMessage) {
     let m = null;
@@ -423,17 +433,13 @@ class Uploader {
 
     // Transfer
     if (m = LineMessage.match(/Receive\s+(-?\d+)(?:\s+(\S+))?/i)) {
+      const totalPackets = this.#packets.length - 1;
       const progress = parseInt(m[1]);
       const recvHash = m[2] ? m[2].toUpperCase() : null;
       console.log(`recvived Hash = ${recvHash}`);
 
-      const totalPackets = this.#packets.length - 1;
-
-      this.isTransferring = false;
-      if (progress === totalPackets) this.isTransferring = true;
-
       if (recvHash) {
-        const expected = calcPacketsHash(progress);
+        const expected = this.#calcPacketsHash(progress);
         console.log(`expected Hash = ${expected}`);
         if (recvHash !== expected) {
           console.error(
@@ -443,9 +449,11 @@ class Uploader {
           return; // stop transfer
         }
       }
+       
+      this.isTransferring = false;
+      if (progress === totalPackets) this.isTransferring = true;
 
       await this.#onTransferInternal(progress);
-
       if (this.onTransfer) this.onTransfer(progress + 1, totalPackets);
       return;
     }
@@ -680,14 +688,4 @@ let packetsSent = [];
 
 function onSendPacket(bytes) {
   packetsSent.push(bytes);
-}
-
-function calcPacketsHash(maxIndex) {
-  const md5 = new SparkMD5.ArrayBuffer();
-
-  for (let i = 0; i <= maxIndex; i++) {
-    md5.append(packetsSent[i].buffer);
-  }
-
-  return md5.end().toUpperCase();
 }
