@@ -339,6 +339,8 @@ class Uploader {
     this.#nextToSend = 0;
     this.#ControlPipe_rxQueue = [];
     this.#ControlPipe_busy = true;
+    this.isTransferring = false;
+    packetsSent = [];
 
     console.log("Uploader: Start uploading");
     for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
@@ -420,15 +422,31 @@ class Uploader {
     }
 
     // Transfer
-    if (m = LineMessage.match(/Receive\s+(-?\d+)/i)) {
+    if (m = LineMessage.match(/Receive\s+(-?\d+)(?:\s+(\S+))?/i)) {
       const progress = parseInt(m[1]);
-      const totalPackets = this.#packets.length - 1; // Không tính EOF packet
+      const recvHash = m[2] ? m[2].toUpperCase() : null;
+      console.log(`recvived Hash = ${recvHash}`);
+
+      const totalPackets = this.#packets.length - 1;
 
       this.isTransferring = false;
       if (progress === totalPackets) this.isTransferring = true;
-      
+
+      if (recvHash) {
+        const expected = calcPacketsHash(progress);
+        console.log(`expected Hash = ${expected}`);
+        if (recvHash !== expected) {
+          console.error(
+            "Transfer Error: Hash mismatch. ESP32:", recvHash, "WEB:", expected
+          );
+          if(this.onTransferError) this.onTransferError();
+          return; // stop transfer
+        }
+      }
+
       await this.#onTransferInternal(progress);
-      if (this.onTransfer) this.onTransfer(progress + 1, totalPackets); // vì Received = N nghĩa là đã nhận N+1 packet
+
+      if (this.onTransfer) this.onTransfer(progress + 1, totalPackets);
       return;
     }
 
@@ -504,6 +522,7 @@ class Uploader {
   // ========== Data Pipe Communication ==========
   async #DataPipe_sendToLeanbot(packet) {
     await this.#DataPipe_char.writeValueWithoutResponse(packet);
+    onSendPacket(packet);
   }
 
   cancel() {
@@ -652,4 +671,23 @@ function convertHexToBlePackets(hexText) {
     lastAddr = block.address + data.length;
   }
   return packets;
+}
+
+// ======================================================
+// 🔹 PACKETS HASH CALCULATOR (MD5)
+// ======================================================
+let packetsSent = [];
+
+function onSendPacket(bytes) {
+  packetsSent.push(bytes);
+}
+
+function calcPacketsHash(maxIndex) {
+  const md5 = new SparkMD5.ArrayBuffer();
+
+  for (let i = 0; i <= maxIndex; i++) {
+    md5.append(packetsSent[i].buffer);
+  }
+
+  return md5.end().toUpperCase();
 }
