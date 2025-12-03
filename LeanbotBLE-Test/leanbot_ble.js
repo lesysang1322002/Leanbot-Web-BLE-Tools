@@ -439,11 +439,10 @@ class Uploader {
 
       if (recvHash) {
         const expected = this.#packetHashes[progress];
+        this.#packetHashes[progress] = null;
         console.log(`expected Hash = ${expected}`);
         if (recvHash !== expected) {
-          console.error(
-            "Transfer Error: Hash mismatch. ESP32:", recvHash, "WEB:", expected
-          );
+          console.error("Transfer Error: Hash mismatch. ESP32:", recvHash, "WEB:", expected);
           if(this.onTransferError) this.onTransferError();
           return; // stop transfer
         }
