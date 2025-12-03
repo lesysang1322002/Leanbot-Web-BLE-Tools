@@ -534,8 +534,15 @@ class Uploader {
 
   // ========== Data Pipe Communication ==========
   async #DataPipe_sendToLeanbot(packet) {
-    await this.#DataPipe_char.writeValueWithoutResponse(packet);
-    // onSendPacket(packet);
+    try {
+      await this.#DataPipe_char.writeValueWithoutResponse(packet);
+    } catch (err) {
+      console.log("Write Error:", err);
+
+      this.isUploadSessionActive = false;
+
+      if (this.onTransferError) this.onTransferError(err);
+    }
   }
 
   cancel() {
