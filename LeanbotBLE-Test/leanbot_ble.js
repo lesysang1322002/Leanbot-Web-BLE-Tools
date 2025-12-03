@@ -446,6 +446,7 @@ class Uploader {
       if (recvHash) {
         const expected = this.#packetHashes[progress];
         if (recvHash !== expected) {
+          this.isUploadSessionActive = false;
           console.error("Transfer Error: Hash mismatch. ESP32:", recvHash, "WEB:", expected);
           if (this.onTransferError) this.onTransferError();
           return; // stop transfer
@@ -528,7 +529,7 @@ class Uploader {
 
   async #ControlPipe_onReceiveFromLeanbot(packet){
     if (this.isUploadSessionActive !== true) return;
-    
+
     this.#ControlPipe_rxQueue.push(packet);
     setTimeout(async () => await this.#ControlPipe_rxQueueHandler(), 0);
   }
@@ -538,7 +539,7 @@ class Uploader {
     try {
       await this.#DataPipe_char.writeValueWithoutResponse(packet);
     } catch (err) {
-      console.log("Write Error:", err);
+      console.error("Write Error:", err);
 
       this.isUploadSessionActive = false;
 
