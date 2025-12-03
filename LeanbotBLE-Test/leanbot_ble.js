@@ -122,6 +122,9 @@ export class LeanbotBLE {
     console.log("Callback onDisconnect: Enabled");
     this.#device.addEventListener("gattserverdisconnected", () => {
       console.log("Device disconnected", this.#device.name);
+
+      this.Uploader.isUploadSessionActive = false;
+
       if (this.onDisconnect) this.onDisconnect();
       
       if (this.Uploader.isTransferring === false) {
@@ -315,6 +318,8 @@ class Uploader {
   onWriteError    = null;
   onVerifyError   = null;
 
+  isUploadSessionActive = null;
+
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
     return !!this.#DataPipe_char && !!this.#ControlPipe_char;
@@ -326,6 +331,8 @@ class Uploader {
       console.log("Uploader Error: Uploader characteristic not found.");
       return;
     }
+
+    this.isUploadSessionActive = true;
 
     console.log("Uploader: Start uploading HEX...");
     
@@ -435,15 +442,12 @@ class Uploader {
       const totalPackets = this.#packets.length - 1;
       const progress = parseInt(m[1]);
       const recvHash = m[2] ? m[2].toUpperCase() : null;
-      console.log(`recvived Hash = ${recvHash}`);
 
       if (recvHash) {
         const expected = this.#packetHashes[progress];
-        this.#packetHashes[progress] = null;
-        console.log(`expected Hash = ${expected}`);
         if (recvHash !== expected) {
           console.error("Transfer Error: Hash mismatch. ESP32:", recvHash, "WEB:", expected);
-          if(this.onTransferError) this.onTransferError();
+          if (this.onTransferError) this.onTransferError();
           return; // stop transfer
         }
       }
@@ -472,12 +476,14 @@ class Uploader {
 
     // Success
     if (/Upload success/i.test(LineMessage)) {
+      this.isUploadSessionActive = false;
       if (this.onSuccess) this.onSuccess();
       return;
     }
 
     // Errors
     if (/Write failed|Verify failed/i.test(LineMessage)) {
+      this.isUploadSessionActive = false;
       if (this.onError) this.onError(LineMessage);
     }
 
@@ -521,6 +527,7 @@ class Uploader {
   }
 
   async #ControlPipe_onReceiveFromLeanbot(packet){
+    if (this.isUploadSessionActive !== true) return;
     this.#ControlPipe_rxQueue.push(packet);
     setTimeout(async () => await this.#ControlPipe_rxQueueHandler(), 0);
   }
