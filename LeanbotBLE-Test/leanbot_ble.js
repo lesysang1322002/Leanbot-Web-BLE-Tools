@@ -528,6 +528,7 @@ class Uploader {
 
   async #ControlPipe_onReceiveFromLeanbot(packet){
     if (this.isUploadSessionActive !== true) return;
+    
     this.#ControlPipe_rxQueue.push(packet);
     setTimeout(async () => await this.#ControlPipe_rxQueueHandler(), 0);
   }
@@ -541,7 +542,7 @@ class Uploader {
 
       this.isUploadSessionActive = false;
 
-      if (this.onTransferError) this.onTransferError(err);
+      if (this.onTransferError) this.onTransferError();
     }
   }
 
