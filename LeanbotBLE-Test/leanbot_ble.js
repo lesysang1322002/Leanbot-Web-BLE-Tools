@@ -334,20 +334,12 @@ class Uploader {
 
     // Compute packet hash (MD5 tích lũy 0 → i cho từng packet)
     const md5 = new SparkMD5.ArrayBuffer();
-    md5.reset();   // reset trạng thái MD5 về ban đầu
-
+    md5.reset();   
     for (let i = 0; i < this.#packets.length; i++) {
-      // Cộng dồn thêm packet i vào hash tổng
       md5.append(this.#packets[i].buffer);
-
-      // Lưu trạng thái hiện tại để tí nữa khôi phục (tiếp tục hash)
       const state = md5.getState();
-
-      // MD5 tạm thời từ packet 0 → i
       this.#packetHashes[i] = md5.end().toUpperCase().substring(0, 8);
-
-      // Khôi phục lại state để vòng sau append tiếp (không hash lại từ đầu)
-      md5.setState(state);
+      md5.setState(state); // to resume an incremental md5
     }
 
     const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
