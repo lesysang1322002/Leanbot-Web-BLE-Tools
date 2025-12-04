@@ -524,7 +524,7 @@ class Uploader {
 
     if (this.timeoutTimer){
       console.log(`[RECV ${received}] Uploader: Clear timeout`);
-      clearTimeout(this.timeoutTimer);
+      clearInterval(this.timeoutTimer);
       this.timeoutTimer = null;
       this.timeoutCount = 0;
     }
@@ -533,7 +533,7 @@ class Uploader {
 
     console.log(`[RECV ${received}] Uploader: Setting timeout for packet #${received + 1}`);
 
-    this.timeoutTimer = setTimeout(async () => {
+    this.timeoutTimer = setInterval(async () => {
       this.timeoutCount++;
       console.log(`[TIMEOUT Trial ${this.timeoutCount}] Uploader: Timeout waiting for packet #${received + 1} response`);
 
@@ -553,6 +553,9 @@ class Uploader {
       this.isSending = false;
       
       if (this.timeoutCount >= 5) {
+        clearInterval(this.timeoutTimer);
+        this.timeoutTimer = null;
+        console.log(`Uploader: Transfer failed due to repeated timeouts.`);
         this.isUploadSessionActive = false;
         if (this.onTransferError) this.onTransferError(); 
       }
