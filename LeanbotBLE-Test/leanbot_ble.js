@@ -555,7 +555,7 @@ class Uploader {
       if (this.timeoutCount >= 5) {
         clearInterval(this.timeoutTimer);
         this.timeoutTimer = null;
-        console.log(`Uploader: Transfer failed due to repeated timeouts.`);
+        console.log(`Uploader: Transfer Error.`);
         this.isUploadSessionActive = false;
         if (this.onTransferError) this.onTransferError(); 
       }
