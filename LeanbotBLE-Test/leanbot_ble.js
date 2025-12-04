@@ -500,27 +500,69 @@ class Uploader {
   };
 
   // ========== Send next packet ==========
-  async #onTransferInternal(received) {
-    // console.log(`Uploader: Received packet #${received}`);
+  timeoutDuration = 200;
+  timeoutCount = 0;
+  timeoutTimer = null;
+  isSending = false;
 
-    if (this.#nextToSend > received + this.#PacketBufferSize) {
-      console.log("--------------------------");
-      for (let i = received + 1; i <= received + this.#PacketBufferSize; i++) {
-        if (i >= this.#packets.length) return;
-        console.log(`[RECV ${received}] Uploader: Re-sending packet #${i}`);
-        await this.#DataPipe_sendToLeanbot(this.#packets[i]);
-      }
-      console.log("--------------------------");
-      this.#nextToSend = received + this.#PacketBufferSize + 1;
+  async #onTransferInternal(received) {
+    if (this.#nextToSend > received + this.#PacketBufferSize){
+      console.log(`[RECV ${received}] Uploader: Not the first time, ignore`);
       return;
     }
 
-    while(this.#nextToSend <= received + this.#PacketBufferSize && this.#nextToSend < this.#packets.length){
+    // Gửi các gói tin tiếp theo nếu chưa gửi hết
+    while(this.#nextToSend <= received + this.#PacketBufferSize && this.#nextToSend < this.#packets.length) {
+      while (this.isSending) await new Promise(resolve => setTimeout(resolve, 5));  // Chờ 5ms rồi kiểm tra lại
+  
       console.log(`[RECV ${received}] Uploader: Sending packet #${this.#nextToSend}`);
+      this.isSending = true;
       await this.#DataPipe_sendToLeanbot(this.#packets[this.#nextToSend]);
+      this.isSending = false;
       this.#nextToSend++;
     }
-  };
+
+    if (this.timeoutTimer){
+      console.log(`[RECV ${received}] Uploader: Clear timeout`);
+      clearTimeout(this.timeoutTimer);
+      this.timeoutTimer = null;
+      this.timeoutCount = 0;
+    }
+
+    if (received + 1 >= this.#packets.length) return;
+
+    console.log(`[RECV ${received}] Uploader: Setting timeout for packet #${received + 1}`);
+
+    this.timeoutTimer = setTimeout(async () => {
+      this.timeoutCount++;
+      console.log(`[TIMEOUT Trial ${this.timeoutCount}] Uploader: Timeout waiting for packet #${received + 1} response`);
+
+      while (this.isSending) await new Promise(resolve => setTimeout(resolve, 5));  // Chờ 5ms rồi kiểm tra lại
+
+      this.isSending = true;
+      if (this.timeoutCount === 1) {
+        await this.#SendPacketAtIndex(received + 1);
+        await this.#SendPacketAtIndex(received + 2);
+        await this.#SendPacketAtIndex(received + 3);
+      } else if (this.timeoutCount === 2) {
+        await this.#SendPacketAtIndex(received + 1);
+        await this.#SendPacketAtIndex(received + 2);
+      } else if (this.timeoutCount === 3 || this.timeoutCount === 4) {
+        await this.#SendPacketAtIndex(received + 1);
+      } 
+      this.isSending = false;
+      
+      if (this.timeoutCount >= 5) {
+        this.isUploadSessionActive = false;
+        if (this.onTransferError) this.onTransferError(); 
+      }
+    }, this.timeoutDuration);
+  }
+  
+  async #SendPacketAtIndex(index) {
+    if (index >= this.#packets.length) return;
+    await this.#DataPipe_sendToLeanbot(this.#packets[index]);
+  }
 
   // ========== Control Pipe Communication ==========
   async #ControlPipe_sendToLeanbot(packet) {
