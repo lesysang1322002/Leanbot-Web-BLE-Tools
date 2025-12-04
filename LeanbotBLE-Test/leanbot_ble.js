@@ -506,6 +506,12 @@ class Uploader {
   isSending = false;
 
   async #onTransferInternal(received) {
+    // Nếu sau đó nhận lại các Receive N hay Receive (N-d) thì bỏ qua
+    if (this.#nextToSend > received + this.#PacketBufferSize){
+      console.log(`[RECV ${received}] Uploader: Not the first time, ignore`);
+      return;
+    }
+
     // Lần đầu nhận Receive N  thì gửi tiếp cho đến (N+4)
     while(this.#nextToSend <= received + this.#PacketBufferSize && this.#nextToSend < this.#packets.length) {
       // Đợi nếu đang gửi, trách lỗi khi Timeout cũng đang chạy
@@ -516,12 +522,6 @@ class Uploader {
       await this.#DataPipe_sendToLeanbot(this.#packets[this.#nextToSend]);
       this.isSending = false;
       this.#nextToSend++;
-    }
-
-    // Nếu sau đó nhận lại các Receive N hay Receive (N-d) thì bỏ qua
-    if (this.#nextToSend > received + this.#PacketBufferSize){
-      console.log(`[RECV ${received}] Uploader: Not the first time, ignore`);
-      return;
     }
 
     // Khi nhận Receive mới thì xóa timeout cũ (nếu có)
