@@ -24,7 +24,7 @@ export class LeanbotBLE {
       else {
         this.#device = await navigator.bluetooth.requestDevice({
           filters: [{
-            name: deviceName.trim(),
+            namePrefix: deviceName.trim(),
             services: [LeanbotBLE.SERVICE_UUID],
           }],
         });
