@@ -506,13 +506,9 @@ class Uploader {
   isSending = false;
 
   async #onTransferInternal(received) {
-    if (this.#nextToSend > received + this.#PacketBufferSize){
-      console.log(`[RECV ${received}] Uploader: Not the first time, ignore`);
-      return;
-    }
-
-    // Gửi các gói tin tiếp theo nếu chưa gửi hết
+    // Lần đầu nhận Receive N  thì gửi tiếp cho đến (N+4)
     while(this.#nextToSend <= received + this.#PacketBufferSize && this.#nextToSend < this.#packets.length) {
+      // Đợi nếu đang gửi, trách lỗi khi Timeout cũng đang chạy
       while (this.isSending) await new Promise(resolve => setTimeout(resolve, 5));  // Chờ 5ms rồi kiểm tra lại
   
       console.log(`[RECV ${received}] Uploader: Sending packet #${this.#nextToSend}`);
@@ -522,6 +518,13 @@ class Uploader {
       this.#nextToSend++;
     }
 
+    // Nếu sau đó nhận lại các Receive N hay Receive (N-d) thì bỏ qua
+    if (this.#nextToSend > received + this.#PacketBufferSize){
+      console.log(`[RECV ${received}] Uploader: Not the first time, ignore`);
+      return;
+    }
+
+    // Khi nhận Receive mới thì xóa timeout cũ (nếu có)
     if (this.timeoutTimer){
       console.log(`[RECV ${received}] Uploader: Clear timeout`);
       clearInterval(this.timeoutTimer);
@@ -529,6 +532,7 @@ class Uploader {
       this.timeoutCount = 0;
     }
 
+    // Nếu đã gửi hết rồi thì không cần đặt timeout nữa
     if (received + 1 >= this.#packets.length) return;
 
     console.log(`[RECV ${received}] Uploader: Setting timeout for packet #${received + 1}`);
@@ -556,7 +560,7 @@ class Uploader {
         clearInterval(this.timeoutTimer);
         this.timeoutTimer = null;
         this.timeoutCount = 0;
-        
+
         console.log(`Uploader: Transfer Error.`);
         this.isUploadSessionActive = false;
         if (this.onTransferError) this.onTransferError(); 
