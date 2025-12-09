@@ -781,7 +781,6 @@ function convertHexToBlePackets(hexText) {
 const P1 = 0xDE1AD64D;
 
 /**
- * Cập nhật hash với 1 block 32-bit
  * @param {number} hash - hash hiện tại
  * @param {number} data - dữ liệu 32-bit
  * @returns {number} hash mới (uint32)
