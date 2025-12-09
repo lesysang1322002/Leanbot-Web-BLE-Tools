@@ -777,13 +777,13 @@ function convertHexToBlePackets(hexText) {
 // 🔹 HASH FUNCTION (32-bit)
 // ======================================================
 
-// Hằng số P1 (32-bit unsigned)
+// Hằng số P1
 const P1 = 0xDE1AD64D;
 
 /**
  * Cập nhật hash với 1 block 32-bit
- * @param {number} hash - hash hiện tại (uint32)
- * @param {number} data - dữ liệu 32-bit (uint32)
+ * @param {number} hash - hash hiện tại
+ * @param {number} data - dữ liệu 32-bit
  * @returns {number} hash mới (uint32)
  */
 function updateHash(hash, data) {
@@ -798,7 +798,7 @@ function updateHash(hash, data) {
 
 /**
  * @param {number} hash32 - hash hiện tại (uint32)
- * @param {Uint8Array|number[]} data - mảng byte
+ * @param {Uint8Array} data - mảng byte
  * @returns {number} hash sau khi xử lý hết data
  */
 function updateHashWithBytes(hash32, data) {
@@ -814,7 +814,6 @@ function updateHashWithBytes(hash32, data) {
       (data[idx + 2]   << 16) |
       (data[idx + 3]   << 24);
 
-    data32 = data32 >>> 0;
     hash32 = updateHash(hash32, data32);
     idx += 4;
   }
@@ -822,8 +821,9 @@ function updateHashWithBytes(hash32, data) {
   // Xử lý phần còn lại 1–3 byte
   if (idx < len) {
     let data32 = 0;
-    for (; idx < len; idx++) {
-      data32 = ((data32 << 8) | data[idx]) >>> 0;
+    for ( ; idx < len; idx++) {
+      data32 <<= 8;
+      data32  |= data[idx];
     }
     hash32 = updateHash(hash32, data32);
   }
