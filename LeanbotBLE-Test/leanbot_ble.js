@@ -119,7 +119,7 @@ export class LeanbotBLE {
 
   async #setupConnection() {
     /** ---------- DISCONNECT EVENT ---------- */
-    //console.log("Callback onDisconnect: Enabled");
+    console.log("Callback onDisconnect: Enabled");
     this.#device.addEventListener("gattserverdisconnected", () => {
       //console.log("Device disconnected", this.#device.name);
 
@@ -147,11 +147,11 @@ export class LeanbotBLE {
     await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
 
     /** ---------- CONNECT CALLBACK ---------- */
-    //console.log("Callback onConnect: Enabled");
+    console.log("Callback onConnect: Enabled");
     if (this.onConnect) this.onConnect();
 
     //** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
-    //console.log("Saving device to localStorage:", this.#device.name);
+    console.log("Saving device to localStorage:", this.#device.name);
     localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
   }
 
@@ -194,7 +194,7 @@ class Serial {
   async send(data, withResponse = true) {
     try {
       if (!this.isSupported()) {
-        //console.log("Serial.Send Error: Serial not supported");
+        console.log("Serial.Send Error: Serial not supported");
         return;
       }
 
@@ -203,7 +203,7 @@ class Serial {
 
       await this.#SerialPipe_sendToLeanbot(buffer, withResponse);
     } catch (e) {
-      //console.log(`Serial.Send Error: ${e}`);
+      console.log(`Serial.Send Error: ${e}`);
     }
   }
 
@@ -212,12 +212,12 @@ class Serial {
     this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || null;
 
     if (!this.isSupported()) {
-      //console.log("Serial Notify: Serial not supported");
+      console.log("Serial Notify: Serial not supported");
       return;
     }
 
     if (!this.#SerialPipe_char.properties.notify) {
-      //console.log("Serial Notify: Not supported");
+      console.log("Serial Notify: Not supported");
       return;
     }
 
@@ -228,7 +228,7 @@ class Serial {
       this.#SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS);
     });
 
-    //console.log("Callback Serial.onMessage: Enabled");
+    console.log("Callback Serial.onMessage: Enabled");
   }
 
   #SerialPipe_rxQueueHandler() {
@@ -300,7 +300,7 @@ class Uploader {
   #lastReceived      = -1;
   #totalBytesData    = 0;
   #PacketBufferSize  = 0;
-  #MaxPacketBufferSize = 3;
+  #MaxPacketBufferSize = 4;
   
   // Queue state
   #ControlPipe_rxQueue = [];
@@ -330,7 +330,7 @@ class Uploader {
   /** Upload HEX */
   async upload(hexText) {
     if (!this.isSupported()) {
-      //console.log("Uploader Error: Uploader characteristic not found.");
+      console.log("Uploader Error: Uploader characteristic not found.");
       return;
     }
 
@@ -343,8 +343,8 @@ class Uploader {
     const hashType = window.HASH || 2; // 1 = MD5, 2 = HASH32
     this.#packetHashes = [];
 
-    if (hashType == 1) this.#computePacketHashesMD5();
-    if (hashType == 2) this.#computePacketHashesHash32();
+    if (hashType === 1) this.#computePacketHashesMD5();
+    if (hashType === 2) this.#computePacketHashesHash32();
 
     const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
     const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
@@ -357,16 +357,16 @@ class Uploader {
     this.#ControlPipe_busy = true;
     this.#PacketBufferSize = this.#MaxPacketBufferSize;
 
-    //console.log('[START] Initializing upload......');
+    console.log('[START] Initializing upload......');
     for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
       await this.#DataPipe_sendToLeanbot(this.#packets[i]);
-      //console.log(`Uploader: Sending packet #${i}`);
+      console.log(`Uploader: Sending packet #${i}`);
       this.#nextToSend++;
     }
     
     this.#ControlPipe_busy = false;
 
-    // //console.log("Waiting for Receive feedback...");
+    // console.log("Waiting for Receive feedback...");
   }
 
   // Kiểu 1: MD5 tích lũy
@@ -396,12 +396,12 @@ class Uploader {
     this.#ControlPipe_char = characteristics[Uploader.ControlPipe_UUID] || null;
 
     if (!this.isSupported()) {
-      //console.log("Uploader Notify: Uploader not supported");
+      console.log("Uploader Notify: Uploader not supported");
       return;
     }
 
     if (!this.#ControlPipe_char.properties.notify) {
-      //console.log("Uploader Notify: Not supported");
+      console.log("Uploader Notify: Not supported");
       return;
     }
 
@@ -411,7 +411,7 @@ class Uploader {
       this.#ControlPipe_onReceiveFromLeanbot(BLEPacket);
     });
 
-    //console.log("Callback Uploader.onMessage: Enabled");
+    console.log("Callback Uploader.onMessage: Enabled");
 
     // Các lệnh thiết lập (nếu có)
     if (BLE_MaxLength) {
@@ -464,13 +464,13 @@ class Uploader {
     if (m = LineMessage.match(/Receive\s+(-?\d+)(?:\s+(\S+))?/i)) {
       const totalPackets = this.#packets.length - 1;
       const progress = parseInt(m[1]);
-      console.log(`[RECV ${progress}]`);
+      // console.log(`[RECV ${progress}]`);
       const recvHash = m[2] ? m[2].toUpperCase() : null;
-      console.log(`Received Hash:`, recvHash);
+      // console.log(`Received Hash:`, recvHash);
 
       if (recvHash) {
         const expected = this.#packetHashes[progress];
-        console.log(`Expected Hash:`, expected);
+        // console.log(`Expected Hash:`, expected);
         if (recvHash !== expected) {
           this.isUploadSessionActive = false;
           console.error("Transfer Error: Hash mismatch. ESP32:", recvHash, "WEB:", expected);
@@ -555,15 +555,15 @@ class Uploader {
       this.#nextToSend = this.#lastReceived + this.#PacketBufferSize;
 
       this.#timeoutCount++;
-      //console.log(`[TIMEOUT] TRIAL ${this.#timeoutCount}: Waiting for packet #${this.#nextToSend} response`);
+      console.log(`[TIMEOUT] TRIAL ${this.#timeoutCount}: Waiting for packet #${this.#nextToSend} response`);
       
-      //console.log(`[TIMEOUT] Uploader: Resending packet #${this.#nextToSend}`);
+      console.log(`[TIMEOUT] Uploader: Resending packet #${this.#nextToSend}`);
       await this.#sendPacket(this.#nextToSend);
       this.#nextToSend++;
       
       if (this.#timeoutCount >= 5) {
         this.#clearTimeoutTimer();
-        //console.log(`Uploader: Transfer Error.`);
+        console.log(`Uploader: Transfer Error.`);
         this.isUploadSessionActive = false;
         if (this.onTransferError) this.onTransferError(); 
       }
@@ -571,10 +571,10 @@ class Uploader {
   }
 
   async #onTransferInternal(received) {
-    //console.log(`[RECV ${received}] onTransferInternal called`);
+    console.log(`[RECV ${received}] onTransferInternal called`);
 
     if (received <= this.#lastReceived){
-      //console.log(`Uploader: Not the first time, ignore`);
+      console.log(`Uploader: Not the first time, ignore`);
       return;
     }
 
@@ -584,7 +584,7 @@ class Uploader {
 
     const nextToSendLimit = received + this.#PacketBufferSize;
     while(this.#nextToSend <= nextToSendLimit && this.#nextToSend < this.#packets.length) {
-      //console.log(`Uploader: Sending packet #${this.#nextToSend}`);
+      console.log(`Uploader: Sending packet #${this.#nextToSend}`);
       await this.#sendPacket(this.#nextToSend);
       this.#nextToSend++;
     }
@@ -592,11 +592,11 @@ class Uploader {
     this.#clearTimeoutTimer();
 
     if (received + 1 >= this.#packets.length) {
-      //console.log(`Uploader: Leanbot received all packets.`);
+      console.log(`Uploader: Leanbot received all packets.`);
       return;
     }
 
-    //console.log(`Uploader: Setting timeout for packet #${received + 1}`);
+    console.log(`Uploader: Setting timeout for packet #${received + 1}`);
     this.#startTimeoutForNextPacket();
   }
 
@@ -679,7 +679,7 @@ function hexLineToBytes(block) {
  */
 function convertHexToBlePackets(hexText) {
   const BLE_MaxLength = window.BLE_MaxLength || 512; // Mặc định 512 nếu không có thiết lập
-  //console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
+  console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
 
   // --- STEP 0: Split HEX text into LinesMessage ---
   const LinesMessage = hexText.split(/\r?\n/).filter(LineMessage => LineMessage.trim().length > 0);

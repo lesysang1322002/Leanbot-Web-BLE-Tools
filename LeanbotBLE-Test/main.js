@@ -6,7 +6,7 @@ import { LeanbotBLE } from "./leanbot_ble.js";
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
-window.HASH          = params.get("HASH");
+window.HASH          = parseInt(params.get("HASH"));
 
 console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
