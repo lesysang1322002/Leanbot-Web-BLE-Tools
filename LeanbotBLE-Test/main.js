@@ -42,7 +42,7 @@ leanbot.onConnect = () => {
 }
 
 leanbot.onDisconnect = () => {
-  restoreFullSerialLog();
+  // restoreFullSerialLog();
 
   leanbotStatus.style.display = "none";
 
@@ -107,20 +107,20 @@ function copySerialLog() {
 let fullSerialBackup = null;
 
 function trimSerialLogTo30() {
-  // const lines = serialLog.value.split("\n");
-  // if (lines.length <= 30) return;
+  const lines = serialLog.value.split("\n");
+  if (lines.length <= 30) return;
 
-  // if (fullSerialBackup === null) fullSerialBackup = serialLog.value;
+  if (fullSerialBackup === null) fullSerialBackup = serialLog.value;
 
-  // const last30 = lines.slice(-30);
-  // serialLog.value = last30.join("\n");
+  const last30 = lines.slice(-30);
+  serialLog.value = last30.join("\n");
 }
 
 function restoreFullSerialLog() {
-  // if (fullSerialBackup === null) return;
+  if (fullSerialBackup === null) return;
 
-  // serialLog.value = fullSerialBackup;
-  // fullSerialBackup = null;
+  serialLog.value = fullSerialBackup;
+  fullSerialBackup = null;
 }
 
 // ================== Send Command ==================
@@ -219,7 +219,7 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
   
-  trimSerialLogTo30();
+  // trimSerialLogTo30();
   uiUploadDialogOpen();
 
   compileStart = performance.now();
@@ -256,7 +256,7 @@ UploaderBtnClose.onclick = () => {
   if (UploaderBtnClose.innerText === "Cancel") {
     leanbot.Uploader.cancel();
     UploaderBtnClose.innerText = "Close";
-    restoreFullSerialLog();
+    // restoreFullSerialLog();
   }
   UploaderDialog.style.display = "none";
 };
@@ -354,7 +354,7 @@ leanbot.Uploader.onVerifyError = () => {
 };
 
 leanbot.Uploader.onSuccess = () => {
-  restoreFullSerialLog();
+  // restoreFullSerialLog();
   UploaderTitleUpload.className = "green";
   UploaderBtnClose.innerText = "Close";
   if (UploaderAutoClose.checked) {
@@ -366,7 +366,7 @@ leanbot.Uploader.onSuccess = () => {
 };
 
 leanbot.Uploader.onError = (err) => {
-  restoreFullSerialLog();
+  // restoreFullSerialLog();
   UploaderBtnClose.innerText = "Close";
   UploaderTitleUpload.className = "red";
 };

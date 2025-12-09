@@ -778,7 +778,7 @@ function convertHexToBlePackets(hexText) {
 // ======================================================
 
 // Hằng số P1 (32-bit unsigned)
-const P1 = 0x5E62C719 >>> 0;
+const P1 = 0xDE1AD64D >>> 0;
 
 /**
  * Cập nhật hash với 1 block 32-bit
@@ -788,9 +788,11 @@ const P1 = 0x5E62C719 >>> 0;
  */
 function updateHash(hash, data) {
   hash = (hash ^ data) >>> 0;
-  hash = (hash + (hash >>> 16)) >>> 0;
-  hash = (hash ^ Math.imul(hash, P1) >>> 0) >>> 0;
-  hash = (hash ^ (hash >> 16)) >>> 0;
+  hash = (hash ^ (hash >>> 15)) >>> 0;
+  hash = Math.imul(hash, P1) >>> 0;
+  hash = (hash ^ (hash >>> 15)) >>> 0;
+  hash = Math.imul(hash, P1) >>> 0;
+  hash = (hash ^ (hash >>> 15)) >>> 0;
   return hash >>> 0;
 }
 
@@ -807,10 +809,10 @@ function updateHashWithBytes(hash32, data) {
   const fullBlocks = (len / 4) | 0;
   for (let i = 0; i < fullBlocks; i++) {
     let data32 =
-      (data[idx]      << 0)  |
-      (data[idx + 1]  << 8)  |
-      (data[idx + 2]  << 16) |
-      (data[idx + 3]  << 24);
+      (data[idx]       << 0)  |
+      (data[idx + 1]   << 8)  |
+      (data[idx + 2]   << 16) |
+      (data[idx + 3]   << 24);
 
     data32 = data32 >>> 0;
     hash32 = updateHash(hash32, data32);
@@ -818,11 +820,10 @@ function updateHashWithBytes(hash32, data) {
   }
 
   // Xử lý phần còn lại 1–3 byte
-  const remain = len - idx;
-  if (remain > 0) {
+  if (idx < len) {
     let data32 = 0 >>> 0;
-    for (let i = 0; i < remain; i++) {
-      data32 |= (data[idx + i] << (8 * i)) >>> 0;
+    for (; idx < len; idx++) {
+      data32 = ((data32 << 8) | (data[idx] & 0xFF)) >>> 0;
     }
     data32 = data32 >>> 0;
     hash32 = updateHash(hash32, data32);
