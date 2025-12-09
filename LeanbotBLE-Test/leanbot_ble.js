@@ -119,9 +119,9 @@ export class LeanbotBLE {
 
   async #setupConnection() {
     /** ---------- DISCONNECT EVENT ---------- */
-    console.log("Callback onDisconnect: Enabled");
+    //console.log("Callback onDisconnect: Enabled");
     this.#device.addEventListener("gattserverdisconnected", () => {
-      console.log("Device disconnected", this.#device.name);
+      //console.log("Device disconnected", this.#device.name);
 
       this.Uploader.isUploadSessionActive = false;
 
@@ -144,14 +144,14 @@ export class LeanbotBLE {
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
-    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval);
+    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
 
     /** ---------- CONNECT CALLBACK ---------- */
-    console.log("Callback onConnect: Enabled");
+    //console.log("Callback onConnect: Enabled");
     if (this.onConnect) this.onConnect();
 
     //** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
-    console.log("Saving device to localStorage:", this.#device.name);
+    //console.log("Saving device to localStorage:", this.#device.name);
     localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
   }
 
@@ -194,7 +194,7 @@ class Serial {
   async send(data, withResponse = true) {
     try {
       if (!this.isSupported()) {
-        console.log("Serial.Send Error: Serial not supported");
+        //console.log("Serial.Send Error: Serial not supported");
         return;
       }
 
@@ -203,7 +203,7 @@ class Serial {
 
       await this.#SerialPipe_sendToLeanbot(buffer, withResponse);
     } catch (e) {
-      console.log(`Serial.Send Error: ${e}`);
+      //console.log(`Serial.Send Error: ${e}`);
     }
   }
 
@@ -212,12 +212,12 @@ class Serial {
     this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || null;
 
     if (!this.isSupported()) {
-      console.log("Serial Notify: Serial not supported");
+      //console.log("Serial Notify: Serial not supported");
       return;
     }
 
     if (!this.#SerialPipe_char.properties.notify) {
-      console.log("Serial Notify: Not supported");
+      //console.log("Serial Notify: Not supported");
       return;
     }
 
@@ -228,7 +228,7 @@ class Serial {
       this.#SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS);
     });
 
-    console.log("Callback Serial.onMessage: Enabled");
+    //console.log("Callback Serial.onMessage: Enabled");
   }
 
   #SerialPipe_rxQueueHandler() {
@@ -297,8 +297,10 @@ class Uploader {
   #packets           = [];
   #packetHashes      = [];
   #nextToSend        = 0;
-  #PacketBufferSize  = 4;
+  #lastReceived      = -1;
   #totalBytesData    = 0;
+  #PacketBufferSize  = 0;
+  #MaxPacketBufferSize = 3;
   
   // Queue state
   #ControlPipe_rxQueue = [];
@@ -328,7 +330,7 @@ class Uploader {
   /** Upload HEX */
   async upload(hexText) {
     if (!this.isSupported()) {
-      console.log("Uploader Error: Uploader characteristic not found.");
+      //console.log("Uploader Error: Uploader characteristic not found.");
       return;
     }
 
@@ -337,7 +339,38 @@ class Uploader {
     // Chuyển toàn bộ HEX sang gói BLE
     this.#packets = convertHexToBlePackets(hexText);
 
-    // Compute packet hash (MD5 tích lũy 0 → i cho từng packet)
+    // Tính toán hash cho từng gói
+    const hashType = window.HASH || 2; // 1 = MD5, 2 = HASH32
+    this.#packetHashes = [];
+
+    if (hashType == 1) this.#computePacketHashesMD5();
+    if (hashType == 2) this.#computePacketHashesHash32();
+
+    const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
+    const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
+    this.#totalBytesData = Math.ceil(dataBytes / 128) * 128; // Làm tròn lên bội số của 128 bytes
+
+    // Reset trạng thái upload
+    this.#nextToSend = 0;
+    this.#lastReceived = -1;
+    this.#ControlPipe_rxQueue = [];
+    this.#ControlPipe_busy = true;
+    this.#PacketBufferSize = this.#MaxPacketBufferSize;
+
+    //console.log('[START] Initializing upload......');
+    for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
+      await this.#DataPipe_sendToLeanbot(this.#packets[i]);
+      //console.log(`Uploader: Sending packet #${i}`);
+      this.#nextToSend++;
+    }
+    
+    this.#ControlPipe_busy = false;
+
+    // //console.log("Waiting for Receive feedback...");
+  }
+
+  // Kiểu 1: MD5 tích lũy
+  #computePacketHashesMD5() {
     const md5 = new SparkMD5.ArrayBuffer();
     md5.reset();   
     for (let i = 0; i < this.#packets.length; i++) {
@@ -346,40 +379,29 @@ class Uploader {
       this.#packetHashes[i] = md5.end().toUpperCase().substring(0, 8);
       md5.setState(state); // to resume an incremental md5
     }
+  }
 
-    const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
-    const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
-    this.#totalBytesData = Math.ceil(dataBytes / 128) * 128; // Làm tròn lên bội số của 128 bytes
-
-    // Reset trạng thái upload
-    this.#nextToSend = 0;
-    this.#ControlPipe_rxQueue = [];
-    this.#ControlPipe_busy = true;
-
-    console.log('[START] Initializing upload......');
-    for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
-      await this.#DataPipe_sendToLeanbot(this.#packets[i]);
-      console.log(`Uploader: Sending packet #${i}`);
-      this.#nextToSend++;
+  // Kiểu 2: hash32 mới
+  #computePacketHashesHash32() {
+    let hash32 = 0 >>> 0; // reset hash32
+    for (let i = 0; i < this.#packets.length; i++) {
+      hash32 = updateHashWithBytes(hash32, this.#packets[i]);
+      this.#packetHashes[i] = hash32.toString(16).toUpperCase().padStart(8, '0');
     }
-    
-    this.#ControlPipe_busy = false;
-
-    // console.log("Waiting for Receive feedback...");
   }
 
   /** Setup Char + Notify + Queue */
-  async setupConnection(characteristics, BLE_MaxLength, BLE_Interval) {
+  async setupConnection(characteristics, BLE_MaxLength, BLE_Interval, HASH) {
     this.#DataPipe_char    = characteristics[Uploader.DataPipe_UUID] || null;
     this.#ControlPipe_char = characteristics[Uploader.ControlPipe_UUID] || null;
 
     if (!this.isSupported()) {
-      console.log("Uploader Notify: Uploader not supported");
+      //console.log("Uploader Notify: Uploader not supported");
       return;
     }
 
     if (!this.#ControlPipe_char.properties.notify) {
-      console.log("Uploader Notify: Not supported");
+      //console.log("Uploader Notify: Not supported");
       return;
     }
 
@@ -389,19 +411,22 @@ class Uploader {
       this.#ControlPipe_onReceiveFromLeanbot(BLEPacket);
     });
 
-    console.log("Callback Uploader.onMessage: Enabled");
+    //console.log("Callback Uploader.onMessage: Enabled");
 
     // Các lệnh thiết lập (nếu có)
     if (BLE_MaxLength) {
       const cmd = `SET BLE_MAX_LENGTH ${BLE_MaxLength}`;
       await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
-      console.log(`Uploader: Set BLE Max Length = ${BLE_MaxLength}`);
     }
 
     if (BLE_Interval) {
       const cmd = `SET BLE_INTERVAL ${BLE_Interval}`;
       await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
-      console.log(`Uploader: Set BLE Interval = ${BLE_Interval}`);
+    }
+
+    if (HASH) {
+      const cmd = `SET HASH ${HASH}`;
+      await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
     }
   }
 
@@ -439,10 +464,13 @@ class Uploader {
     if (m = LineMessage.match(/Receive\s+(-?\d+)(?:\s+(\S+))?/i)) {
       const totalPackets = this.#packets.length - 1;
       const progress = parseInt(m[1]);
+      console.log(`[RECV ${progress}]`);
       const recvHash = m[2] ? m[2].toUpperCase() : null;
+      console.log(`Received Hash:`, recvHash);
 
       if (recvHash) {
         const expected = this.#packetHashes[progress];
+        console.log(`Expected Hash:`, expected);
         if (recvHash !== expected) {
           this.isUploadSessionActive = false;
           console.error("Transfer Error: Hash mismatch. ESP32:", recvHash, "WEB:", expected);
@@ -498,81 +526,78 @@ class Uploader {
   };
 
   // ========== Send next packet ==========
-  timeoutDuration = 200;
-  timeoutCount = 0;
-  timeoutTimer = null;
-  isSending = false;
+  #timeoutDuration = 200;
+  #timeoutCount = 0;
+  #timeoutTimer = null;
+  #isSending = false;
 
-  async #onTransferInternal(received) {
-    console.log(`[RECV ${received}] onTransferInternal called`);
-    // Nếu sau đó nhận lại các Receive N hay Receive (N-d) thì bỏ qua
-    if (this.#nextToSend > received + this.#PacketBufferSize){
-      console.log(`Uploader: Not the first time, ignore`);
-      return;
+  #clearTimeoutTimer() {
+    if (this.#timeoutTimer) {
+      clearInterval(this.#timeoutTimer);
+      this.#timeoutTimer = null;
     }
+    this.#timeoutCount = 0;
+  }
 
-    // Lần đầu nhận Receive N  thì gửi tiếp cho đến (N+4)
-    while(this.#nextToSend <= received + this.#PacketBufferSize && this.#nextToSend < this.#packets.length) {
-      // Đợi nếu đang gửi, trách lỗi khi Timeout cũng đang chạy
-      while (this.isSending) await new Promise(resolve => setTimeout(resolve, 5));  // Chờ 5ms rồi kiểm tra lại
-  
-      console.log(`Uploader: Sending packet #${this.#nextToSend}`);
-      this.isSending = true;
-      await this.#DataPipe_sendToLeanbot(this.#packets[this.#nextToSend]);
-      this.isSending = false;
-      this.#nextToSend++;
-    }
+  async #sendPacket(index) {
+    if (index >= this.#packets.length) return;
 
-    // Khi nhận Receive mới thì xóa timeout cũ (nếu có)
-    if (this.timeoutTimer){
-      clearInterval(this.timeoutTimer);
-      this.timeoutTimer = null;
-      this.timeoutCount = 0;
-    }
+    while (this.#isSending) await new Promise(resolve => setTimeout(resolve, 5));
 
-    // Nếu đã gửi hết rồi thì không cần đặt timeout nữa
-    if (received + 1 >= this.#packets.length) {
-      console.log(`Uploader: Leanbot received all packets.`);
-      return;
-    }
+    this.#isSending = true;
+    await this.#DataPipe_sendToLeanbot(this.#packets[index]);
+    this.#isSending = false;
+  }
 
-    console.log(`Uploader: Setting timeout for packet #${received + 1}`);
+  #startTimeoutForNextPacket() {
+    this.#timeoutTimer = setInterval(async () => {
+      this.#PacketBufferSize = 1;
+      this.#nextToSend = this.#lastReceived + this.#PacketBufferSize;
 
-    this.timeoutTimer = setInterval(async () => {
-      this.timeoutCount++;
-      console.log(`[TIMEOUT] TRIAL ${this.timeoutCount}: Waiting for packet #${received + 1} response`);
-
-      while (this.isSending) await new Promise(resolve => setTimeout(resolve, 5));  // Chờ 5ms rồi kiểm tra lại
-
-      this.isSending = true;
-      if (this.timeoutCount === 1) {
-        await this.#SendPacketAtIndex(received + 1);
-        await this.#SendPacketAtIndex(received + 2);
-        await this.#SendPacketAtIndex(received + 3);
-      } else if (this.timeoutCount === 2) {
-        await this.#SendPacketAtIndex(received + 1);
-        await this.#SendPacketAtIndex(received + 2);
-      } else if (this.timeoutCount === 3 || this.timeoutCount === 4) {
-        await this.#SendPacketAtIndex(received + 1);
-      } 
-      this.isSending = false;
+      this.#timeoutCount++;
+      //console.log(`[TIMEOUT] TRIAL ${this.#timeoutCount}: Waiting for packet #${this.#nextToSend} response`);
       
-      if (this.timeoutCount >= 5) {
-        clearInterval(this.timeoutTimer);
-        this.timeoutTimer = null;
-        this.timeoutCount = 0;
-
-        console.log(`Uploader: Transfer Error.`);
+      //console.log(`[TIMEOUT] Uploader: Resending packet #${this.#nextToSend}`);
+      await this.#sendPacket(this.#nextToSend);
+      this.#nextToSend++;
+      
+      if (this.#timeoutCount >= 5) {
+        this.#clearTimeoutTimer();
+        //console.log(`Uploader: Transfer Error.`);
         this.isUploadSessionActive = false;
         if (this.onTransferError) this.onTransferError(); 
       }
-    }, this.timeoutDuration);
+    }, this.#timeoutDuration);
   }
-  
-  async #SendPacketAtIndex(index) {
-    if (index >= this.#packets.length) return;
-    console.log(`[TIMEOUT] Uploader: Resending packet #${index}`);
-    await this.#DataPipe_sendToLeanbot(this.#packets[index]);
+
+  async #onTransferInternal(received) {
+    //console.log(`[RECV ${received}] onTransferInternal called`);
+
+    if (received <= this.#lastReceived){
+      //console.log(`Uploader: Not the first time, ignore`);
+      return;
+    }
+
+    this.#lastReceived = received;
+
+    if (this.#PacketBufferSize < this.#MaxPacketBufferSize) this.#PacketBufferSize++;
+
+    const nextToSendLimit = received + this.#PacketBufferSize;
+    while(this.#nextToSend <= nextToSendLimit && this.#nextToSend < this.#packets.length) {
+      //console.log(`Uploader: Sending packet #${this.#nextToSend}`);
+      await this.#sendPacket(this.#nextToSend);
+      this.#nextToSend++;
+    }
+
+    this.#clearTimeoutTimer();
+
+    if (received + 1 >= this.#packets.length) {
+      //console.log(`Uploader: Leanbot received all packets.`);
+      return;
+    }
+
+    //console.log(`Uploader: Setting timeout for packet #${received + 1}`);
+    this.#startTimeoutForNextPacket();
   }
 
   // ========== Control Pipe Communication ==========
@@ -602,7 +627,7 @@ class Uploader {
 
   cancel() {
     this.#ControlPipe_rxQueue = []; 
-    this.#nextToSend = this.#packets.length;
+    this.#lastReceived = this.#packets.length;
     this.#ControlPipe_busy = true;
   }
 }
@@ -654,7 +679,7 @@ function hexLineToBytes(block) {
  */
 function convertHexToBlePackets(hexText) {
   const BLE_MaxLength = window.BLE_MaxLength || 512; // Mặc định 512 nếu không có thiết lập
-  console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
+  //console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
 
   // --- STEP 0: Split HEX text into LinesMessage ---
   const LinesMessage = hexText.split(/\r?\n/).filter(LineMessage => LineMessage.trim().length > 0);
@@ -746,4 +771,62 @@ function convertHexToBlePackets(hexText) {
     lastAddr = block.address + data.length;
   }
   return packets;
+}
+
+// ======================================================
+// 🔹 HASH FUNCTION (32-bit)
+// ======================================================
+
+// Hằng số P1 (32-bit unsigned)
+const P1 = 0x5E62C719 >>> 0;
+
+/**
+ * Cập nhật hash với 1 block 32-bit
+ * @param {number} hash - hash hiện tại (uint32)
+ * @param {number} data - dữ liệu 32-bit (uint32)
+ * @returns {number} hash mới (uint32)
+ */
+function updateHash(hash, data) {
+  hash = (hash ^ data) >>> 0;
+  hash = (hash + (hash >>> 16)) >>> 0;
+  hash = (hash ^ Math.imul(hash, P1) >>> 0) >>> 0;
+  hash = (hash ^ (hash >> 16)) >>> 0;
+  return hash >>> 0;
+}
+
+/**
+ * @param {number} hash32 - hash hiện tại (uint32)
+ * @param {Uint8Array|number[]} data - mảng byte
+ * @returns {number} hash sau khi xử lý hết data
+ */
+function updateHashWithBytes(hash32, data) {
+  let idx = 0;
+  const len = data.length;
+
+  // Xử lý các block 4 byte
+  const fullBlocks = (len / 4) | 0;
+  for (let i = 0; i < fullBlocks; i++) {
+    let data32 =
+      (data[idx]      << 0)  |
+      (data[idx + 1]  << 8)  |
+      (data[idx + 2]  << 16) |
+      (data[idx + 3]  << 24);
+
+    data32 = data32 >>> 0;
+    hash32 = updateHash(hash32, data32);
+    idx += 4;
+  }
+
+  // Xử lý phần còn lại 1–3 byte
+  const remain = len - idx;
+  if (remain > 0) {
+    let data32 = 0 >>> 0;
+    for (let i = 0; i < remain; i++) {
+      data32 |= (data[idx + i] << (8 * i)) >>> 0;
+    }
+    data32 = data32 >>> 0;
+    hash32 = updateHash(hash32, data32);
+  }
+
+  return hash32 >>> 0;
 }
