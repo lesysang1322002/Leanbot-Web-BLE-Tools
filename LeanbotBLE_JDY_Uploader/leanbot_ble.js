@@ -683,8 +683,18 @@ class JDYUploader {
       await this.#handleSyncResponse(bytes);
       return;
     }
-    // Nếu đã sync thành công, xử lý dữ liệu đọc flash
-    this.#handleReadFlashResponse(bytes);
+
+    // nếu đang chờ ACK cho write
+    if (this.#pendingPageResolve) {
+      this.#handleReadFlashResponse(bytes);
+      return;
+    }
+
+    // nếu đang chờ ACK cho write
+    if (this.#pendingWriteResolve) {
+      this.#handleWriteAck(bytes);
+      return;
+    }
   }
 
   // --- getSync state ---
@@ -711,7 +721,8 @@ class JDYUploader {
       console.log(">>> Bootloader SYNC success! <<<");
       this.#stopGetSync();  // STOP spamming getSync
       this.#isSynced = true;
-      await this.readFlash(50); // Đọc trang flash đầu tiên
+      await this.readFlash(1); // Đọc trang flash đầu tiên
+      await this.testWriteFlash();
     }
   }
 
@@ -723,36 +734,39 @@ class JDYUploader {
     }
   }
 
-  async readFlash(pageIndex = 0) {
-    const pageSize = 128;
-    const byteAddress = pageIndex * pageSize;
+  async #loadAddress(pageIndex) {
+    const byteAddress = pageIndex * this.#pageSize;
     const wordAddress = byteAddress >> 1;
 
     const addrLow  = wordAddress & 0xFF;
     const addrHigh = (wordAddress >> 8) & 0xFF;
 
-    // 1) LOAD_ADDRESS
-    const loadAddrCmd = new Uint8Array([
+    const cmd = new Uint8Array([
       0x55,      // STK_LOAD_ADDRESS
       addrLow,
       addrHigh,
       0x20       // STK_CRC_EOP
     ]);
 
-    await this.#serial.SerialPipe_sendToLeanbot(loadAddrCmd);
+    await this.#serial.SerialPipe_sendToLeanbot(cmd);
+  }
 
+  async readFlash(pageIndex = 0) {
+    // 1) LOAD_ADDRESS
+    await this.#loadAddress(pageIndex);
+    
     // 2) READ_PAGE
     const readPageCmd = new Uint8Array([
       0x74,      // STK_READ_PAGE
       0x00,      // len_hi
-      pageSize,  // len_lo
+      this.#pageSize,  // len_lo
       0x46,      // 'F'
       0x20       // STK_CRC_EOP
     ]);
 
-    console.log(`[READ] Page ${pageIndex} @ byte address 0x${byteAddress.toString(16).padStart(4, "0").toUpperCase()}`);
+    console.log(`[READ] Page ${pageIndex}`);
 
-    await this.#serial.SerialPipe_sendToLeanbot(readPageCmd);
+    await this.#serial.SerialPipe_sendToLeanbot(readPageCmd, false);
 
     // 3) CHỜ RESPONSE
     const pageData = await this.#waitForReadPage(1000); 
@@ -850,6 +864,111 @@ class JDYUploader {
     console.log("const uint8_t hexdata[] = {");
     console.log(formatHexBlock(pageData));
     console.log("};");
+  }
+
+  #pendingWriteResolve = null;
+  #pendingWriteReject  = null;
+  #writeTimeoutId      = null;
+
+  async writeFlash(pageIndex, pageData) {
+    if (!(pageData instanceof Uint8Array) || pageData.length !== this.#pageSize) {
+      throw new Error(`pageData must be Uint8Array[${this.#pageSize}]`);
+    }
+
+    // 1) LOAD_ADDRESS
+    await this.#loadAddress(pageIndex);
+
+    // 2) PROG_PAGE (ghi 1 page flash)
+    const progPageHeader = new Uint8Array([
+      0x64,             // STK_PROG_PAGE
+      0x00,             // len_hi
+      this.#pageSize,   // len_lo = 128
+      0x46              // 'F' = flash memory
+    ]);
+    const progPageTail = new Uint8Array([0x20]); // STK_CRC_EOP
+
+    console.log(`[WRITE] Page ${pageIndex}`);
+
+    // Gửi header, data, tail
+    await this.#serial.SerialPipe_sendToLeanbot(progPageHeader, false);
+    await this.#serial.SerialPipe_sendToLeanbot(pageData, false);
+    await this.#serial.SerialPipe_sendToLeanbot(progPageTail, false);
+
+    // 3) Chờ ACK 0x14 0x10
+    const ok = await this.#waitForWriteAck(1000);
+
+    console.log("[WRITE] Page", pageIndex, "ACK =", ok);
+
+    return ok; // true nếu nhận được 0x14 0x10
+  }
+
+  #waitForWriteAck(timeoutMs = 1000) {
+    return new Promise((resolve, reject) => {
+      this.#pendingWriteResolve = resolve;
+      this.#pendingWriteReject  = reject;
+
+      this.#writeTimeoutId = setTimeout(() => {
+        this.#pendingWriteResolve = null;
+        this.#pendingWriteReject  = null;
+        reject(new Error("Timeout waiting for PROG_PAGE ACK"));
+      }, timeoutMs);
+    });
+  }
+
+  #clearWriteTimeout() {
+    if (this.#writeTimeoutId) {
+      clearTimeout(this.#writeTimeoutId);
+      this.#writeTimeoutId = null;
+    }
+    this.#pendingWriteResolve = null;
+    this.#pendingWriteReject  = null;
+  }
+
+  #handleWriteAck(bytes) {
+    // 0x14 = STK_INSYNC, 0x10 = STK_OK
+    if (bytes[0] === 0x14 && bytes[1] === 0x10) {
+      this.#pendingWriteResolve?.(true);
+    } else {
+      this.#pendingWriteReject?.(
+        new Error(
+          `Invalid PROG_PAGE ACK: 0x${bytes[0].toString(16)}, 0x${bytes[1].toString(16)}`
+        )
+      );
+    }
+
+    this.#clearWriteTimeout();
+  }
+
+  async testWriteFlash() {
+    // Tạo data test: 0x00, 0x01, 0x02, ... 0x7F
+    const testData = new Uint8Array(this.#pageSize);
+    for (let i = 0; i < this.#pageSize; i++) {
+      testData[i] = i & 0xFF;
+    }
+
+    console.log("[TEST] Writing test pattern to page 1...");
+    await this.writeFlash(1, testData);
+
+    console.log("[TEST] Reading back page 1...");
+    const readBack = await this.readFlash(1);
+
+    // So sánh từng byte
+    let ok = true;
+    for (let i = 0; i < this.#pageSize; i++) {
+      if (readBack[i] !== testData[i]) {
+        console.error(
+          `[TEST] Mismatch at byte ${i}: wrote 0x${testData[i]
+            .toString(16)
+            .padStart(2, "0")}, read 0x${readBack[i].toString(16).padStart(2, "0")}`
+        );
+        ok = false;
+        break;
+      }
+    }
+
+    if (ok) {
+      console.log("[TEST] Write/Read page 1 OK – data matches exactly.");
+    }
   }
 }
 
