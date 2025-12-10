@@ -1,0 +1,1067 @@
+// leanbot_ble.js
+// SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
+
+export class LeanbotBLE {
+  // ===== SERVICE UUID CHUNG =====
+  static SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
+
+  // ---- PRIVATE MEMBERS ----
+  #device  = null;
+  #server  = null;
+  #service = null;
+  #chars   = {};
+
+  // ---------------- BLE CORE ----------------
+  async connect(deviceName = null) {
+    try {
+      // Nếu deviceName rỗng → quét tất cả thiết bị có service UUID tương ứng
+      if (!deviceName || deviceName.trim() === "") {
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
+        });
+      } 
+      // Nếu có deviceName → chỉ quét thiết bị có tên trùng khớp
+      else {
+        this.#device = await navigator.bluetooth.requestDevice({
+          filters: [{
+            name: deviceName.trim(),
+            services: [LeanbotBLE.SERVICE_UUID],
+          }],
+        });
+      }
+      // Thiết lập kết nối BLE
+      await this.#setupConnection();
+      return {  
+        success: true,
+        message: `Connected to ${this.#device.name}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Connection failed: ${error.message || "Unknown error"}`
+      };
+    }
+  }
+
+  async reconnect() {
+    try {
+      if (this.isConnected()) {
+        // Nếu đang kết nối rồi thì không cần làm gì
+        return {
+          success: true,
+          message: `Already connected to ${this.#device.name}`
+        };
+      }
+
+      if (this.#device) {
+        // Nếu đã ngắt kết nối thì kết nối lại
+        await this.#setupConnection();
+        return {
+          success: true,
+          message: `Reconnected to ${this.#device.name}`
+        };
+      }
+
+      // Gọi lại Connect nếu không có thiết bị trong phiên làm việc hiện tại
+      return await this.connect(this.getLeanbotID());
+    } catch (error) {
+      return {
+        success: false,
+        message: `Reconnect failed: ${error.message || "Unknown error"}`
+      };
+    }
+  }
+
+  disconnect() {
+    try {
+      // Không có thiết bị nào được lưu
+      if (!this.#device) {
+        return {
+          success: false,
+          message: "No device found to disconnect. Please connect a device first."
+        };
+      }
+
+      // Thiết bị tồn tại nhưng chưa kết nối
+      if (!this.#device.gatt.connected) {
+        return {
+          success: false,
+          message: "Device is not currently connected."
+        };
+      }
+
+      // Ngắt kết nối
+      this.#device.gatt.disconnect();
+      return {
+        success: true,
+        message: `Disconnected from ${this.#device.name}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Disconnect failed: ${error.message || "Unknown error"}`
+      };
+    }
+  }
+
+  isConnected() {
+    return this.#device?.gatt.connected === true;
+  }
+
+  getLeanbotID() {
+    // Nếu phiên làm việc hiện tại có thiết bị thì trả về tên thiết bị đó
+    if (this.#device) return this.#device.name
+    
+    // Ngược lại lấy từ localStorage
+    const lastDevice = localStorage.getItem("leanbot_device");
+    return lastDevice ? JSON.parse(lastDevice) : "No Leanbot";
+  }
+
+  async #setupConnection() {
+    /** ---------- DISCONNECT EVENT ---------- */
+    console.log("Callback onDisconnect: Enabled");
+    this.#device.addEventListener("gattserverdisconnected", () => {
+      //console.log("Device disconnected", this.#device.name);
+
+      this.Uploader.isUploadSessionActive = false;
+
+      if (this.onDisconnect) this.onDisconnect();
+      
+      if (this.Uploader.isTransferring === false) {
+        if(this.Uploader.onTransferError) this.Uploader.onTransferError();
+      }
+      
+    });
+    
+    /** ---------- GATT CONNECTION ---------- */
+    this.#server = await this.#device.gatt.connect();
+    this.#service = await this.#server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
+
+    /** ---------- CHARACTERISTICS ---------- */
+    const chars = await this.#service.getCharacteristics();
+    this.#chars = {};
+    for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
+    
+    /** ---------- SETUP SUB-CONNECTIONS ---------- */
+    await this.Serial.setupConnection(this.#chars);
+    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
+
+    /** ---------- CONNECT CALLBACK ---------- */
+    console.log("Callback onConnect: Enabled");
+    if (this.onConnect) this.onConnect();
+
+    //** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
+    console.log("Saving device to localStorage:", this.#device.name);
+    localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
+  }
+
+  constructor() {
+    this.onConnect = null;
+    this.onDisconnect = null;
+    
+    this.Serial = new Serial(this);
+    this.Uploader = new Uploader(this);
+    this.JDYUploader = new JDYUploader(this, this.Serial);
+  }
+}
+
+// ======================================================
+// 🔹 SUBMODULE: SERIAL
+// ======================================================
+class Serial {
+  // UUID riêng của Serial
+  static SerialPipe_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+  #SerialPipe_char = null;
+
+  /** Kiểm tra hỗ trợ Serial */
+  isSupported() {
+    return !!this.#SerialPipe_char;
+  }
+
+  /** Callback khi nhận notify Serial */
+  onMessage = null;
+
+  /** Callback chuyển tiếp dữ liệu thô sang JDYUploader */
+  onForwardReponse = null;
+
+  // Queue nhận dữ liệu
+  #SerialPipe_rxQueue   = [];
+  #SerialPipe_rxTSQueue = [];
+  #SerialPipe_busy   = false;
+  #SerialPipe_buffer = "";
+  #SerialPipe_lastTS = null;
+
+  /** Gửi dữ liệu qua đặc tính Serial mặc định (UUID)
+   * @param {string|Uint8Array} data - dữ liệu cần gửi
+   * @param {boolean} withResponse - true = gửi chờ phản hồi, false = gửi nhanh
+   */
+  async send(data, withResponse = true) {
+    try {
+      if (!this.isSupported()) {
+        console.log("Serial.Send Error: Serial not supported");
+        return;
+      }
+
+      // Chuyển dữ liệu sang Uint8Array nếu là chuỗi
+      const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
+
+      await this.SerialPipe_sendToLeanbot(buffer, withResponse);
+    } catch (e) {
+      console.log(`Serial.Send Error: ${e}`);
+    }
+  }
+
+  /** Thiết lập characteristic + notify **/
+  async setupConnection(characteristics) {
+    this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || null;
+
+    if (!this.isSupported()) {
+      console.log("Serial Notify: Serial not supported");
+      return;
+    }
+
+    if (!this.#SerialPipe_char.properties.notify) {
+      console.log("Serial Notify: Not supported");
+      return;
+    }
+
+    await this.#SerialPipe_char.startNotifications();
+    this.#SerialPipe_char.addEventListener("characteristicvaluechanged", (event) => {
+      const bytes = new Uint8Array(event.target.value.buffer); // UploaderJDY needs raw bytes
+      if (this.onForwardReponse) this.onForwardReponse(bytes); // Forward raw bytes to JDYUploader
+      const BLEPacket = new TextDecoder().decode(bytes);
+      const Packet_TS = new Date(performance.timeOrigin + event.timeStamp);
+      this.#SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS);
+    });
+
+    console.log("Callback Serial.onMessage: Enabled");
+  }
+
+  #SerialPipe_rxQueueHandler() {
+    if (this.#SerialPipe_busy) return;
+    this.#SerialPipe_busy = true;
+
+    while (this.#SerialPipe_rxQueue.length > 0) {
+      const BLEPacket = this.#SerialPipe_rxQueue.shift();
+      this.#SerialPipe_buffer += BLEPacket;
+
+      const PacketTS  = this.#SerialPipe_rxTSQueue.shift();
+
+      let lines = this.#SerialPipe_buffer.split("\n");
+      this.#SerialPipe_buffer = lines.pop();
+
+      for (let i = 0; i < lines.length; i++) { 
+        let line = lines[i] + "\n";
+        let timeGapMs = this.#SerialPipe_lastTS ? (PacketTS - this.#SerialPipe_lastTS) : 0;
+
+        if (line === "AT+NAME\r\n")  continue;
+        if (line === "LB999999\r\n") {
+          line = ">>> Leanbot ready >>>\n";
+          if (this.onMessage) this.onMessage(line, PacketTS, timeGapMs);
+          if (this.onMessage) this.onMessage("\n", PacketTS, 0);
+          continue;
+        }
+
+        if (this.onMessage) this.onMessage(line, PacketTS, timeGapMs);
+        this.#SerialPipe_lastTS = PacketTS;
+      }
+    }
+
+    this.#SerialPipe_busy = false;
+  }
+
+  // ========== Serial Pipe Communication ==========
+  async SerialPipe_sendToLeanbot(packet, withResponse = true) {
+    if (withResponse) {
+      await this.#SerialPipe_char.writeValue(packet);
+    } else {
+      await this.#SerialPipe_char.writeValueWithoutResponse(packet);
+    }
+  }
+
+  async #SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS){
+    this.#SerialPipe_rxQueue.push(BLEPacket);
+    this.#SerialPipe_rxTSQueue.push(Packet_TS);
+    setTimeout(() => this.#SerialPipe_rxQueueHandler(), 0);
+  }
+}
+
+// ======================================================
+// 🔹 SUBMODULE: UPLOADER
+// ======================================================
+class Uploader {
+  static DataPipe_UUID    = '0000ffe2-0000-1000-8000-00805f9b34fb';
+  static ControlPipe_UUID = '0000ffe3-0000-1000-8000-00805f9b34fb';
+
+  // ---- PRIVATE MEMBERS ----
+
+  // Characteristics
+  #DataPipe_char     = null;
+  #ControlPipe_char  = null;
+
+  // Upload state
+  #packets           = [];
+  #packetHashes      = [];
+  #nextToSend        = 0;
+  #lastReceived      = -1;
+  #totalBytesData    = 0;
+  #PacketBufferSize  = 0;
+  #MaxPacketBufferSize = 4;
+  
+  // Queue state
+  #ControlPipe_rxQueue = [];
+  #ControlPipe_busy = false;
+
+  // ===== User Callbacks =====
+  onMessage  = null;
+  onTransfer = null;
+  onWrite    = null;
+  onVerify   = null;
+  onRSSI     = null;
+  onSuccess  = null;
+  onError    = null;
+  
+  isTransferring  = null;
+  onTransferError = null;
+  onWriteError    = null;
+  onVerifyError   = null;
+
+  isUploadSessionActive = null;
+
+  /** Kiểm tra hỗ trợ Uploader */
+  isSupported() {
+    return !!this.#DataPipe_char && !!this.#ControlPipe_char;
+  }
+
+  /** Upload HEX */
+  async upload(hexText) {
+    if (!this.isSupported()) {
+      console.log("Uploader Error: Uploader characteristic not found.");
+      return;
+    }
+
+    this.isUploadSessionActive = true;
+    
+    // Chuyển toàn bộ HEX sang gói BLE
+    this.#packets = convertHexToBlePackets(hexText);
+
+    // Tính toán hash cho từng gói
+    const hashType = window.HASH || 2; // 1 = MD5, 2 = HASH32
+    this.#packetHashes = [];
+
+    if (hashType === 1) this.#computePacketHashesMD5();
+    if (hashType === 2) this.#computePacketHashesHash32();
+
+    const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
+    const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
+    this.#totalBytesData = Math.ceil(dataBytes / 128) * 128; // Làm tròn lên bội số của 128 bytes
+
+    // Reset trạng thái upload
+    this.#nextToSend = 0;
+    this.#lastReceived = -1;
+    this.#ControlPipe_rxQueue = [];
+    this.#ControlPipe_busy = true;
+    this.#PacketBufferSize = this.#MaxPacketBufferSize;
+
+    console.log('[START] Initializing upload......');
+    for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
+      await this.#DataPipe_sendToLeanbot(this.#packets[i]);
+      console.log(`Uploader: Sending packet #${i}`);
+      this.#nextToSend++;
+    }
+    
+    this.#ControlPipe_busy = false;
+
+    // console.log("Waiting for Receive feedback...");
+  }
+
+  // Kiểu 1: MD5 tích lũy
+  #computePacketHashesMD5() {
+    const md5 = new SparkMD5.ArrayBuffer();
+    md5.reset();   
+    for (let i = 0; i < this.#packets.length; i++) {
+      md5.append(this.#packets[i].buffer);
+      const state = md5.getState();
+      this.#packetHashes[i] = md5.end().toUpperCase().substring(0, 8);
+      md5.setState(state); // to resume an incremental md5
+    }
+  }
+
+  // Kiểu 2: hash32 mới
+  #computePacketHashesHash32() {
+    let hash32 = 0 >>> 0; // reset hash32
+    for (let i = 0; i < this.#packets.length; i++) {
+      hash32 = updateHashWithBytes(hash32, this.#packets[i]);
+      this.#packetHashes[i] = hash32.toString(16).toUpperCase().padStart(8, '0');
+    }
+  }
+
+  /** Setup Char + Notify + Queue */
+  async setupConnection(characteristics, BLE_MaxLength, BLE_Interval, HASH) {
+    this.#DataPipe_char    = characteristics[Uploader.DataPipe_UUID] || null;
+    this.#ControlPipe_char = characteristics[Uploader.ControlPipe_UUID] || null;
+
+    if (!this.isSupported()) {
+      console.log("Uploader Notify: Uploader not supported");
+      return;
+    }
+
+    if (!this.#ControlPipe_char.properties.notify) {
+      console.log("Uploader Notify: Not supported");
+      return;
+    }
+
+    await this.#ControlPipe_char.startNotifications();
+    this.#ControlPipe_char.addEventListener("characteristicvaluechanged", (event) => {
+      const BLEPacket = new TextDecoder().decode(event.target.value);
+      this.#ControlPipe_onReceiveFromLeanbot(BLEPacket);
+    });
+
+    console.log("Callback Uploader.onMessage: Enabled");
+
+    // Các lệnh thiết lập (nếu có)
+    if (BLE_MaxLength) {
+      const cmd = `SET BLE_MAX_LENGTH ${BLE_MaxLength}`;
+      await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
+    }
+
+    if (BLE_Interval) {
+      const cmd = `SET BLE_INTERVAL ${BLE_Interval}`;
+      await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
+    }
+
+    if (HASH) {
+      const cmd = `SET HASH ${HASH}`;
+      await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
+    }
+  }
+
+  // ========== Queue handler ==========
+  async #ControlPipe_rxQueueHandler() {
+    if (this.#ControlPipe_busy) return;
+    this.#ControlPipe_busy = true;
+
+    while (this.#ControlPipe_rxQueue.length > 0) {
+      const BLEPacket = this.#ControlPipe_rxQueue.shift();
+      const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+      for (const LineMessage of LineMessages) {
+        await this.#onMessageInternal(LineMessage);
+        if (this.onMessage) this.onMessage(LineMessage);
+      }
+    }
+
+    this.#ControlPipe_busy = false;
+  };
+
+  // ========== Message Processor ==========
+  async #onMessageInternal(LineMessage) {
+    let m = null;
+
+    // RSSI
+    if (m = [...LineMessage.matchAll(/\[(-?\d+(?:\.\d+)?)\]/g)]) {
+      // LineMessage = [2.897] [-54.3] Receive 56
+      // m[0][0] = [2.897], m[1][0] = [-54.3]
+      const rssi = m[1][1]; // rssi = -54.3
+      if(this.onRSSI) this.onRSSI(rssi);
+    }
+
+    // Transfer
+    if (m = LineMessage.match(/Receive\s+(-?\d+)(?:\s+(\S+))?/i)) {
+      const totalPackets = this.#packets.length - 1;
+      const progress = parseInt(m[1]);
+      // console.log(`[RECV ${progress}]`);
+      const recvHash = m[2] ? m[2].toUpperCase() : null;
+      // console.log(`Received Hash:`, recvHash);
+
+      if (recvHash) {
+        const expected = this.#packetHashes[progress];
+        // console.log(`Expected Hash:`, expected);
+        if (recvHash !== expected) {
+          this.isUploadSessionActive = false;
+          console.error("Transfer Error: Hash mismatch. ESP32:", recvHash, "WEB:", expected);
+          if (this.onTransferError) this.onTransferError();
+          return; // stop transfer
+        }
+      }
+       
+      this.isTransferring = false;
+      if (progress === totalPackets) this.isTransferring = true;
+
+      await this.#onTransferInternal(progress);
+      if (this.onTransfer) this.onTransfer(progress + 1, totalPackets);
+      return;
+    }
+
+    // Write
+    if (m = LineMessage.match(/Write\s+(\d+)\s*bytes/i)) {
+      const progress = parseInt(m[1]);
+      if (this.onWrite) this.onWrite(progress, this.#totalBytesData);
+      return;
+    }
+
+    // Verify
+    if (m = LineMessage.match(/Verify\s+(\d+)\s*bytes/i)) {
+      const progress = parseInt(m[1]);
+      if (this.onVerify) this.onVerify(progress, this.#totalBytesData);
+      return;
+    }
+
+    // Success
+    if (/Upload success/i.test(LineMessage)) {
+      this.isUploadSessionActive = false;
+      if (this.onSuccess) this.onSuccess();
+      return;
+    }
+
+    // Errors
+    if (/Write failed|Verify failed/i.test(LineMessage)) {
+      this.isUploadSessionActive = false;
+      if (this.onError) this.onError(LineMessage);
+    }
+
+    if (/Write failed/i.test(LineMessage)) {
+      if (this.onWriteError) this.onWriteError();
+      return;
+    }
+
+    if (/Verify failed/i.test(LineMessage)) {
+      if (this.onVerifyError) this.onVerifyError();
+      return;
+    }
+  };
+
+  // ========== Send next packet ==========
+  #timeoutDuration = 200;
+  #timeoutCount = 0;
+  #timeoutTimer = null;
+  #isSending = false;
+
+  #clearTimeoutTimer() {
+    if (this.#timeoutTimer) {
+      clearInterval(this.#timeoutTimer);
+      this.#timeoutTimer = null;
+    }
+    this.#timeoutCount = 0;
+  }
+
+  async #sendPacket(index) {
+    if (index >= this.#packets.length) return;
+
+    while (this.#isSending) await new Promise(resolve => setTimeout(resolve, 5));
+
+    this.#isSending = true;
+    await this.#DataPipe_sendToLeanbot(this.#packets[index]);
+    this.#isSending = false;
+  }
+
+  #startTimeoutForNextPacket() {
+    this.#timeoutTimer = setInterval(async () => {
+      this.#PacketBufferSize = 1;
+      this.#nextToSend = this.#lastReceived + this.#PacketBufferSize;
+
+      this.#timeoutCount++;
+      console.log(`[TIMEOUT] TRIAL ${this.#timeoutCount}: Waiting for packet #${this.#nextToSend} response`);
+      
+      console.log(`[TIMEOUT] Uploader: Resending packet #${this.#nextToSend}`);
+      await this.#sendPacket(this.#nextToSend);
+      this.#nextToSend++;
+      
+      if (this.#timeoutCount >= 5) {
+        this.#clearTimeoutTimer();
+        console.log(`Uploader: Transfer Error.`);
+        this.isUploadSessionActive = false;
+        if (this.onTransferError) this.onTransferError(); 
+      }
+    }, this.#timeoutDuration);
+  }
+
+  async #onTransferInternal(received) {
+    console.log(`[RECV ${received}] onTransferInternal called`);
+
+    if (received <= this.#lastReceived){
+      console.log(`Uploader: Not the first time, ignore`);
+      return;
+    }
+
+    this.#lastReceived = received;
+
+    if (this.#PacketBufferSize < this.#MaxPacketBufferSize) this.#PacketBufferSize++;
+
+    const nextToSendLimit = received + this.#PacketBufferSize;
+    while(this.#nextToSend <= nextToSendLimit && this.#nextToSend < this.#packets.length) {
+      console.log(`Uploader: Sending packet #${this.#nextToSend}`);
+      await this.#sendPacket(this.#nextToSend);
+      this.#nextToSend++;
+    }
+
+    this.#clearTimeoutTimer();
+
+    if (received + 1 >= this.#packets.length) {
+      console.log(`Uploader: Leanbot received all packets.`);
+      return;
+    }
+
+    console.log(`Uploader: Setting timeout for packet #${received + 1}`);
+    this.#startTimeoutForNextPacket();
+  }
+
+  // ========== Control Pipe Communication ==========
+  async #ControlPipe_sendToLeanbot(packet) {
+    await this.#ControlPipe_char.writeValueWithoutResponse(packet);
+  }
+
+  async #ControlPipe_onReceiveFromLeanbot(packet){
+    if (this.isUploadSessionActive !== true) return;
+
+    this.#ControlPipe_rxQueue.push(packet);
+    setTimeout(async () => await this.#ControlPipe_rxQueueHandler(), 0);
+  }
+
+  // ========== Data Pipe Communication ==========
+  async #DataPipe_sendToLeanbot(packet) {
+    try {
+      await this.#DataPipe_char.writeValueWithoutResponse(packet);
+    } catch (err) {
+      console.error("Write Error:", err);
+
+      this.isUploadSessionActive = false;
+
+      if (this.onTransferError) this.onTransferError();
+    }
+  }
+
+  cancel() {
+    this.#ControlPipe_rxQueue = []; 
+    this.#lastReceived = this.#packets.length;
+    this.#ControlPipe_busy = true;
+  }
+}
+
+// ======================================================
+// 🔹 SUBMODULE: JDYUploader
+// ======================================================
+class JDYUploader {
+  #leanbot;
+  #serial;
+  #isUploading = false;
+
+  constructor(ble, serial) {
+    this.#leanbot = ble;     // dùng được hàm của LeanbotBLE
+    this.#serial  = serial;  // dùng được hàm của Serial
+
+    // callback nhận dữ liệu từ Serial
+    serial.onForwardReponse = (bytes) => {
+      if (!this.#isUploading) return;
+      this.#handleReponse(bytes);
+    };
+  }
+
+  async upload() {
+    console.log("[UPLOAD] Disconnecting...");
+    const resultDisc = this.#leanbot.disconnect();
+    console.log("[UPLOAD] Disconnect result:", resultDisc.message);
+
+    await new Promise(resolve => setTimeout(resolve, 3500));
+
+    console.log("[UPLOAD] Reconnecting...");
+    const resultReco = await this.#leanbot.reconnect();
+
+    if (resultReco.success) {
+      console.log("[UPLOAD] Starting upload process...");
+      this.#isUploading = true;
+      this.#getSync();
+    } else {
+      console.log("[UPLOAD] Reconnect failed:", resultReco.message);
+    }
+  }
+
+  #isSynced = false;
+
+  async #handleReponse(bytes) {
+    if (!this.#isSynced) {
+      await this.#handleSyncResponse(bytes);
+      return;
+    }
+    // Nếu đã sync thành công, xử lý dữ liệu đọc flash
+    this.#handleReadFlashResponse(bytes);
+  }
+
+  // --- getSync state ---
+  #getSyncTimer = null;
+  #getSyncCmd   = new Uint8Array([0x30, 0x20]);     // STK_GET_SYNC + STK_CRC_EOP
+  #getSyncResponse = new Uint8Array([0x14, 0x10]);  // STK_INSYNC + STK_OK
+
+  async #getSync(maxAttempts = 10, intervalMs = 50) {
+    let count = 0;
+    this.#getSyncTimer = setInterval(async () => {
+      if (count >= maxAttempts) {
+        console.log("Max getSync attempts reached, stopping.");
+        clearInterval(this.#getSyncTimer);
+        return;
+      }
+      await this.#serial.SerialPipe_sendToLeanbot(this.#getSyncCmd, false);
+      count++;
+    }, intervalMs);
+    console.log(`getSync burst started (max ${maxAttempts})`);
+  }
+
+  async #handleSyncResponse(bytes) {
+    if (bytes.length >= 2 && bytes[0] === this.#getSyncResponse[0] && bytes[1] === this.#getSyncResponse[1]) {
+      console.log(">>> Bootloader SYNC success! <<<");
+      this.#stopGetSync();  // STOP spamming getSync
+      this.#isSynced = true;
+      await this.readFlash(50); // Đọc trang flash đầu tiên
+    }
+  }
+
+  #stopGetSync() {
+    if (this.#getSyncTimer) {
+      clearInterval(this.#getSyncTimer);
+      this.#getSyncTimer = null;
+      console.log("getSync stopped");
+    }
+  }
+
+  async readFlash(pageIndex = 0) {
+    const pageSize = 128;
+    const byteAddress = pageIndex * pageSize;
+    const wordAddress = byteAddress >> 1;
+
+    const addrLow  = wordAddress & 0xFF;
+    const addrHigh = (wordAddress >> 8) & 0xFF;
+
+    // 1) LOAD_ADDRESS
+    const loadAddrCmd = new Uint8Array([
+      0x55,      // STK_LOAD_ADDRESS
+      addrLow,
+      addrHigh,
+      0x20       // STK_CRC_EOP
+    ]);
+
+    await this.#serial.SerialPipe_sendToLeanbot(loadAddrCmd);
+
+    // 2) READ_PAGE
+    const readPageCmd = new Uint8Array([
+      0x74,      // STK_READ_PAGE
+      0x00,      // len_hi
+      pageSize,  // len_lo
+      0x46,      // 'F'
+      0x20       // STK_CRC_EOP
+    ]);
+
+    console.log(`[READ] Page ${pageIndex} @ byte address 0x${byteAddress.toString(16).padStart(4, "0").toUpperCase()}`);
+
+    await this.#serial.SerialPipe_sendToLeanbot(readPageCmd);
+
+    // 3) CHỜ RESPONSE
+    const pageData = await this.#waitForReadPage(1000); 
+
+    console.log("[READ] Page", pageIndex, "length =", pageData.length);
+
+    return pageData;
+  }
+
+  #pendingPageResolve = null;
+  #pendingPageReject  = null;
+  #pageTimeoutId      = null;
+
+  #pageBuffer      = [];
+  #pageCollecting  = false;
+  #pageSize        = 128;
+
+  #waitForReadPage(timeoutMs = 1000) {
+    // reset buffer & state
+    this.#pageBuffer     = [];
+    this.#pageCollecting = false;
+
+    return new Promise((resolve, reject) => {
+      this.#pendingPageResolve = resolve;
+      this.#pendingPageReject  = reject;
+
+      this.#pageTimeoutId = setTimeout(() => {
+        this.#pageTimeoutId = null;
+        this.#pendingPageResolve = null;
+        this.#pendingPageReject  = null;
+        this.#pageBuffer = [];
+        this.#pageCollecting = false;
+        reject(new Error("Timeout waiting for flash page data"));
+      }, timeoutMs);
+    });
+  }
+
+  #clearPendingPage() {
+    if (this.#pageTimeoutId) {
+      clearTimeout(this.#pageTimeoutId);
+      this.#pageTimeoutId = null;
+    }
+    this.#pendingPageResolve = null;
+    this.#pendingPageReject  = null;
+    this.#pageBuffer = [];
+    this.#pageCollecting = false;
+  }
+
+  #handleReadFlashResponse(chunk) {
+    if (!this.#pendingPageResolve) return;
+
+    // chunk là Uint8Array 20 byte từ BLE
+    let startIndex = 0;
+
+    if (!this.#pageCollecting) {
+      // Tìm byte 0x14 (STK_INSYNC)
+      const idx = chunk.indexOf(0x14);
+      if (idx === -1) return; // không tìm thấy, bỏ qua chunk này
+      this.#pageCollecting = true;
+      startIndex = idx; // bắt đầu cộng từ 0x14
+    }
+
+    // Đang collect -> đẩy toàn bộ từ startIndex vào buffer
+    for (let i = startIndex; i < chunk.length; i++) {
+      this.#pageBuffer.push(chunk[i]);
+    }
+
+    // Nếu byte cuối cùng trong chunk là 0x10 (STK_OK) -> có thể là kết thúc message
+    const lastByte = chunk[chunk.length - 1];
+    if (lastByte !== 0x10) {
+      // chưa kết thúc, chờ chunk tiếp theo
+      return;
+    }
+
+    // Đã kết thúc message: dựng Uint8Array từ buffer
+    const fullMsg = new Uint8Array(this.#pageBuffer);
+
+    // fullMsg = [0x14, data..., 0x10]
+    const expectedTotal = this.#pageSize + 2; // 128 data + 0x14 + 0x10
+    if (fullMsg.length < expectedTotal) {
+      this.#pendingPageReject?.(
+        new Error(`Invalid page response length: ${fullMsg.length}, expected >= ${expectedTotal}`)
+      );
+      this.#clearPendingPage();
+      return;
+    }
+
+    const pageData = fullMsg.slice(1, 1 + this.#pageSize); // cắt phần data
+
+    // Resolve promise + clear state
+    this.#pendingPageResolve?.(pageData);
+    this.#clearPendingPage();
+
+    console.log("[READ] Page completed:");
+    console.log("const uint8_t hexdata[] = {");
+    console.log(formatHexBlock(pageData));
+    console.log("};");
+  }
+}
+
+// ======================================================
+// 🔹 HEX TO BLE PACKETS CONVERTER
+// ======================================================
+function parseHexLine(LineMessage) {
+  if (!LineMessage.startsWith(":")) return null;
+  const hex = LineMessage.slice(1);
+  const length = parseInt(hex.substr(0, 2), 16);
+  const address = parseInt(hex.substr(2, 4), 16);
+  const recordType = hex.substr(6, 2);
+  const data = hex.substr(8, length * 2);
+  const checksum = parseInt(hex.substr(8 + length * 2, 2), 16);
+  return { length, address, recordType, data, checksum, hex };
+}
+
+// Kiểm tra checksum của dòng HEX
+function verifyChecksum(parsed) {
+  const { hex, length, checksum } = parsed;
+  const allBytes = [];
+  for (let i = 0; i < 4 + length; i++) {
+    allBytes.push(parseInt(hex.substr(i * 2, 2), 16));
+  }
+  const sum = allBytes.reduce((a, b) => a + b, 0);
+  const calcChecksum = ((~sum + 1) & 0xFF);
+  return calcChecksum === checksum;
+}
+
+// Chuyển dòng HEX thành mảng byte
+function hexLineToBytes(block) {
+  const bytes = [];
+  for (let i = 0; i < block.length; i += 2) {
+    const b = parseInt(block.substr(i, 2), 16);
+    if (!isNaN(b)) bytes.push(b);
+  }
+  return new Uint8Array(bytes);
+}
+
+/**
+ * Convert Intel HEX text into optimized BLE packets
+ * - Parse HEX LinesMessage → validate checksum
+ * - Merge consecutive LinesMessage with continuous addresses
+ * - Split into BLE packets of max 236 bytes
+ * 
+ * @param {string} hexText - HEX file content
+ * @returns {Uint8Array[]} packets - Array of BLE message bytes ready to send
+ */
+function convertHexToBlePackets(hexText) {
+  const BLE_MaxLength = window.BLE_MaxLength || 512; // Mặc định 512 nếu không có thiết lập
+  console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
+
+  // --- STEP 0: Split HEX text into LinesMessage ---
+  const LinesMessage = hexText.split(/\r?\n/).filter(LineMessage => LineMessage.trim().length > 0);
+
+  // --- STEP 1: Parse each HEX LineMessage ---
+  const parsedLines = [];
+  for (let i = 0; i < LinesMessage.length; i++) {
+    const parsed = parseHexLine(LinesMessage[i].trim());
+    if (!parsed) continue;
+    if (!verifyChecksum(parsed)) continue;
+    const bytes = hexLineToBytes(parsed.data);
+    parsedLines.push({ address: parsed.address, bytes: bytes });
+  }
+
+  // --- STEP 2: Merge consecutive address blocks ---
+  const mergedBlocks = [];
+  let current = null;
+
+  for (const LineMessage of parsedLines) {
+    if (!current) {
+      // Dùng spread operator [...] để sao chép dữ liệu, tránh ảnh hưởng mảng gốc
+      current = { address: LineMessage.address, bytes: [...LineMessage.bytes] };
+      continue;
+    }
+
+    const expectedAddr = current.address + current.bytes.length;
+    if (LineMessage.address === expectedAddr) {
+      current.bytes.push(...LineMessage.bytes);
+    } else {
+      mergedBlocks.push(current);
+      current = { address: LineMessage.address, bytes: [...LineMessage.bytes] };
+    }
+  }
+  if (current) mergedBlocks.push(current);
+
+  // --- STEP 3: Split each merged block into BLE packets (≤ BLE_MaxLength bytes) ---
+  const packets = [];
+  let sequence = 0;
+  let lastAddr = 0;
+
+  for (const block of mergedBlocks) {
+    const data = block.bytes;
+    const isLastBlock = block === mergedBlocks[mergedBlocks.length - 2]; // block EOF không tính
+
+    // Tính delta giữa các block (so với block trước)
+    let deltaAddr = 0;
+
+    if (packets.length === 0) {
+      deltaAddr = 0; // block đầu tiên
+    } else {
+      const diff = block.address - lastAddr;
+      while (diff > 0x7F) {
+        // Gửi marker 0x7F (bản tin rỗng)
+        const seqByte = sequence & 0xFF;
+        const marker = new Uint8Array([seqByte, 0x7F]);
+        packets.push(marker);
+        sequence++;
+        diff -= 0x7F; // giảm dần khoảng cách
+      }
+
+      deltaAddr = diff & 0x7F; // giới hạn trong [0x00, 0x7F]
+    }
+    
+    let offset = 0;
+
+    while (offset < data.length) {
+      const remain = data.length - offset;
+
+      const isFinalPacket = isLastBlock && (offset + (BLE_MaxLength - 1) >= data.length);
+
+      if (deltaAddr === 0 && remain >= (BLE_MaxLength - 1)) {
+        // Loại 1: [Seq][511 data]
+        const chunk = data.slice(offset, offset + (BLE_MaxLength - 1));
+        const bytes = new Uint8Array([sequence & 0xFF, ...chunk]);
+        packets.push(bytes);
+        offset += (BLE_MaxLength - 1);
+      } else {
+        // Loại 2: [Seq][deltaAddr][≤509 data]
+        const chunk = data.slice(offset, offset + (BLE_MaxLength - 3));
+        const effectiveDelta = isFinalPacket ? (0xFF - deltaAddr) : deltaAddr;
+        const bytes = new Uint8Array([sequence & 0xFF, effectiveDelta, ...chunk]);
+        packets.push(bytes);
+        offset += (BLE_MaxLength - 3);
+      }
+
+      sequence++;
+    }
+
+    lastAddr = block.address + data.length;
+  }
+  return packets;
+}
+
+// ======================================================
+// 🔹 HASH FUNCTION (32-bit)
+// ======================================================
+
+// Hằng số P1
+const P1 = 0xDE1AD64D;
+
+/**
+ * @param {number} hash - hash hiện tại
+ * @param {number} data - dữ liệu 32-bit
+ * @returns {number} hash mới (uint32)
+ */
+function updateHash(hash, data) {
+  hash ^= data;
+  hash ^= hash >>> 15;
+  hash = Math.imul(hash, P1);
+  hash ^= hash >>> 15;
+  hash = Math.imul(hash, P1);
+  hash ^= hash >>> 15;
+  return hash >>> 0; // đảm bảo trả về uint32
+}
+
+/**
+ * @param {number} hash32 - hash hiện tại (uint32)
+ * @param {Uint8Array} data - mảng byte
+ * @returns {number} hash sau khi xử lý hết data
+ */
+function updateHashWithBytes(hash32, data) {
+  let idx = 0;
+  const len = data.length;
+
+  // Xử lý các block 4 byte
+  const fullBlocks = (len / 4) | 0;
+  for (let i = 0; i < fullBlocks; i++) {
+    let data32 =
+      (data[idx]       << 0)  |
+      (data[idx + 1]   << 8)  |
+      (data[idx + 2]   << 16) |
+      (data[idx + 3]   << 24);
+
+    hash32 = updateHash(hash32, data32);
+    idx += 4;
+  }
+
+  // Xử lý phần còn lại 1–3 byte
+  if (idx < len) {
+    let data32 = 0;
+    for ( ; idx < len; idx++) {
+      data32 <<= 8;
+      data32  |= data[idx];
+    }
+    hash32 = updateHash(hash32, data32);
+  }
+
+  return hash32;
+}
+
+// ======================================================
+// 🔹 HEX FORMATTING UTILITIES
+// ======================================================
+function formatHexBlock(data) {
+  let lines = [];
+  for (let i = 0; i < data.length; i += 16) {
+    const slice = data.slice(i, i + 16);
+    const hexLine = Array.from(slice)
+      .map(b => "0x" + b.toString(16).padStart(2, "0"))
+      .join(", ");
+    lines.push("  " + hexLine + ",");
+  }
+  return lines.join("\n");
+}
