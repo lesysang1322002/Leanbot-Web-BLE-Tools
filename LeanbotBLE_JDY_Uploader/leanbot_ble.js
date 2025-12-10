@@ -752,6 +752,8 @@ class JDYUploader {
   }
 
   async readFlash(pageIndex = 0) {
+    console.log(`[READ] Page ${pageIndex}`);
+    
     // 1) LOAD_ADDRESS
     await this.#loadAddress(pageIndex);
     
@@ -763,8 +765,6 @@ class JDYUploader {
       0x46,      // 'F'
       0x20       // STK_CRC_EOP
     ]);
-
-    console.log(`[READ] Page ${pageIndex}`);
 
     await this.#serial.SerialPipe_sendToLeanbot(readPageCmd, false);
 
@@ -871,10 +871,11 @@ class JDYUploader {
   #writeTimeoutId      = null;
 
   async writeFlash(pageIndex, pageData) {
+    console.log(`[WRITE] Page ${pageIndex}`);
+
     if (!(pageData instanceof Uint8Array) || pageData.length !== this.#pageSize) {
       throw new Error(`pageData must be Uint8Array[${this.#pageSize}]`);
     }
-
     // 1) LOAD_ADDRESS
     await this.#loadAddress(pageIndex);
 
@@ -886,8 +887,6 @@ class JDYUploader {
       0x46              // 'F' = flash memory
     ]);
     const progPageTail = new Uint8Array([0x20]); // STK_CRC_EOP
-
-    console.log(`[WRITE] Page ${pageIndex}`);
 
     // Gửi header, data, tail
     await this.#serial.SerialPipe_sendToLeanbot(progPageHeader, false);
