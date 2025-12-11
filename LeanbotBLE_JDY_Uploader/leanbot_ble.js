@@ -820,7 +820,7 @@ class JDYUploader {
       await this.#serial.SerialPipe_sendToLeanbot(cmd, false);
 
       try {
-        await this.#waitForLoadAddressAck(200);
+        await this.#waitForLoadAddressAck(20);
         console.log("[LOAD] LOAD_ADDRESS ACK received!");
         return;
       } catch (e) {
@@ -832,8 +832,7 @@ class JDYUploader {
     }
   }
 
-
-  #waitForLoadAddressAck(timeoutMs = 200) {
+  #waitForLoadAddressAck(timeoutMs = 20) {
     return new Promise((resolve, reject) => {
       this.#pendingAddrResolve = resolve;
       this.#pendingAddrReject  = reject;
