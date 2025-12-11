@@ -694,9 +694,16 @@ class JDYUploader {
   }
 
   async #handleReponse(bytes) {
+    console.log("[RESPONSE] Received bytes:", bytes);
     // 1) Chưa sync thì ưu tiên SYNC
     if (!this.#isSynced) {
       await this.#handleSyncResponse(bytes);
+      return;
+    }
+
+    // 4) Nếu đang chờ ACK LOAD_ADDRESS → xử lý cho LOAD_ADDRESS
+    if (this.#pendingAddrResolve) {
+      this.#handleLoadAddressAck(bytes);
       return;
     }
 
@@ -709,12 +716,6 @@ class JDYUploader {
     // 3) Nếu đang chờ ACK write page → xử lý cho PROG_PAGE
     if (this.#pendingWriteResolve) {
       this.#handleWriteAck(bytes);
-      return;
-    }
-
-    // 4) Nếu đang chờ ACK LOAD_ADDRESS → xử lý ở đây
-    if (this.#pendingAddrResolve) {
-      this.#handleLoadAddressAck(bytes);
       return;
     }
 
@@ -756,7 +757,7 @@ class JDYUploader {
       this.#isSynced = true;
       console.log(">>> Bootloader SYNC success! <<<");
       await this.#stopGetSync();  // STOP spamming getSync
-      await this.readFlash(0); // Đọc trang flash đầu tiên
+      // await this.readFlash(0); // Đọc trang flash đầu tiên
       // await this.testWriteFlash();
       // const pages = this.#buildPagesFromBlocks(this.#mergedBlock);
       // for (const page of pages) {
