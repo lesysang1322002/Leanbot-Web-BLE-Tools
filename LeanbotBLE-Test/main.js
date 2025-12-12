@@ -34,6 +34,7 @@ else{
 }
 
 leanbot.onConnect = () => {
+  if (!leanbot.Uploader.isSupported()) btnUpload.style.backgroundColor = "red";
   leanbotStatus.style.display = "inline-block";
   leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
   leanbotStatus.style.color   = "green";
@@ -204,6 +205,11 @@ async function loadHexFile() {
 const btnUpload = document.getElementById("btnUpload");
 
 btnUpload.addEventListener("click", async () => {
+  if (!leanbot.Uploader.isSupported()) {
+    const LeanbotName = getLeanbotIDWithoutBLE();
+    alert(`${LeanbotName} is not compatible with BLE upload.\nPlease use USB upload, or upgrade the Bluetooth module.`);
+    return;
+  }
   if (!loadedHexContent) {
     fileInput.click();
     loadedHexContent = await loadHexFile();
