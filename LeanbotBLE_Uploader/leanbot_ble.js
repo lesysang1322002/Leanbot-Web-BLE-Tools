@@ -158,10 +158,13 @@ export class LeanbotBLE {
   constructor() {
     this.onConnect = null;
     this.onDisconnect = null;
+
+    this.Serial      = new Serial(this);
+    this.Uploader    = new Uploader(this);
+    this.JDYUploader = new JDYUploader(this, this.Serial, this.Uploader);
     
-    this.Serial = new Serial(this, this.JDYUploader);
-    this.Uploader = new Uploader(this);
-    this.JDYUploader = new JDYUploader(this, this.Serial);
+    this.Serial.setJDYUploader(this.JDYUploader);
+    this.Uploader.setJDYUploader(this.JDYUploader);
   }
 }
 
@@ -174,7 +177,7 @@ class Serial {
   #SerialPipe_char = null;
   #JDYUploader = null;
 
-  contructor(ble, jdyUploader) {
+  setJDYUploader(jdyUploader) {
     this.#JDYUploader = jdyUploader;
   }
 
@@ -233,8 +236,10 @@ class Serial {
     await this.#SerialPipe_char.startNotifications();
     this.#SerialPipe_char.addEventListener("characteristicvaluechanged", (event) => {
       const bytes = new Uint8Array(event.target.value.buffer); // UploaderJDY needs raw bytes
-      if (this.onForwardReponse) this.onForwardReponse(bytes); // Forward raw bytes to JDYUploader
-      if (this.#JDYUploader && this.#JDYUploader.isUploading !== true) return; // Ignore if not uploading
+      if (this.#JDYUploader && this.#JDYUploader.isUploading) {
+        if (this.onForwardReponse) this.onForwardReponse(bytes);
+        return;
+      }
       const BLEPacket = new TextDecoder().decode(bytes);
       const Packet_TS = new Date(performance.timeOrigin + event.timeStamp);
       this.#SerialPipe_onReceiveFromLeanbot(BLEPacket, Packet_TS);
@@ -299,18 +304,23 @@ class Uploader {
   static DataPipe_UUID    = '0000ffe2-0000-1000-8000-00805f9b34fb';
   static ControlPipe_UUID = '0000ffe3-0000-1000-8000-00805f9b34fb';
 
-  // ---- PRIVATE MEMBERS ----
+  #JDYUploader = null;
+
+  setJDYUploader(jdyUploader) {
+    this.#JDYUploader = jdyUploader;
+  }
 
   // Characteristics
   #DataPipe_char     = null;
   #ControlPipe_char  = null;
 
   // Upload state
-  #packets           = [];
+  #packets            = [];
   #packetHashes      = [];
   #nextToSend        = 0;
   #lastReceived      = -1;
-  #totalBytesData    = 0;
+  totalBytesData     = 0;
+  totalPackets       = 0;
   #PacketBufferSize  = 0;
   #MaxPacketBufferSize = 4;
   
@@ -342,14 +352,14 @@ class Uploader {
   /** Upload HEX */
   async upload(hexText) {
     if (!this.isSupported()) {
-      console.log("Uploader Error: Uploader characteristic not found.");
-      return;
+      if (this.#JDYUploader) return this.#JDYUploader.upload(hexText);
     }
 
     this.isUploadSessionActive = true;
     
     // Chuyển toàn bộ HEX sang gói BLE
     this.#packets = convertHexToBlePackets(hexText);
+    this.totalPackets = this.#packets.length - 1;
 
     // Tính toán hash cho từng gói
     const hashType = window.HASH || 2; // 1 = MD5, 2 = HASH32
@@ -360,7 +370,7 @@ class Uploader {
 
     const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
     const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
-    this.#totalBytesData = Math.ceil(dataBytes / 128) * 128; // Làm tròn lên bội số của 128 bytes
+    this.totalBytesData = Math.ceil(dataBytes / 128) * 128; // Làm tròn lên bội số của 128 bytes
 
     // Reset trạng thái upload
     this.#nextToSend = 0;
@@ -452,7 +462,7 @@ class Uploader {
       const LineMessages = BLEPacket.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
       for (const LineMessage of LineMessages) {
-        await this.#onMessageInternal(LineMessage);
+        await this.onMessageInternal(LineMessage);
         if (this.onMessage) this.onMessage(LineMessage);
       }
     }
@@ -461,20 +471,21 @@ class Uploader {
   };
 
   // ========== Message Processor ==========
-  async #onMessageInternal(LineMessage) {
+  async onMessageInternal(LineMessage) {
     let m = null;
 
     // RSSI
     if (m = [...LineMessage.matchAll(/\[(-?\d+(?:\.\d+)?)\]/g)]) {
       // LineMessage = [2.897] [-54.3] Receive 56
       // m[0][0] = [2.897], m[1][0] = [-54.3]
-      const rssi = m[1][1]; // rssi = -54.3
-      if(this.onRSSI) this.onRSSI(rssi);
+      if (m.length >= 2){
+        const rssi = m[1][1]; // rssi = -54.3
+        if(this.onRSSI) this.onRSSI(rssi);
+      }
     }
 
     // Transfer
     if (m = LineMessage.match(/Receive\s+(-?\d+)(?:\s+(\S+))?/i)) {
-      const totalPackets = this.#packets.length - 1;
       const progress = parseInt(m[1]);
       // console.log(`[RECV ${progress}]`);
       const recvHash = m[2] ? m[2].toUpperCase() : null;
@@ -492,24 +503,24 @@ class Uploader {
       }
        
       this.isTransferring = false;
-      if (progress === totalPackets) this.isTransferring = true;
+      if (progress === this.totalPackets) this.isTransferring = true;
 
       await this.#onTransferInternal(progress);
-      if (this.onTransfer) this.onTransfer(progress + 1, totalPackets);
+      if (this.onTransfer) this.onTransfer(progress + 1, this.totalPackets);
       return;
     }
 
     // Write
     if (m = LineMessage.match(/Write\s+(\d+)\s*bytes/i)) {
       const progress = parseInt(m[1]);
-      if (this.onWrite) this.onWrite(progress, this.#totalBytesData);
+      if (this.onWrite) this.onWrite(progress, this.totalBytesData);
       return;
     }
 
     // Verify
     if (m = LineMessage.match(/Verify\s+(\d+)\s*bytes/i)) {
       const progress = parseInt(m[1]);
-      if (this.onVerify) this.onVerify(progress, this.#totalBytesData);
+      if (this.onVerify) this.onVerify(progress, this.totalBytesData);
       return;
     }
 
@@ -604,7 +615,7 @@ class Uploader {
     this.#clearTimeoutTimer();
 
     if (received + 1 >= this.#packets.length) {
-      console.log(`Uploader: Leanbot received all packets.`);
+      console.log(`Uploader: Leanbot received all #packets.`);
       return;
     }
 
@@ -650,29 +661,47 @@ class Uploader {
 class JDYUploader {
   #leanbot;
   #serial;
-  isUploading = false;
-  #isSynced    = false; 
-  #mergedBlock = [];
-  #pageSize    = 128;
+  #uploader;
 
-  constructor(ble, serial) {
+  isUploading        = false;
+  #isSyncing         = false;
+  #isLoadingAddress  = false;
+  #isReadingPage     = false;
+  #isCollectingPage  = false;
+  #isWritingPage     = false;
+
+  #pageSize    = 128;
+  #BLEPackets  = [];
+  #pageBuffer  = [];
+
+  #startTime = null;
+
+  #responseACK = new Uint8Array([0x14, 0x10]); // STK_OK
+  #isACK(bytes){
+    return bytes[0] === this.#responseACK[0] 
+        && bytes[1] === this.#responseACK[1];
+  }
+
+  /* ------------------- CONSTRUCTOR ------------------- */
+  constructor(ble, serial, uploader) {
     this.#leanbot = ble;     // dùng được hàm của LeanbotBLE
     this.#serial  = serial;  // dùng được hàm của Serial
+    this.#uploader = uploader; // dùng được hàm của Uploader
 
     // callback nhận dữ liệu từ Serial
-    serial.onForwardReponse = (bytes) => {
-      if (!this.isUploading) return;
-      this.#handleReponse(bytes);
+    serial.onForwardReponse = async (bytes) => {
+      await this.#handleResponse(bytes);
     };
   }
 
+  /* ------------------- UPLOAD HEX ------------------- */
   async upload(hexText) {
     if (!this.#serial.isSupported()) {
       console.log("[UPLOAD] Error: Serial not supported.");
       return;
     }
-
-    this.#mergedBlock = convertHexToBlePackets(hexText, { returnStep2: true });
+    
+    this.#startTime = Date.now();
 
     console.log("[UPLOAD] Disconnecting...");
     const resultDisc = this.#leanbot.disconnect();
@@ -683,103 +712,219 @@ class JDYUploader {
     console.log("[UPLOAD] Reconnecting...");
     const resultReco = await this.#leanbot.reconnect();
 
-    if (resultReco.success) {
-      console.log("[UPLOAD] Starting upload process...");
-      this.isUploading = true;
-      this.#isSynced = false;
-      await this.#getSync();
-    } else {
+    if (!resultReco.success) {
       console.log("[UPLOAD] Reconnect failed:", resultReco.message);
-    }
-  }
-
-  async #handleReponse(bytes) {
-    console.log("[RESPONSE] Received bytes: 0x" + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
-    // 1) Chưa sync thì ưu tiên SYNC
-    if (!this.#isSynced) {
-      await this.#handleSyncResponse(bytes);
       return;
     }
 
-    // 2) Nếu đang chờ ACK LOAD_ADDRESS → xử lý cho LOAD_ADDRESS
+    console.log("[UPLOAD] Reconnect success:");
+    this.isUploading = true;
+    this.#BLEPackets = convertHexToBlePackets(hexText, { returnStep2: true });
+
+    console.log("[UPLOAD] Starting SYNC...");
+    await this.#getSync();
+  }
+
+  /* ------------------- HANDLE RESPONSE ------------------- */
+  async #handleResponse(bytes) {
+    if (this.#isSyncing ) {
+      await this.#handleGetSyncAck(bytes);
+      return;
+    }
+
     if (this.#isLoadingAddress) {
-      this.#handleLoadAddressAck(bytes);
-      this.#isLoadingAddress = false;
+      await this.#handleLoadAddressAck(bytes);
       return;
     }
 
-    // // 2) Nếu đang chờ page read → ưu tiên page
-    // if (this.#pendingPageResolve) {
-    //   this.#handleReadFlashResponse(bytes);
-    //   return;
-    // }
+    if (this.#isReadingPage) {
+      await this.#handleReadFlashAck(bytes);
+      return;
+    }
 
-    // // 3) Nếu đang chờ ACK write page → xử lý cho PROG_PAGE
-    // if (this.#pendingWriteResolve) {
-    //   this.#handleWriteAck(bytes);
-    //   return;
-    // }
-  }
-
-  // --- getSync state ---
-  #getSyncTimer = null;
-  #responseACK  = new Uint8Array([0x14, 0x10]);  // STK_INSYNC + STK_OK
-
-  async #getSync(maxAttempts = 10, intervalMs = 25) {
-    let count = 0;
-    this.#getSyncTimer = setInterval(async () => {
-      if (this.#isSynced) return;
-      if (count >= maxAttempts) {
-        console.log("Max getSync attempts reached, stopping.");
-        clearInterval(this.#getSyncTimer);
-        return;
-      }
-      const getSyncCmd = new Uint8Array([0x30, 0x20]); // STK_GET_SYNC + STK_CRC_EOP
-      await this.#serial.SerialPipe_sendToLeanbot(getSyncCmd, false);
-      count++;
-      console.log(`getSync attempt #${count}`);
-    }, intervalMs);
-    console.log(`getSync burst started (max ${maxAttempts})`);
-  }
-
-  async #stopGetSync() {
-    if (this.#getSyncTimer) {
-      clearInterval(this.#getSyncTimer);
-      this.#getSyncTimer = null;
-      console.log("getSync stopped");
+    if (this.#isWritingPage) {
+      await this.#handleWriteFlashAck(bytes);
+      return;
     }
   }
 
-  async #handleSyncResponse(bytes) {
-    if (bytes.length >= 2 && bytes[0] === this.#responseACK[0] && bytes[1] === this.#responseACK[1]) {
-      this.#isSynced = true;
-      console.log(">>> Bootloader SYNC success! <<<");
-      await this.#stopGetSync();  // STOP spamming getSync
-      await this.readFlash(0); // Đọc trang flash đầu tiên
-      await this.testWriteFlash();
-      // const pages = this.#buildPagesFromBlocks(this.#mergedBlock);
-      // for (const page of pages) {
-      //   await this.writeFlash(page.pageIndex, page.bytes);
-      // }
+  /* ------------------- GET SYNC ------------------- */
+  async #getSync() {
+    // STK_GET_SYNC + STK_CRC_EOP
+    const getSyncCmd = new Uint8Array([0x30, 0x20]); 
+    console.log("[SYNC] Sent GET_SYNC command");
+    await this.#serial.SerialPipe_sendToLeanbot(getSyncCmd, false);
+    this.#isSyncing  = true;
+  }
+
+  async #handleGetSyncAck(bytes) {
+    this.#isSyncing  = false;
+    if (!this.#isACK(bytes)) {
+      console.warn("[SYNC] Invalid SYNC ACK response");
+      this.#emitUploadMessage("Get Sync failed");
       this.isUploading = false;
+      return;
     }
+    console.log("[SYNC] SYNC ACK received!");
+    // Bắt đầu upload code
+    await this.#uploadCode();
+  }
+  
+  /* ------------------- LOAD ADDRESS ------------------- */
+  async #loadAddress(pageIndex) {
+    const byteAddress = pageIndex * this.#pageSize;
+    const wordAddress = byteAddress >> 1;
+    const addrLow     = wordAddress & 0xFF;
+    const addrHigh    = (wordAddress >> 8) & 0xFF;
+
+    // STK_LOAD_ADDRESS + addrLow + addrHigh + STK_CRC_EOP
+    const cmd = new Uint8Array([0x55, addrLow, addrHigh, 0x20]);
+    console.log(`[LOAD] Sent LOAD_ADDRESS for page ${pageIndex}`);
+    await this.#serial.SerialPipe_sendToLeanbot(cmd, false);
+    this.#isLoadingAddress = true;
+
+    while (this.#isLoadingAddress) await new Promise(resolve => setTimeout(resolve, 5));
   }
 
-  #buildPagesFromBlocks(mergedBlocks, pageSize = 128) {
-    const pages = {}; // key = pageIndex
+  async #handleLoadAddressAck(bytes) {
+    this.#isLoadingAddress = false;
+    if (!this.#isACK(bytes)) {
+      console.warn("[LOAD] Invalid LOAD_ADDRESS ACK response");
+      this.#emitUploadMessage("Load address failed");
+      this.isUploading = false;
+      return;
+    }
+    console.log("[LOAD] LOAD_ADDRESS ACK received!");
+  }
+
+  /* ------------------- READ FLASH ------------------- */
+  async #readFlash(pageIndex = 0) {
+    console.log(`[READ] Page ${pageIndex}`);
+    
+    // 1) LOAD_ADDRESS
+    await this.#loadAddress(pageIndex);
+
+    // 2) STK_READ_PAGE + len_hi + len_lo + 'F' + STK_CRC_EOP
+    const readPageCmd = new Uint8Array([0x74, 0x00, this.#pageSize, 0x46, 0x20]);
+    console.log("[READ] Sent READ_PAGE command");
+    await this.#serial.SerialPipe_sendToLeanbot(readPageCmd, false);
+
+    this.#isReadingPage = true;
+    this.#isCollectingPage = false;
+    this.#pageBuffer = [];
+
+    while (this.#isReadingPage) await new Promise(resolve => setTimeout(resolve, 5));
+  }
+
+  async #handleReadFlashAck(chunk) {
+    if (!this.#isCollectingPage && chunk[0] !== this.#responseACK[0]) return;
+
+    if (!this.#isCollectingPage) this.#isCollectingPage = true; // bắt đầu thu thập page
+
+    this.#pageBuffer.push(...chunk);
+
+    if (chunk[chunk.length - 1] !== this.#responseACK[1]) return; // chưa kết thúc, chờ chunk tiếp theo
+
+    if (this.#pageBuffer.length !== this.#pageSize + 2) return; // kích thước không đúng, chờ chunk tiếp theo
+
+    this.#pageBuffer = this.#pageBuffer.slice(1, -1); // loại bỏ byte ACK đầu và cuối
+    this.#isReadingPage = false;
+    this.#isCollectingPage = false;
+  }
+
+  /* ------------------- WRITE FLASH ------------------- */
+  async #writeFlash(pageIndex, pageData) {
+    console.log(`[WRITE] Page ${pageIndex}`);
+
+    if (!(pageData instanceof Uint8Array) || pageData.length !== this.#pageSize) {
+      throw new Error(`pageData must be Uint8Array[${this.#pageSize}]`);
+    }
+    // 1) LOAD_ADDRESS
+    await this.#loadAddress(pageIndex);
+
+    // 2) PROG PAGE
+    const progPageHeader = new Uint8Array([0x64, 0x00, this.#pageSize,  0x46]); // STK_PROG_PAGE + len_hi + len_lo + 'F'
+    const progPageTail = new Uint8Array([0x20]); // STK_CRC_EOP
+
+    console.log("[WRITE] Sending PAGE command");
+
+    await this.#serial.SerialPipe_sendToLeanbot(progPageHeader, false);
+    await this.#serial.SerialPipe_sendToLeanbot(pageData, false);
+    await this.#serial.SerialPipe_sendToLeanbot(progPageTail, false);
+
+    this.#isWritingPage = true;
+
+    while (this.#isWritingPage) await new Promise(resolve => setTimeout(resolve, 5));
+
+    this.#emitUploadMessage(`Write ${(pageIndex + 1) * this.#pageSize} bytes`);
+  }
+ 
+  async #handleWriteFlashAck(bytes) {
+    this.#isWritingPage = false;
+    if (!this.#isACK(bytes)) {
+      console.warn("[WRITE] Invalid PROG_PAGE ACK response");
+      this.#emitUploadMessage("Write failed");
+      this.isUploading = false;
+      return;
+    }
+    console.log("[WRITE] PROG_PAGE ACK received!");
+  }
+
+  /* ------------------- UPLOAD CODE ------------------- */
+  async #uploadCode() {
+    console.log("[UPLOAD] Starting code upload...");
+    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, this.#pageSize);
+
+    // Tổng số byte data thực sự (để UI dùng)
+    const totalBytesData = pages.length * this.#pageSize;
+    this.#uploader.totalPackets   = pages.length;
+    this.#uploader.totalBytesData = totalBytesData;
+
+    let writtenBytes = 0;
+
+    const t1 = performance.now();
+    for (const page of pages) {
+      this.#emitUploadMessage(`Receive ${page.pageIndex + 1}`);
+      await this.#writeFlash(page.pageIndex, page.bytes);
+    }
+    const t2 = performance.now();
+    console.log(`[UPLOAD] Completed in ${((t2 - t1) / 1000).toFixed(2)} s`);
+
+    // Verify
+    const t3 = performance.now();
+    const verifyOk = await this.verifyUploadedCode();
+    const t4 = performance.now();
+    console.log(`[UPLOAD] Verification completed in ${((t4 - t3) / 1000).toFixed(2)} s`);
+    console.log("[UPLOAD] Verify result:", verifyOk ? "OK" : "FAILED");
+
+    // Thông báo success / fail cho UI cũ
+    if (this.#uploader) {
+      if (verifyOk) {
+        this.#emitUploadMessage(`Upload success, Reset Leanbot`);
+      } else {
+        this.#emitUploadMessage(`Verify failed`);
+      }
+    }
+
+    this.isUploading = false;
+  }
+
+  /* ------------------- BUILD PAGES FROM BLOCKS ------------------- */
+  #buildPagesFromBlocks(mergedBlocks) {
+    const pages = {};
 
     for (const block of mergedBlocks) {
       let addr = block.address;
       for (let i = 0; i < block.bytes.length; i++, addr++) {
-        const pageIndex  = Math.floor(addr / pageSize);
-        const pageBase   = pageIndex * pageSize;
-        const pageOffset = addr % pageSize;
+        const pageIndex  = Math.floor(addr / this.#pageSize);
+        const pageBase   = pageIndex * this.#pageSize;
+        const pageOffset = addr % this.#pageSize;
 
         if (!pages[pageIndex]) {
           pages[pageIndex] = {
             pageIndex,
             address: pageBase,
-            bytes: new Uint8Array(pageSize).fill(0xFF),
+            bytes: new Uint8Array(this.#pageSize).fill(0xFF),
           };
         }
         pages[pageIndex].bytes[pageOffset] = block.bytes[i];
@@ -789,291 +934,115 @@ class JDYUploader {
     return Object.values(pages).sort((a, b) => a.pageIndex - b.pageIndex);
   }
 
-  // #pendingAddrResolve = null;
-  // #pendingAddrReject  = null;
-  // #addrTimeoutId      = null;
-  #isLoadingAddress = null;
+  /* ------------------- SO SÁNH 2 PAGE ------------------- */
+  #comparePage(expected, actual) {
+    if (!expected || !actual) return false;
+    if (expected.length !== actual.length) return false;
 
-  async #loadAddress(pageIndex, maxAttempts = 5) {
-    const byteAddress = pageIndex * this.#pageSize;
-    const wordAddress = byteAddress >> 1;
-    const addrLow     = wordAddress & 0xFF;
-    const addrHigh    = (wordAddress >> 8) & 0xFF;
-    const cmd = new Uint8Array([0x55, addrLow, addrHigh, 0x20]); // STK_LOAD_ADDRESS + addrLow + addrHigh + STK_CRC_EOP
-
-    // for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    //   await this.#serial.SerialPipe_sendToLeanbot(cmd, false);
-
-    //   try {
-    //     await this.#waitForLoadAddressAck(20);
-    //     console.log("[LOAD] LOAD_ADDRESS ACK received!");
-    //     return;
-    //   } catch (e) {
-    //     console.warn("[LOAD] LOAD_ADDRESS ACK failed:", e.message);
-    //     if (attempt === maxAttempts) {
-    //       throw new Error("LOAD_ADDRESS failed after max attempts");
-    //     }
-    //   }
-    // }
-    await this.#serial.SerialPipe_sendToLeanbot(cmd, false);
-    this.#isLoadingAddress = true;
+    for (let i = 0; i < expected.length; i++) {
+      if (expected[i] !== actual[i]) return false;
+    }
+    return true;
   }
 
-  // #waitForLoadAddressAck(timeoutMs = 20) {
-  //   return new Promise((resolve, reject) => {
-  //     this.#pendingAddrResolve = resolve;
-  //     this.#pendingAddrReject  = reject;
+  /* Đọc 1 page và chờ đến khi nhận xong */
+  async #readPageAndGetData(pageIndex) {
+    await this.#readFlash(pageIndex);
 
-  //     this.#addrTimeoutId = setTimeout(() => {
-  //       this.#pendingAddrResolve = null;
-  //       this.#pendingAddrReject  = null;
-  //       this.#addrTimeoutId      = null;
-  //       reject(new Error("Timeout waiting for LOAD_ADDRESS ACK"));
-  //     }, timeoutMs);
-  //   });
-  // }
+    // chờ cho đến khi #handleReadFlashAck xử lý xong
+    while (this.#isReadingPage) await new Promise(resolve => setTimeout(resolve, 5));
 
-  // #clearLoadAddressAck() {
-  //   if (this.#addrTimeoutId) {
-  //     clearTimeout(this.#addrTimeoutId);
-  //     this.#addrTimeoutId = null;
-  //   }
-  //   this.#pendingAddrResolve = null;
-  //   this.#pendingAddrReject  = null;
-  // }
-
-  #handleLoadAddressAck(bytes) {
-    if (bytes[0] === this.#responseACK[0] && bytes[1] === this.#responseACK[1]) {
-      this.#isLoadingAddress = false;
-      console.log("[LOAD] LOAD_ADDRESS ACK received!");
-    }
-    else {
-      console.warn("[LOAD] Invalid LOAD_ADDRESS ACK response");
-    }
+    return this.#pageBuffer;
   }
 
-  async readFlash(pageIndex = 0) {
-    console.log(`[READ] Page ${pageIndex}`);
-    
-    // 1) LOAD_ADDRESS
-    await this.#loadAddress(pageIndex);
+  /* ------------------- VERIFY READ_PAGE ------------------- */
+  /**
+   * mode = "full"   → verify tất cả page
+   * mode = "sample" → verify 1/16 số page, random
+   */
+  async verifyUploadedCode(mode = "sample") {
+    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, this.#pageSize);
+    const totalPages = pages.length;
 
-    while (this.#isLoadingAddress) {
-      await new Promise(resolve => setTimeout(resolve, 5));
-    }
-    
-    // 2) READ_PAGE
-    const readPageCmd = new Uint8Array([
-      0x74,             // STK_READ_PAGE
-      0x00,             // len_hi
-      this.#pageSize,   // len_lo
-      0x46,             // 'F'
-      0x20              // STK_CRC_EOP
-    ]);
-
-    await this.#serial.SerialPipe_sendToLeanbot(readPageCmd, false);
-
-    // 3) CHỜ RESPONSE
-    console.log("[READ] Waiting for page data...");
-    const pageData = await this.#waitForReadPage(3000); 
-
-    console.log("[READ] Page", pageIndex, "length =", pageData.length);
-
-    return pageData;
-  }
-
-  #pendingPageResolve = null;
-  #pendingPageReject  = null;
-  #pageTimeoutId      = null;
-
-  #pageBuffer      = [];
-  #pageCollecting  = false;
-
-  #waitForReadPage(timeoutMs = 3000) {
-    // reset buffer & state
-    this.#pageBuffer     = [];
-    this.#pageCollecting = false;
-
-    return new Promise((resolve, reject) => {
-      this.#pendingPageResolve = resolve;
-      this.#pendingPageReject  = reject;
-
-      this.#pageTimeoutId = setTimeout(() => {
-        this.#pageTimeoutId = null;
-        this.#pendingPageResolve = null;
-        this.#pendingPageReject  = null;
-        this.#pageBuffer = [];
-        this.#pageCollecting = false;
-        reject(new Error("Timeout waiting for flash page data"));
-      }, timeoutMs);
-    });
-  }
-
-  #clearPendingPage() {
-    if (this.#pageTimeoutId) {
-      clearTimeout(this.#pageTimeoutId);
-      this.#pageTimeoutId = null;
-    }
-    this.#pendingPageResolve = null;
-    this.#pendingPageReject  = null;
-    this.#pageBuffer = [];
-    this.#pageCollecting = false;
-  }
-
-  #handleReadFlashResponse(chunk) {
-    if (!this.#pendingPageResolve) return;
-
-    // chunk là Uint8Array 20 byte từ BLE
-    let startIndex = 0;
-
-    if (!this.#pageCollecting) {
-      // Tìm byte 0x14 (STK_INSYNC)
-      const idx = chunk.indexOf(this.#responseACK[0]);
-      if (idx === -1) return; // không tìm thấy, bỏ qua chunk này
-      this.#pageCollecting = true;
-      startIndex = idx; // bắt đầu cộng từ 0x14
+    if (totalPages === 0) {
+      console.log("[VERIFY] No pages to verify.");
+      return false;
     }
 
-    // Đang collect -> đẩy toàn bộ từ startIndex vào buffer
-    for (let i = startIndex; i < chunk.length; i++) {
-      this.#pageBuffer.push(chunk[i]);
-    }
+    let pageIndices = [];
 
-    // Nếu byte cuối cùng trong chunk là 0x10 (STK_OK) -> có thể là kết thúc message
-    const lastByte = chunk[chunk.length - 1];
-    if (lastByte !== this.#responseACK[1]) {
-      // chưa kết thúc, chờ chunk tiếp theo
-      return;
-    }
+    /* ---------------- SELECT VERIFY MODE ---------------- */
+    if (mode === "full") {
+      console.log(`[VERIFY] Mode FULL: verifying all ${totalPages} pages...`);
+      pageIndices = [...Array(totalPages).keys()]; // 0 → totalPages-1
 
-    // Đã kết thúc message: dựng Uint8Array từ buffer
-    const fullMsg = new Uint8Array(this.#pageBuffer);
+    } else if (mode === "sample") {
+      const sampleCount = Math.max(1, Math.floor(totalPages / 16));
+      const selected = new Set();
 
-    // fullMsg = [0x14, data..., 0x10]
-    const expectedTotal = this.#pageSize + 2; // 128 data + 0x14 + 0x10
-    if (fullMsg.length < expectedTotal) {
-      // this.#pendingPageReject?.(
-      //   new Error(`Invalid page response length: ${fullMsg.length}, expected >= ${expectedTotal}`)
-      // );
-      // this.#clearPendingPage();
-      return;
-    }
-
-    const pageData = fullMsg.slice(1, 1 + this.#pageSize); // cắt phần data
-
-    // Resolve promise + clear state
-    this.#pendingPageResolve?.(pageData);
-    this.#clearPendingPage();
-
-    console.log("[READ] Page completed:");
-    console.log("const uint8_t hexdata[] = {");
-    console.log(formatHexBlock(pageData));
-    console.log("};");
-  }
-
-  #pendingWriteResolve = null;
-  #pendingWriteReject  = null;
-  #writeTimeoutId      = null;
-
-  async writeFlash(pageIndex, pageData) {
-    console.log(`[WRITE] Page ${pageIndex}`);
-
-    if (!(pageData instanceof Uint8Array) || pageData.length !== this.#pageSize) {
-      throw new Error(`pageData must be Uint8Array[${this.#pageSize}]`);
-    }
-    // 1) LOAD_ADDRESS
-    await this.#loadAddress(pageIndex);
-
-    // 2) PROG_PAGE (ghi 1 page flash)
-    const progPageHeader = new Uint8Array([
-      0x64,             // STK_PROG_PAGE
-      0x00,             // len_hi
-      this.#pageSize,   // len_lo = 128
-      0x46              // 'F' = flash memory
-    ]);
-    const progPageTail = new Uint8Array([0x20]); // STK_CRC_EOP
-
-    console.log("[WRITE] Page Data:");
-
-    // Gửi header, data, tail
-    await this.#serial.SerialPipe_sendToLeanbot(progPageHeader, false);
-    await this.#serial.SerialPipe_sendToLeanbot(pageData, false);
-    await this.#serial.SerialPipe_sendToLeanbot(progPageTail, false);
-
-    // 3) Chờ ACK 0x14 0x10
-    const ok = await this.#waitForWriteAck(3000);
-
-    console.log("[WRITE] Page", pageIndex, "ACK =", ok);
-
-    return ok; // true nếu nhận được 0x14 0x10
-  }
-
-  async #waitForWriteAck(timeoutMs = 3000) {
-    return new Promise((resolve, reject) => {
-      this.#pendingWriteResolve = resolve;
-      this.#pendingWriteReject  = reject;
-
-      this.#writeTimeoutId = setTimeout(() => {
-        this.#pendingWriteResolve = null;
-        this.#pendingWriteReject  = null;
-        reject(new Error("Timeout waiting for PROG_PAGE ACK"));
-      }, timeoutMs);
-    });
-  }
-
-  #clearWriteTimeout() {
-    if (this.#writeTimeoutId) {
-      clearTimeout(this.#writeTimeoutId);
-      this.#writeTimeoutId = null;
-    }
-    this.#pendingWriteResolve = null;
-    this.#pendingWriteReject  = null;
-  }
-
-  #handleWriteAck(bytes) {
-    // 0x14 = STK_INSYNC, 0x10 = STK_OK
-    if (bytes[0] === this.#responseACK[0] && bytes[1] === this.#responseACK[1]) {
-      this.#pendingWriteResolve?.(true);
-    } else {
-      this.#pendingWriteReject?.(
-        new Error(
-          `Invalid PROG_PAGE ACK: 0x${bytes[0].toString(16)}, 0x${bytes[1].toString(16)}`
-        )
-      );
-    }
-
-    this.#clearWriteTimeout();
-  }
-
-  async testWriteFlash() {
-    // Tạo data test: 0x00, 0x01, 0x02, ... 0x7F
-    const testData = new Uint8Array(this.#pageSize);
-    for (let i = 0; i < this.#pageSize; i++) {
-      testData[i] = i & 0xFF;
-    }
-
-    console.log("[TEST] Writing test pattern to page 1...");
-    await this.writeFlash(1, testData);
-
-    console.log("[TEST] Reading back page 1...");
-    const readBack = await this.readFlash(1);
-
-    // So sánh từng byte
-    let ok = true;
-    for (let i = 0; i < this.#pageSize; i++) {
-      if (readBack[i] !== testData[i]) {
-        console.error(
-          `[TEST] Mismatch at byte ${i}: wrote 0x${testData[i]
-            .toString(16)
-            .padStart(2, "0")}, read 0x${readBack[i].toString(16).padStart(2, "0")}`
-        );
-        ok = false;
-        break;
+      while (selected.size < sampleCount) {
+        const r = Math.floor(Math.random() * totalPages);
+        selected.add(r);
       }
+
+      pageIndices = [...selected];
+      console.log(`[VERIFY] Mode SAMPLE: verifying ${pageIndices.length}/${totalPages} random pages (~1/16)`);
+    } 
+    else {
+      console.warn(`[VERIFY] Invalid mode "${mode}". Expected "full" or "sample".`);
+      return false;
     }
 
-    if (ok) {
-      console.log("[TEST] Write/Read page 1 OK – data matches exactly.");
+    /* ---------------- EXECUTE VERIFY ---------------- */
+    let allOk = true;
+    let verifyStep = 0; 
+    for (const idx of pageIndices) {
+      const page = pages[idx];
+      const pageIndex = page.pageIndex;
+
+      console.log(`[VERIFY] Reading page ${pageIndex}...`);
+      const deviceData = await this.#readPageAndGetData(pageIndex);
+
+      const isSame = this.#comparePage(page.bytes, deviceData);
+
+      if (!isSame) {
+        allOk = false;
+        console.warn(`[VERIFY] Page ${pageIndex} MISMATCH!`);
+
+        // log byte đầu tiên bị sai
+        for (let i = 0; i < page.bytes.length; i++) {
+          if (page.bytes[i] !== deviceData[i]) {
+            console.warn(
+              `[VERIFY] Page ${pageIndex}, offset ${i}: ` +
+              `expected 0x${page.bytes[i].toString(16).padStart(2,'0')}, ` +
+              `got 0x${deviceData[i].toString(16).padStart(2,'0')}`
+            );
+            break;
+          }
+        }
+      } else {
+        console.log(`[VERIFY] Page ${pageIndex} OK`);
+      }
+      verifyStep++;
+      const verifiedBytes = (verifyStep / pageIndices.length) * this.#uploader.totalBytesData;
+      this.#emitUploadMessage(`Verify ${Math.floor(verifiedBytes)} bytes`);
+    }
+
+    /* ---------------- FINAL RESULT ---------------- */
+    if (allOk) {
+      console.log(`[VERIFY] Verification SUCCESS (${mode} mode).`);
+    } else {
+      console.log(`[VERIFY] Verification FAILED (${mode} mode).`);
+    }
+
+    return allOk;
+  }
+
+  #emitUploadMessage(message) {
+    if (this.#uploader) {
+      this.#uploader.onMessageInternal(message);
+      const timeStamp = ((Date.now() - this.#startTime) / 1000).toFixed(3);
+      this.#uploader.onMessage(`[${timeStamp}] ${message}`);
     }
   }
 }
@@ -1284,7 +1253,8 @@ function updateHashWithBytes(hash32, data) {
 // ======================================================
 // 🔹 HEX FORMATTING UTILITIES
 // ======================================================
-function formatHexBlock(data) {
+function logFormatHexBlock(data) {
+  console.log("const uint8_t hexdata[] = {");
   let lines = [];
   for (let i = 0; i < data.length; i += 16) {
     const slice = data.slice(i, i + 16);
@@ -1293,5 +1263,6 @@ function formatHexBlock(data) {
       .join(", ");
     lines.push("  " + hexLine + ",");
   }
-  return lines.join("\n");
+  console.log(lines.join("\n"));
+  console.log("};");
 }
