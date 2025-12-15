@@ -471,7 +471,7 @@ class Uploader {
   };
 
   // ========== Message Processor ==========
-  async onMessageInternal(LineMessage) {
+  async onMessageInternal(LineMessage, onTransferInternal = true) {
     let m = null;
 
     // RSSI
@@ -505,7 +505,7 @@ class Uploader {
       this.isTransferring = false;
       if (progress === this.totalPackets) this.isTransferring = true;
 
-      await this.#onTransferInternal(progress);
+      if (onTransferInternal) await this.#onTransferInternal(progress);
       if (this.onTransfer) this.onTransfer(progress + 1, this.totalPackets);
       return;
     }
@@ -704,13 +704,28 @@ class JDYUploader {
     this.#startTime = Date.now();
 
     console.log("[UPLOAD] Disconnecting...");
-    const resultDisc = this.#leanbot.disconnect();
-    console.log("[UPLOAD] Disconnect result:", resultDisc.message);
-
-    await new Promise(resolve => setTimeout(resolve, 3500));
+    const resultDisc = await this.#leanbot.disconnect();
+    console.log("[UPLOAD] Disconnect result:", resultDisc?.message);
 
     console.log("[UPLOAD] Reconnecting...");
-    const resultReco = await this.#leanbot.reconnect();
+    let resultReco = null;
+    let retryCount = 0;
+
+    while (true) {
+      try {
+        retryCount++;
+        resultReco = await this.#leanbot.reconnect();
+
+        if (resultReco?.success) {
+          this.#emitUploadMessage(`Reconnect successful after ${retryCount} retries (50 ms interval)`);
+          break;
+        }
+      } catch (err) {
+        // ignore lỗi, tiếp tục thử
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
 
     if (!resultReco.success) {
       console.log("[UPLOAD] Reconnect failed:", resultReco.message);
@@ -884,8 +899,8 @@ class JDYUploader {
 
     const t1 = performance.now();
     for (const page of pages) {
-      this.#emitUploadMessage(`Receive ${page.pageIndex + 1}`);
       await this.#writeFlash(page.pageIndex, page.bytes);
+      this.#emitUploadMessage(`Receive ${page.pageIndex + 1}`);
     }
     const t2 = performance.now();
     console.log(`[UPLOAD] Completed in ${((t2 - t1) / 1000).toFixed(2)} s`);
@@ -1040,7 +1055,7 @@ class JDYUploader {
 
   #emitUploadMessage(message) {
     if (this.#uploader) {
-      this.#uploader.onMessageInternal(message);
+      this.#uploader.onMessageInternal(message, false);
       const timeStamp = ((Date.now() - this.#startTime) / 1000).toFixed(3);
       this.#uploader.onMessage(`[${timeStamp}] ${message}`);
     }

@@ -15,32 +15,39 @@
     </div>
 
     <div id="rightButtons">
-      <span id="fileName">No file</span>
-      <button id="btnLoadHex">Load HEX</button>
-      <input type="file" id="hexFileInput" accept=".hex" hidden>
+      <span id="fileName" hidden>No file</span>
+      <button id="btnLoadFile">Load File</button>
+      <input type="file" id="FileInput" accept=".ino" hidden> <!-- chỉ chấp nhận file .ino -->
       <button id="btnUpload">Upload</button>
+      <button id="btnSerial">Serial</button>
     </div>
   </div>
 
-  <!-- SERIAL MONITOR -->
-  <div id="serialSection">
-    <div id="serialTop">
-      <div id="serialOptions">
-        <label><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
-        <label><input type="checkbox" id="showTimestamp"> Timestamp</label>
-      </div>
-      <div>
-        <button id="btnClear">Clear</button>
-        <button id="btnCopy">Copy</button>
-      </div>
+  <div id="workspace">
+    <div id="editorSection">
+      <div id="codeEditor"></div>
     </div>
 
-    <textarea id="serialLog" readonly></textarea>
+    <!-- SERIAL MONITOR -->
+    <div id="serialSection" class="is-hidden">
+      <div id="serialTop">
+        <div id="serialOptions">
+          <label><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
+          <label><input type="checkbox" id="showTimestamp"> Timestamp</label>
+        </div>
+        <div>
+          <button id="btnClear">Clear</button>
+          <button id="btnCopy">Copy</button>
+        </div>
+      </div>
 
-    <div id="serialBottom">
-      <button id="btnSend">Send</button>
-      <input type="text" id="serialInput" placeholder="Send Message -> ...">
-      <label><input type="checkbox" id="addNewline" checked> Newline</label>
+      <textarea id="serialLog" readonly></textarea>
+
+      <div id="serialBottom">
+        <button id="btnSend">Send</button>
+        <input type="text" id="serialInput" placeholder="Send Message -> ...">
+        <label><input type="checkbox" id="addNewline" checked> Newline</label>
+      </div>
     </div>
   </div>
 
@@ -145,5 +152,6 @@
 
   <script type="module" src="main.js"></script>
   <script src="spark-md5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
 </body>
 </html>

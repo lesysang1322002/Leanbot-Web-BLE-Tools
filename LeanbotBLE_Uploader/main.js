@@ -142,7 +142,7 @@ const modal          = document.getElementById("fileModal");
 const closeModal     = document.getElementById("closeModal");
 const fileNameLabel  = document.getElementById("fileName");
 
-let loadedHexContent = ""; // lưu nội dung file HEX đã đọc
+let fileLoaded = ""; // lưu nội dung file đã đọc
 
 btnCode.addEventListener("click", () => {
   modal.classList.remove("hidden");
@@ -152,51 +152,72 @@ closeModal.addEventListener("click", () => {
   modal.classList.add("hidden");
 });
 
-document.querySelectorAll(".fileOption").forEach(btn => {
-  btn.addEventListener("click", async (e) => {
-    const fileUrl = e.target.getAttribute("data-file");
-    const fileName = fileUrl.split("/").pop();
+// Load file từ URL và trả về { fileName, ext, text }
+async function loadFromUrl(fileUrl) {
+  const fileName = (fileUrl.split("/").pop() || "unknown").split("?")[0].split("#")[0];
+  const ext = (fileName.split(".").pop() || "").toLowerCase();
 
-    fileNameLabel.textContent = fileName;
+  const res = await fetch(fileUrl, { cache: "no-store" }); // tránh cache nếu có
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const text = await res.text();
+
+  return { fileName, ext, text };
+}
+
+document.querySelectorAll(".fileOption").forEach((btn) => {
+  btn.addEventListener("click", async (e) => {
+    const fileUrl = btn.dataset.file; // ổn định hơn e.target.getAttribute(...)
+    if (!fileUrl) return;
+
     modal.classList.add("hidden");
 
-    console.log(`Fetching HEX file from GitHub...`);
-    console.log(`URL: ${fileUrl}`);
+    console.log(`[FETCH] URL: ${fileUrl}`);
 
     try {
-      const res = await fetch(fileUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.leanbotStatus}`);
-      const text = await res.text();
-      loadedHexContent = text;
+      const loaded = await loadFromUrl(fileUrl);
 
-      console.log(`Loaded HEX file: ${fileName}`);
+      fileNameLabel.textContent = loaded.fileName;
+
+      // bạn muốn lưu kiểu object để dùng chung với Compiler / Upload
+      fileLoaded = loaded; // { fileName, ext, text }
+
+      console.log(`[FETCH] Loaded: ${loaded.fileName} (${loaded.ext}), size=${loaded.text.length}`);
     } catch (err) {
-      console.log(`Failed to fetch HEX file: ${err}`);
+      console.log(`[FETCH] Failed: ${err}`);
       alert("Error loading file. Please check your internet or URL.");
     }
   });
 });
 
-// =================== Button Load HEX =================== //
-const btnLoadHex = document.getElementById("btnLoadHex");
-const fileInput  = document.getElementById("hexFileInput");
 
-btnLoadHex.addEventListener("click", () => {
-  fileInput.click();
-  loadHexFile();
+// =================== Button Load HEX =================== //
+const btnLoadFile = document.getElementById("btnLoadFile");
+const fileInput   = document.getElementById("FileInput");
+
+btnLoadFile.addEventListener("click", async () => {
+  fileInput.click(); // Mở hộp thoại chọn file
+  fileLoaded = await loadFile(); // Đợi người dùng chọn file và load nội dung
+  window.arduinoEditor?.setValue(fileLoaded.text); // Hiển thị nội dung file lên editor
 });
 
-async function loadHexFile() {
+// Hàm load file và trả về đối tượng { fileName, ext, text }
+async function loadFile() {
   return new Promise((resolve) => {
-    fileInput.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
+    fileInput.value = "";
+
+    fileInput.onchange = async (e) => {
+      const file = e.target.files?.[0];
       if (!file) return resolve(null);
 
-      fileNameLabel.textContent = file.name;
+      const fileName = file.name;
+      const ext = fileName.split(".").pop().toLowerCase();
       const text = await file.text();
-      loadedHexContent = text;
-      resolve(text);
-    }, { once: true });
+
+      fileNameLabel.textContent = fileName; // Cập nhật tên file trên UI
+
+      resolve({ fileName, ext, text }); // Trả về đối tượng file đã load
+    };
   });
 }
 
@@ -204,32 +225,25 @@ async function loadHexFile() {
 const btnUpload = document.getElementById("btnUpload");
 
 btnUpload.addEventListener("click", async () => {
-  if (!loadedHexContent) {
-    fileInput.click();
-    loadedHexContent = await loadHexFile();
-    if (!loadedHexContent) {
-      alert("No HEX file loaded!");
-      return;
-    }
-  }
-
+  // Kết nối Leanbot nếu chưa kết nối
   const result = await leanbot.reconnect();
   if (!result.success) {
     alert("Please connect to Leanbot first!");
     return;
   }
   
-  // trimSerialLogTo30();
-  uiUploadDialogOpen();
+  uiUploadDialogOpen();                    // Mở hộp thoại Upload
+  compileStart = performance.now();       
+  const codeINO = getEditorCode();         // Lấy code từ editor
+  if (!codeINO) {
+    alert("No code to upload! Please write or load an Leanbot sketch.");
+    return;
+  }
+  const hexText = await Compiler(codeINO); // Biên dịch file INO sang HEX
 
-  compileStart = performance.now();
-  UploaderTitleCompile.className = "yellow";
-  await SimulateCompiler();
-  UploaderTitleCompile.className = "green";
-
-  uploadStart = performance.now();
+  uploadStart = performance.now();         
   UploaderTitleUpload.className = "yellow";
-  await leanbot.Uploader.upload(loadedHexContent); // Upload the HEX file
+  await leanbot.Uploader.upload(hexText);  // Bắt đầu upload HEX lên Leanbot
 });
 
 // =================== Upload DOM Elements =================== //
@@ -290,12 +304,14 @@ function uiUploadDialogOpen() {
 }
 
 async function SimulateCompiler() {
+  UploaderTitleCompile.className = "yellow";
   const total = 3;
   for (let i = 1; i <= total; i++) {
     await new Promise(r => setTimeout(r, 100));
     uiUpdateTime(compileStart, UploaderTimeCompile);
     uiUpdateProgress(UploaderCompile, i, total);
   }
+  UploaderTitleCompile.className = "green";
 }
 
 // =================== Uploader UI Updates =================== //
@@ -370,4 +386,291 @@ leanbot.Uploader.onError = (err) => {
   UploaderBtnClose.innerText = "Close";
   UploaderTitleUpload.className = "red";
 };
-// End of main.js
+
+// =================== INO Compiler =================== //
+async function Compiler(loaded) {
+  // UI: màu vàng, tiến trình 1/2
+  UploaderTitleCompile.className = "yellow";
+  uiUpdateProgress(UploaderCompile, 1, 2);
+  // Bỏ đuôi .ino để lấy tên sketch
+  const sketchName = loaded.fileName.replace(/\.ino$/i, "");
+  // Tạo payload để gửi lên server compiler
+  const payload = {
+    fqbn: "arduino:avr:uno",
+    files: [
+      {
+        content: loaded.text,
+        name: `${sketchName}/${sketchName}.ino`,
+      },
+    ],
+    flags: { verbose: false, preferLocal: false },
+    libs: [],
+  };
+
+  // Gọi server compile, nhận về { hex (base64), log }
+  const out = await compileIno(payload);
+  // Append log compile vào ô log UI
+  UploaderLog.value += "\n" + out.log;
+  uiUpdateProgress(UploaderCompile, 2, 2);
+  uiUpdateTime(compileStart, UploaderTimeCompile);
+
+  // Nếu không có hex trả về => compile fail
+  if (!out.hex || out.hex.trim() === "") {
+    // UI: cập nhật time + báo đỏ
+    UploaderTitleCompile.className = "red";
+    UploaderCompile.className = "red";
+    throw new Error("Compile failed – no hex returned");
+  }
+
+  // UI: màu xanh khi compile thành công
+  UploaderTitleCompile.className = "green";
+  // Decode base64 hex sang text và trả về
+  return base64ToText(out.hex);
+}
+
+// Gọi API compile: gửi payload JSON lên server và nhận kết quả compile
+async function compileIno(payload) {
+  const res = await fetch("https://ide-server-qa.leanbot.space/v3/compile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) throw new Error(`Compile HTTP ${res.status}`);
+  return await res.json(); // { hex: base64, log: "..." }
+}
+
+// Decode base64 string -> UTF-8 text
+function base64ToText(b64) {
+  // atob: base64 -> "binary string" (mỗi ký tự 0..255)
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+
+  // Chuyển bytes -> string UTF-8
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
+// =================== Get Code from Editor =================== //
+// Lấy code từ editor và trả về object phù hợp với hàm Compiler đã viết
+function getEditorCode() {
+  const text = getCodeText();
+  if (!text || !text.trim()) return null;
+
+  return {
+    fileName: "sketch.ino",
+    ext: "ino",
+    text: text,
+  };
+}
+
+// Lấy nội dung code từ Monaco Editor
+function getCodeText() {
+  return window.arduinoEditor?.getValue() || "";
+}
+
+// =================== Serial Monitor Toggle =================== //
+const workspace = document.getElementById("workspace");
+const btnSerial = document.getElementById("btnSerial");
+const serialSection = document.getElementById("serialSection");
+
+btnSerial.addEventListener("click", () => {
+  const open = workspace.classList.toggle("serial-open");
+
+  // sync trạng thái ẩn/hiện theo class
+  serialSection.classList.toggle("is-hidden", !open);
+
+  // (tuỳ chọn) đổi style nút để biết đang bật
+  btnSerial.classList.toggle("active", open);
+});
+
+// =================== Monaco Editor for Arduino =================== //
+
+require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs" } });
+
+    require(["vs/editor/editor.main"], function () {
+      // Arduino keywords thêm vào highlight
+      monaco.languages.register({ id: "arduino" });
+      monaco.languages.setMonarchTokensProvider("arduino", {
+        tokenizer: {
+          root: [
+            // multi-line comment start /* ... */
+            [/\/\*/, "comment", "@comment"],
+
+            // single-line comment
+            [/\/\/.*$/, "comment"],
+
+            // strings
+            [/"/, { token: "string.quote", bracket: "@open", next: "@string" }],
+
+            // keywords/types
+            [/\b(void|int|char|float|double|bool|byte|long|short|unsigned|signed|const)\b/, "keyword"],
+            [/\b(setup|loop|Serial|pinMode|digitalWrite|digitalRead|analogRead|analogWrite|delay|millis|micros)\b/, "type.identifier"],
+            [/\b(begin|println|print|available|read|write)\b/, "identifier"],
+
+            // numbers
+            [/\b\d+(\.\d+)?\b/, "number"],
+          ],
+
+          // comment state: ăn mọi thứ đến khi gặp */
+          comment: [
+            [/[^\*]+/, "comment"],
+            [/\*\//, "comment", "@pop"],
+            [/\*/, "comment"],
+          ],
+
+          string: [
+            [/[^\\"]+/, "string"],
+            [/\\./, "string.escape"],
+            [/"/, { token: "string.quote", bracket: "@close", next: "@pop" }],
+          ],
+        },
+      });
+
+      // Light theme cho Arduino
+      monaco.editor.defineTheme("arduinoLight", {
+        base: "vs",          // 🔴 theme sáng
+        inherit: true,
+        rules: [
+          { token: "comment", foreground: "008000" },      // xanh lá comment
+          { token: "keyword", foreground: "0000FF" },      // xanh dương
+          { token: "number", foreground: "098658" },
+          { token: "string", foreground: "A31515" },       // đỏ nâu
+          { token: "type.identifier", foreground: "267F99" },
+          { token: "identifier", foreground: "001080" },
+        ],
+        colors: {
+          "editor.background": "#FFFFFF",
+          "editorLineNumber.foreground": "#999999",
+          "editorLineNumber.activeForeground": "#000000",
+          "editorCursor.foreground": "#000000",
+          "editor.selectionBackground": "#ADD6FF",
+          "editor.inactiveSelectionBackground": "#E5EBF1",
+        }
+      });
+
+      // set theme
+      monaco.editor.setTheme("arduinoLight");
+
+      // ✅ Create editor
+      window.arduinoEditor = monaco.editor.create(document.getElementById("codeEditor"), {
+value: `/*Basic Leanbot Motion
+
+  Wait for TB1A+TB1B touch signal, then go straight for 100 mm, then stop.
+
+  More Leanbot examples at  https://git.pythaverse.space/leanbot/Examples
+*/
+
+
+#include <Leanbot.h>                    // use Leanbot library
+
+
+void setup() {
+  Leanbot.begin();                      // initialize Leanbot
+}
+
+
+void loop() {
+  LbMission.begin( TB1A + TB1B );       // start mission when both TB1A and TB1B touched
+
+  LbMotion.runLR( +1000, +1000 );       // go straight forward with speed 1000 steps/s
+  LbMotion.waitDistanceMm( 100 );       // for 100 mm distance
+
+  LbMission.end();                      // stop, finish mission
+}`,
+        language: "arduino",
+        automaticLayout: true,   // tự resize theo workspace
+        lineNumbers: "on",
+        fontSize: 13,
+        tabSize: 2,
+        insertSpaces: true,
+        wordWrap: "off",
+        minimap: { enabled: true },
+        smoothScrolling: true,
+        cursorSmoothCaretAnimation: "on",
+        bracketPairColorization: { enabled: true },
+      });
+
+      window.arduinoEditor.updateOptions({
+        scrollBeyondLastLine: false,
+
+        quickSuggestions: true,
+        suggestOnTriggerCharacters: true,
+        tabCompletion: "on",
+        acceptSuggestionOnEnter: "on",
+        snippetSuggestions: "top",
+        wordBasedSuggestions: "off",
+      });
+
+      const { languages } = monaco;
+
+      const SUGGESTIONS = [
+        // Arduino cơ bản
+        {
+          label: "setup",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: "void setup() {\n\t$0\n}\n",
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: "Arduino setup()",
+        },
+        {
+          label: "loop",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: "void loop() {\n\t$0\n}\n",
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: "Arduino loop()",
+        },
+        {
+          label: "Serial.println",
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: "Serial.println(${1:\"text\"});",
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: "Print line",
+        },
+        {
+          label: "delay",
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: "delay(${1:500});",
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: "Delay ms",
+        },
+
+        // Leanbot (ví dụ)
+        {
+          label: "Leanbot.begin",
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: "Leanbot.begin();",
+          detail: "Init Leanbot",
+        },
+        {
+          label: "LbMission.begin",
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: "LbMission.begin(${1:TB1A} + ${2:TB1B});",
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: "Start mission",
+        },
+        {
+          label: "LbMotion.runLR",
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: "LbMotion.runLR(${1:+1000}, ${2:+1000});",
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: "Run left/right",
+        },
+      ];
+
+      languages.registerCompletionItemProvider("arduino", {
+        triggerCharacters: [".", "(", "<"],
+        provideCompletionItems: (model, position) => {
+          // Lấy word hiện tại để filter gợi ý theo cái user đang gõ
+          const word = model.getWordUntilPosition(position);
+          const range = new monaco.Range(
+            position.lineNumber,
+            word.startColumn,
+            position.lineNumber,
+            word.endColumn
+          );
+
+          return {
+            suggestions: SUGGESTIONS.map((s) => ({ ...s, range })),
+          };
+        },
+      });
+    });
