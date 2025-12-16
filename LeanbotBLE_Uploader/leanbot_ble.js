@@ -746,6 +746,7 @@ class JDYUploader {
 
       await new Promise(resolve => setTimeout(resolve, 50));
     }
+    this.#emitUploadMessage(`Reconnect result: ${resultReco.message}`);
 
     if (!resultReco.success) {
       console.log("[UPLOAD] Reconnect failed:", resultReco.message);
