@@ -175,16 +175,14 @@ document.querySelectorAll(".fileOption").forEach((btn) => {
     console.log(`[FETCH] URL: ${fileUrl}`);
 
     try {
-      const loaded = await loadFromUrl(fileUrl);
+      const res = await fetch(fileUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.leanbotStatus}`);
+      const text = await res.text();
+      window.arduinoEditor?.setValue(text); // Hiển thị nội dung file lên editor
 
-      fileNameLabel.textContent = loaded.fileName;
-
-      // bạn muốn lưu kiểu object để dùng chung với Compiler / Upload
-      fileLoaded = loaded; // { fileName, ext, text }
-
-      console.log(`[FETCH] Loaded: ${loaded.fileName} (${loaded.ext}), size=${loaded.text.length}`);
+      console.log(`Loaded HEX file: ${fileName}`);
     } catch (err) {
-      console.log(`[FETCH] Failed: ${err}`);
+      console.log(`Failed to fetch HEX file: ${err}`);
       alert("Error loading file. Please check your internet or URL.");
     }
   });
