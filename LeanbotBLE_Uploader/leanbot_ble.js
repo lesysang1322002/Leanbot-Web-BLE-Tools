@@ -109,12 +109,10 @@ export class LeanbotBLE {
   }
 
   getLeanbotID() {
-    // Nếu phiên làm việc hiện tại có thiết bị thì trả về tên thiết bị đó
-    if (this.#device) return this.#device.name
-    
-    // Ngược lại lấy từ localStorage
+    if (this.#device) return this.#device.name;
+      
     const lastDevice = localStorage.getItem("leanbot_device");
-    return lastDevice ? JSON.parse(lastDevice) : "No Leanbot";
+    return lastDevice ? JSON.parse(lastDevice).name : "No Leanbot";
   }
 
   async #setupConnection() {
@@ -150,9 +148,19 @@ export class LeanbotBLE {
     console.log("Callback onConnect: Enabled");
     if (this.onConnect) this.onConnect();
 
-    //** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
-    console.log("Saving device to localStorage:", this.#device.name);
-    localStorage.setItem("leanbot_device", JSON.stringify(this.#device.name));
+    /** --------- SAVE DEVICEINFO TO LOCALSTORAGE --------- */
+    const deviceInfo = {
+      name: this.#device.name,
+      supportSerial: this.Serial.isSupported(),
+      supportUploader: this.Uploader.isSupported(),
+    };
+
+    console.log("Saving device to localStorage:", deviceInfo);
+
+    localStorage.setItem(
+      "leanbot_device",
+      JSON.stringify(deviceInfo)
+    );
   }
 
   constructor() {
@@ -183,6 +191,12 @@ class Serial {
 
   /** Kiểm tra hỗ trợ Serial */
   isSupported() {
+    if (this.#SerialPipe_char === null){
+      const lastDevice = localStorage.getItem("leanbot_device");
+      if (!lastDevice) return false;
+      const deviceInfo = JSON.parse(lastDevice);
+      return deviceInfo.supportSerial || false;
+    }
     return !!this.#SerialPipe_char;
   }
 
@@ -346,6 +360,12 @@ class Uploader {
 
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
+    if (this.#DataPipe_char === null || this.#ControlPipe_char === null){
+      const lastDevice = localStorage.getItem("leanbot_device");
+      if (!lastDevice) return false;
+      const deviceInfo = JSON.parse(lastDevice);
+      return deviceInfo.supportUploader || false;
+    }
     return !!this.#DataPipe_char && !!this.#ControlPipe_char;
   }
 
