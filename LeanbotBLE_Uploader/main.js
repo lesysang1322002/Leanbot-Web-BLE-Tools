@@ -12,7 +12,7 @@ console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
 console.log(`HASH = ${window.HASH}`);
 
-localStorage.removeIteam("leanbot_device")
+localStorage.removeItem("leanbot_device");
 
 // =================== BLE Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");
