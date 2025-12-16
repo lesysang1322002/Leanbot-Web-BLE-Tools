@@ -20,6 +20,8 @@ const btnReconnect  = document.getElementById("btnReconnect");
 // Khởi tạo đối tượng LeanbotBLE
 const leanbot = new LeanbotBLE();
 
+localStorage.removeItem("leanbot_device"); // Xoá thiết bị đã lưu cũ để luôn quét mới
+
 function getLeanbotIDWithoutBLE() {
   return leanbot.getLeanbotID().replace(" BLE", "");
 }
