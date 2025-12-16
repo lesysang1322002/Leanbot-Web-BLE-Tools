@@ -527,30 +527,30 @@ require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0
 
       // Light theme cho Arduino
       monaco.editor.defineTheme("arduinoLight", {
-        base: "vs",          // 🔴 theme sáng
+        base: "vs",          // theme sáng
         inherit: true,
         rules: [
           { token: "comment", foreground: "008000" },      // xanh lá comment
           { token: "keyword", foreground: "0000FF" },      // xanh dương
-          { token: "number", foreground: "098658" },
+          { token: "number", foreground: "098658" },       // xanh lá số
           { token: "string", foreground: "A31515" },       // đỏ nâu
-          { token: "type.identifier", foreground: "267F99" },
-          { token: "identifier", foreground: "001080" },
+          { token: "type.identifier", foreground: "267F99" }, // xanh da trời
+          { token: "identifier", foreground: "001080" },   // xanh đậm
         ],
         colors: {
-          "editor.background": "#FFFFFF",
-          "editorLineNumber.foreground": "#999999",
-          "editorLineNumber.activeForeground": "#000000",
-          "editorCursor.foreground": "#000000",
-          "editor.selectionBackground": "#ADD6FF",
-          "editor.inactiveSelectionBackground": "#E5EBF1",
+          "editor.background": "#FFFFFF", // trắng
+          "editorLineNumber.foreground": "#999999", // xám line number
+          "editorLineNumber.activeForeground": "#000000", // đen line number active
+          "editorCursor.foreground": "#000000", // đen con trỏ
+          "editor.selectionBackground": "#ADD6FF", // xanh dương chọn
+          "editor.inactiveSelectionBackground": "#E5EBF1", // xám nhạt chọn
         }
       });
 
       // set theme
       monaco.editor.setTheme("arduinoLight");
 
-      // ✅ Create editor
+      // Create editor
       window.arduinoEditor = monaco.editor.create(document.getElementById("codeEditor"), {
 value: `/*Basic Leanbot Motion
 
@@ -577,9 +577,9 @@ void loop() {
   LbMission.end();                      // stop, finish mission
 }`,
         language: "arduino",
-        automaticLayout: true,   // tự resize theo workspace
-        lineNumbers: "on",
-        fontSize: 13,
+        automaticLayout: true,   
+        lineNumbers: "on",      
+        fontSize: 13,           
         tabSize: 2,
         insertSpaces: true,
         wordWrap: "off",
@@ -590,20 +590,19 @@ void loop() {
       });
 
       window.arduinoEditor.updateOptions({
-        scrollBeyondLastLine: false,
+        scrollBeyondLastLine: false,       // Dòng cuối luôn nằm sát đáy editor
 
-        quickSuggestions: true,
-        suggestOnTriggerCharacters: true,
-        tabCompletion: "on",
-        acceptSuggestionOnEnter: "on",
-        snippetSuggestions: "top",
-        wordBasedSuggestions: "off",
+        quickSuggestions: true,           // Tự động hiện gợi ý khi đang gõ
+        suggestOnTriggerCharacters: true, // Gợi ý khi gõ các ký tự kích hoạt (., (, <)
+        tabCompletion: "on",              // Tab để chấp nhận gợi ý
+        acceptSuggestionOnEnter: "on",    // Enter để chấp nhận gợi 
+        snippetSuggestions: "top",        // Ưu tiên gợi ý snippet lên đầu
+        wordBasedSuggestions: "off",      // Tắt gợi ý dựa trên từ trong văn bản
       });
 
       const { languages } = monaco;
 
       const SUGGESTIONS = [
-        // Arduino cơ bản
         {
           label: "setup",
           kind: monaco.languages.CompletionItemKind.Snippet,
@@ -647,22 +646,15 @@ void loop() {
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           detail: "Start mission",
         },
-        {
-          label: "LbMotion.runLR",
-          kind: monaco.languages.CompletionItemKind.Function,
-          insertText: "LbMotion.runLR(${1:+1000}, ${2:+1000});",
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: "Run left/right",
-        },
       ];
 
-      languages.registerCompletionItemProvider("arduino", {
-        triggerCharacters: [".", "(", "<"],
+      languages.registerCompletionItemProvider("arduino", { // cung cấp gợi ý
+        triggerCharacters: [".", "(", "<"],                 // ký tự kích hoạt gợi ý        
         provideCompletionItems: (model, position) => {
           // Lấy word hiện tại để filter gợi ý theo cái user đang gõ
-          const word = model.getWordUntilPosition(position);
+          const word = model.getWordUntilPosition(position); 
           const range = new monaco.Range(
-            position.lineNumber,
+            position.lineNumber, 
             word.startColumn,
             position.lineNumber,
             word.endColumn

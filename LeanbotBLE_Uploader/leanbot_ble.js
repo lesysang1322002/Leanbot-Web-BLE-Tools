@@ -722,7 +722,6 @@ class JDYUploader {
     }
     
     this.#startTime = Date.now();
-
     console.log("[UPLOAD] Disconnecting...");
     const resultDisc = await this.#leanbot.disconnect();
     console.log("[UPLOAD] Disconnect result:", resultDisc?.message);
