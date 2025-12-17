@@ -223,6 +223,7 @@ async function loadFile() {
 const btnUpload = document.getElementById("btnUpload");
 
 btnUpload.addEventListener("click", async () => {
+  let hexText = null;
   // Kết nối Leanbot nếu chưa kết nối
   const result = await leanbot.reconnect();
   if (!result.success) {
@@ -232,17 +233,37 @@ btnUpload.addEventListener("click", async () => {
   
   uiUploadDialogOpen();                    // Mở hộp thoại Upload
   compileStart = performance.now();       
-  const codeINO = getEditorCode();         // Lấy code từ editor
-  if (!codeINO) {
+  const sourceCode = getSourceCode();         // Lấy code từ editor
+  if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to upload! Please write or load an Leanbot sketch.");
     return;
   }
-  const hexText = await Compiler(codeINO); // Biên dịch file INO sang HEX
 
-  uploadStart = performance.now();         
-  UploaderTitleUpload.className = "yellow";
-  await leanbot.Uploader.upload(hexText);  // Bắt đầu upload HEX lên Leanbot
+  UploaderTitleCompile.className = "yellow";
+  uiUpdateProgress(UploaderCompile, 1, 2);
+
+  await leanbot.LeanbotCompiler.compile(sourceCode);
 });
+
+leanbot.LeanbotCompiler.onCompile = async (response) => {
+  //  Tiến trình 100%, cập nhật thời gian
+  uiUpdateProgress(UploaderCompile, 2, 2);
+  uiUpdateTime(compileStart, UploaderTimeCompile);
+
+  // Append log compile, 
+  UploaderLog.value += "\n" + response.compileLog;
+  
+  if( response.hexCode && response.hexCode.trim() !== "") {
+    UploaderTitleCompile.className = "green";
+    // Bắt đầu upload
+    uploadStart = performance.now();
+    UploaderTitleUpload.className = "yellow";
+    await leanbot.Uploader.upload(response.hexCode);
+  } else {
+    UploaderCompile.className = "red";
+    UploaderTitleCompile.className = "red";
+  }
+};
 
 // =================== Upload DOM Elements =================== //
 const UploaderDialog       = document.getElementById("uploadDialog");
@@ -385,83 +406,8 @@ leanbot.Uploader.onError = (err) => {
   UploaderTitleUpload.className = "red";
 };
 
-// =================== INO Compiler =================== //
-async function Compiler(loaded) {
-  // UI: màu vàng, tiến trình 1/2
-  UploaderTitleCompile.className = "yellow";
-  uiUpdateProgress(UploaderCompile, 1, 2);
-  // Bỏ đuôi .ino để lấy tên sketch
-  const sketchName = loaded.fileName.replace(/\.ino$/i, "");
-  // Tạo payload để gửi lên server compiler
-  const payload = {
-    fqbn: "arduino:avr:uno",
-    files: [
-      {
-        content: loaded.text,
-        name: `${sketchName}/${sketchName}.ino`,
-      },
-    ],
-    flags: { verbose: false, preferLocal: false },
-    libs: [],
-  };
-
-  // Gọi server compile, nhận về { hex (base64), log }
-  const out = await compileIno(payload);
-  // Append log compile vào ô log UI
-  UploaderLog.value += "\n" + out.log;
-  uiUpdateProgress(UploaderCompile, 2, 2);
-  uiUpdateTime(compileStart, UploaderTimeCompile);
-
-  // Nếu không có hex trả về => compile fail
-  if (!out.hex || out.hex.trim() === "") {
-    // UI: cập nhật time + báo đỏ
-    UploaderTitleCompile.className = "red";
-    UploaderCompile.className = "red";
-    throw new Error("Compile failed – no hex returned");
-  }
-
-  // UI: màu xanh khi compile thành công
-  UploaderTitleCompile.className = "green";
-  // Decode base64 hex sang text và trả về
-  return base64ToText(out.hex);
-}
-
-// Gọi API compile: gửi payload JSON lên server và nhận kết quả compile
-async function compileIno(payload) {
-  const res = await fetch("https://ide-server-qa.leanbot.space/v3/compile", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) throw new Error(`Compile HTTP ${res.status}`);
-  return await res.json(); // { hex: base64, log: "..." }
-}
-
-// Decode base64 string -> UTF-8 text
-function base64ToText(b64) {
-  // atob: base64 -> "binary string" (mỗi ký tự 0..255)
-  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-
-  // Chuyển bytes -> string UTF-8
-  return new TextDecoder("utf-8").decode(bytes);
-}
-
-// =================== Get Code from Editor =================== //
-// Lấy code từ editor và trả về object phù hợp với hàm Compiler đã viết
-function getEditorCode() {
-  const text = getCodeText();
-  if (!text || !text.trim()) return null;
-
-  return {
-    fileName: "sketch.ino",
-    ext: "ino",
-    text: text,
-  };
-}
-
 // Lấy nội dung code từ Monaco Editor
-function getCodeText() {
+function getSourceCode() {
   return window.arduinoEditor?.getValue() || "";
 }
 
