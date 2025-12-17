@@ -1,8 +1,5 @@
 // main.js
 
-// Import LeanbotBLE SDK
-import { LeanbotBLE } from "./leanbot_ble.js";
-
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
@@ -11,6 +8,15 @@ window.HASH          = parseInt(params.get("HASH"));
 console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
 console.log(`HASH = ${window.HASH}`);
+
+
+// Import LeanbotCompiler
+import { LeanbotCompiler } from "./leanbot_compiler.js";
+// Khởi tạo đối tượng LeanbotCompiler
+const leanbotCompiler = new LeanbotCompiler();
+
+// Import LeanbotBLE SDK
+import { LeanbotBLE } from "./leanbot_ble.js";
 
 // =================== BLE Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");
@@ -224,7 +230,6 @@ async function loadFile() {
 const btnUpload = document.getElementById("btnUpload");
 
 btnUpload.addEventListener("click", async () => {
-  let hexText = null;
   // Kết nối Leanbot nếu chưa kết nối
   const result = await leanbot.reconnect();
   if (!result.success) {
@@ -232,39 +237,45 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
   
-  uiUploadDialogOpen();                    // Mở hộp thoại Upload
-  compileStart = performance.now();       
-  const sourceCode = getSourceCode();      // Lấy code từ editor
+  uiUploadDialogOpen();                    
+
+  const sourceCode = getSourceCode();      
   if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to upload! Please write or load an Leanbot sketch.");
     return;
   }
 
-  UploaderTitleCompile.className = "yellow";
-  uiUpdateProgress(UploaderCompile, 1, 2);
+  compileStart = performance.now();                // Bắt đầu đếm thời gian compile
+  UploaderTitleCompile.className = "yellow";       // Title Compile yellow: đang compile
+  uiUpdateProgress(UploaderCompile, 1, 2);         // progress: 50% + yellow
 
-  await leanbot.LeanbotCompiler.compile(sourceCode);
+  const response = await leanbotCompiler.compile(sourceCode);
+
+  uiUpdateProgress(UploaderCompile, 2, 2);         // progress:100% + green
+  uiUpdateTime(compileStart, UploaderTimeCompile); // Hiển thị thời gian compile
+
+  UploaderLog.value += "\n" + response.log;        // Hiển thị log compile
+
+  if( response.hex && response.hex.trim() !== "") {// Compile thành công, có hex trả về
+    UploaderTitleCompile.className = "green";      // Title Compile green: compile thành công
+
+    uploadStart = performance.now();               // Bắt đầu đếm thời gian upload  
+    UploaderTitleUpload.className = "yellow";      // Title Upload yellow: đang upload
+    const hexCode = base64ToText(response.hex);    // Giải mã hex từ base64
+    await leanbot.Uploader.upload(hexCode);        // Bắt đầu upload
+  } else {                                         // Compile thất bại, không có hex trả về
+    UploaderCompile.className      = "red";        // progress: red
+    UploaderTitleCompile.className = "red";        // Title Compile red: compile thất bại
+  }
 });
 
-leanbot.LeanbotCompiler.onCompile = async (response) => {
-  //  Tiến trình 100%, cập nhật thời gian
-  uiUpdateProgress(UploaderCompile, 2, 2);
-  uiUpdateTime(compileStart, UploaderTimeCompile);
+function base64ToText(b64) {
+  // atob: base64 -> "binary string" (mỗi ký tự 0..255)
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
 
-  // Append log compile, 
-  UploaderLog.value += "\n" + response.compileLog;
-  
-  if( response.hexCode && response.hexCode.trim() !== "") {
-    UploaderTitleCompile.className = "green";
-    // Bắt đầu upload
-    uploadStart = performance.now();
-    UploaderTitleUpload.className = "yellow";
-    await leanbot.Uploader.upload(response.hexCode);
-  } else {
-    UploaderCompile.className = "red";
-    UploaderTitleCompile.className = "red";
-  }
-};
+  // Chuyển bytes -> string UTF-8
+  return new TextDecoder("utf-8").decode(bytes);
+}
 
 // =================== Upload DOM Elements =================== //
 const UploaderDialog       = document.getElementById("uploadDialog");

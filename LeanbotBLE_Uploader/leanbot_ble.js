@@ -170,7 +170,6 @@ export class LeanbotBLE {
     this.Serial      = new Serial(this);
     this.Uploader    = new Uploader(this);
     this.JDYUploader = new JDYUploader(this, this.Serial, this.Uploader);
-    this.LeanbotCompiler = new LeanbotCompiler(this);
     
     this.Serial.setJDYUploader(this.JDYUploader);
     this.Uploader.setJDYUploader(this.JDYUploader);
@@ -1080,75 +1079,6 @@ class JDYUploader {
       const timeStamp = ((Date.now() - this.#startTime) / 1000).toFixed(3);
       this.#uploader.onMessage(`[${timeStamp}] ${message}`);
     }
-  }
-}
-
-class LeanbotCompiler {
-  onCompile = null;
-
-  async compile(sourceCode) {
-    const currentCodeMD5 = SparkMD5.hash(sourceCode);
-    const lastCodeMD5    = localStorage.getItem("lastCodeMD5") || "";
-
-    if (currentCodeMD5 === lastCodeMD5) {
-      this.onCompile?.({
-        compileLog: localStorage.getItem("lastReponse.log") || "",
-        hexCode   : localStorage.getItem("lastReponse.hex") || "",
-      });
-      return;
-    }
-
-    const sketchName = "LeanbotSketch";
-
-    const payload = {
-      fqbn: "arduino:avr:uno",
-      files: [
-        {
-          content: sourceCode,
-          name: `${sketchName}/${sketchName}.ino`,
-        },
-      ],
-      flags: { verbose: false, preferLocal: false },
-      libs: [],
-    };
-
-    const out = await this.#requestCompile(payload);
-
-    let hexCode = "";
-
-    if (out.hex && out.hex.length > 0) {
-      hexCode = await this.#base64ToText(out.hex);
-    }
-
-    localStorage.setItem("lastCodeMD5", currentCodeMD5);
-    localStorage.setItem("lastReponse.log", out.log);
-    localStorage.setItem("lastReponse.hex", hexCode);
-
-    this.onCompile?.({
-      compileLog: out.log,
-      hexCode   : hexCode,
-    });
-  }
-
-  // Gửi yêu cầu compile lên server
-  async #requestCompile(payload) {
-    const res = await fetch("https://ide-server-qa.leanbot.space/v3/compile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) throw new Error(`Compile HTTP ${res.status}`);
-    return await res.json(); // { hex: base64, log: "..." }
-  }
-
-  // Decode base64 string -> UTF-8 text
-  async #base64ToText(b64) {
-    // atob: base64 -> "binary string" (mỗi ký tự 0..255)
-    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-
-    // Chuyển bytes -> string UTF-8
-    return new TextDecoder("utf-8").decode(bytes);
   }
 }
 
