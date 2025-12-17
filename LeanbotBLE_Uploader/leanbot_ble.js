@@ -139,6 +139,7 @@ export class LeanbotBLE {
     const chars = await this.#service.getCharacteristics();
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
+    console.log("Chars:", this.#chars);
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
