@@ -192,12 +192,6 @@ class Serial {
 
   /** Kiểm tra hỗ trợ Serial */
   isSupported() {
-    if (this.#SerialPipe_char === null){
-      const lastDevice = localStorage.getItem("lastDeviceInfo");
-      if (!lastDevice) return false;
-      const deviceInfo = JSON.parse(lastDevice);
-      return deviceInfo.supportSerial || false;
-    }
     return !!this.#SerialPipe_char;
   }
 
@@ -361,12 +355,6 @@ class Uploader {
 
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
-    if (this.#DataPipe_char === null || this.#ControlPipe_char === null){
-      const lastDevice = localStorage.getItem("lastDeviceInfo");
-      if (!lastDevice) return false;
-      const deviceInfo = JSON.parse(lastDevice);
-      return deviceInfo.supportUploader || false;
-    }
     return !!this.#DataPipe_char && !!this.#ControlPipe_char;
   }
 
