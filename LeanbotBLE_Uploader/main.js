@@ -34,6 +34,7 @@ else{
 }
 
 leanbot.onConnect = () => {
+  console.log("Leanbot connected:", getLeanbotIDWithoutBLE());
   leanbotStatus.style.display = "inline-block";
   leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
   leanbotStatus.style.color   = "green";
