@@ -1088,12 +1088,12 @@ class LeanbotCompiler {
 
   async compile(sourceCode) {
     const currentCodeMD5 = SparkMD5.hash(sourceCode);
-    const lastCodeMD5    = localStorage.getItem("lastCodeMD5");
+    const lastCodeMD5    = localStorage.getItem("lastCodeMD5") || "";
 
     if (currentCodeMD5 === lastCodeMD5) {
       this.onCompile?.({
-        compileLog: localStorage.getItem("lastReponse.log"),
-        hexCode   : localStorage.getItem("lastReponse.hex"),
+        compileLog: localStorage.getItem("lastReponse.log") || "",
+        hexCode   : localStorage.getItem("lastReponse.hex") || "",
       });
       return;
     }

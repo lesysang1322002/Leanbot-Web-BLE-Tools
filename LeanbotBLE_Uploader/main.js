@@ -233,7 +233,7 @@ btnUpload.addEventListener("click", async () => {
   
   uiUploadDialogOpen();                    // Mở hộp thoại Upload
   compileStart = performance.now();       
-  const sourceCode = getSourceCode();         // Lấy code từ editor
+  const sourceCode = getSourceCode();      // Lấy code từ editor
   if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to upload! Please write or load an Leanbot sketch.");
     return;
