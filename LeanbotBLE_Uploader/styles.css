@@ -322,13 +322,13 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
 /* --- WORKSPACE (Editor + Serial) --- */
 
 #workspace{
-  flex: 1;
-  /* height: calc(100vh - var(--topbar-h) - var(--bottombar-h)); */
+  /* flex: 1; */
   display: flex;
   flex-direction: column;
   gap: 8px;              /* nếu muốn có khoảng cách */
   padding: 8px;          /* nếu muốn */
   box-sizing: border-box;
+  height: 300px;    /* hoặc height: calc(100vh - phần khác) nếu muốn
 }
 
 /* Editor mặc định full */
@@ -380,4 +380,46 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   border-radius: 8px;
   overflow: hidden;
 }
+
+/* --- LOG PANEL --- */
+#logPanel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 35%;
+  background: #111;
+  color: #0f0;
+  font-family: monospace;
+  font-size: 12px;
+  border-top: 2px solid #333;
+  z-index: 9999;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #222;
+  color: #fff;
+}
+
+#logOutput {
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: calc(35vh - 40px);
+}
+
+#btnClearLog {
+  background: #444;
+  color: #fff;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
 
