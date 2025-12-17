@@ -237,13 +237,13 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
   
-  uiUploadDialogOpen();                    
-
   const sourceCode = getSourceCode();      
   if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to upload! Please write or load an Leanbot sketch.");
     return;
   }
+  
+  uiUploadDialogOpen();                            // Mở dialog upload
 
   compileStart = performance.now();                // Bắt đầu đếm thời gian compile
   UploaderTitleCompile.className = "yellow";       // Title Compile yellow: đang compile

@@ -2,7 +2,7 @@ export class LeanbotCompiler {
   #prevHash = "";
   #prevResponse = null;
 
-  async compile(sourceCode, compileServer = "cs1.leanbot.space") {
+  async compile(sourceCode, compileServer = "ide-server-qa.leanbot.space") {
     const sketchName = "LeanbotSketch";
 
     const payload = {
@@ -26,7 +26,7 @@ export class LeanbotCompiler {
     if (payloadHash === this.#prevHash) {
       return this.#prevResponse;
     }
-    
+
     const res = await fetch(`https://${compileServer}/v3/compile`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
