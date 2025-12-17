@@ -111,7 +111,7 @@ export class LeanbotBLE {
   getLeanbotID() {
     if (this.#device) return this.#device.name;
       
-    const lastDevice = localStorage.getItem("leanbot_device");
+    const lastDevice = localStorage.getItem("lastDeviceInfo");
     return lastDevice ? JSON.parse(lastDevice).name : "No Leanbot";
   }
 
@@ -158,7 +158,7 @@ export class LeanbotBLE {
     console.log("Saving device to localStorage:", deviceInfo);
 
     localStorage.setItem(
-      "leanbot_device",
+      "lastDeviceInfo",
       JSON.stringify(deviceInfo)
     );
   }
@@ -193,7 +193,7 @@ class Serial {
   /** Kiểm tra hỗ trợ Serial */
   isSupported() {
     if (this.#SerialPipe_char === null){
-      const lastDevice = localStorage.getItem("leanbot_device");
+      const lastDevice = localStorage.getItem("lastDeviceInfo");
       if (!lastDevice) return false;
       const deviceInfo = JSON.parse(lastDevice);
       return deviceInfo.supportSerial || false;
@@ -362,7 +362,7 @@ class Uploader {
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
     if (this.#DataPipe_char === null || this.#ControlPipe_char === null){
-      const lastDevice = localStorage.getItem("leanbot_device");
+      const lastDevice = localStorage.getItem("lastDeviceInfo");
       if (!lastDevice) return false;
       const deviceInfo = JSON.parse(lastDevice);
       return deviceInfo.supportUploader || false;
