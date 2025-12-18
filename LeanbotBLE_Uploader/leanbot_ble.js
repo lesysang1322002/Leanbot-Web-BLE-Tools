@@ -217,35 +217,24 @@ class Serial {
 
   /** Thiết lập characteristic + notify **/
   async setupConnection(characteristics) {
-    const fullUUID  = Serial.SerialPipe_UUID.toLowerCase();
+    const fullUUID  = Serial.SerialPipe_UUID;
     const shortUUID = fullUUID.slice(4, 8); // ffe1
-
-    console.log("Serial lookup full UUID:", fullUUID);
-    console.log("Serial lookup short UUID:", shortUUID);
-
-    console.log("Characteristics keys:", Object.keys(characteristics));
-
+    
     let char = null;
 
-    // 1️⃣ Thử full UUID
     if (characteristics[fullUUID]) {
-      console.log("SerialPipe found by FULL UUID ✅");
       char = characteristics[fullUUID];
     } else {
-      console.warn("SerialPipe NOT found by full UUID ❌");
+      console.warn("SerialPipe NOT found by full UUID");
     }
 
-    // 2️⃣ Nếu chưa có, thử short UUID
     if (!char && characteristics[shortUUID]) {
-      console.log("SerialPipe found by SHORT UUID ✅");
       char = characteristics[shortUUID];
     } else if (!char) {
-      console.warn("SerialPipe NOT found by short UUID ❌");
+      console.warn("SerialPipe NOT found by short UUID");
     }
 
     this.#SerialPipe_char = char;
-
-    console.log("Resolved SerialPipe char =", char);
 
     if (!this.isSupported()) {
       console.warn("Serial: Not supported");
