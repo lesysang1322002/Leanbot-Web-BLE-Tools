@@ -137,10 +137,24 @@ export class LeanbotBLE {
 
     /** ---------- CHARACTERISTICS ---------- */
     const chars = await this.#service.getCharacteristics();
+
+    console.log(
+      "BLE characteristics from service:",
+      chars.map(c => ({
+        uuid: c.uuid.toLowerCase(),
+        properties: c.properties
+      }))
+    );
+
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
+    console.log(
+      "All characteristic UUID keys:",
+      Object.keys(this.#chars)
+    );
+
     await this.Serial.setupConnection(this.#chars);
     await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
 
@@ -219,12 +233,24 @@ class Serial {
 
   /** Thiết lập characteristic + notify **/
   async setupConnection(characteristics) {
-    this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || null;
+    console.log("Serial.setupConnection() called");
+    console.log("Serial.SerialPipe_UUID =", Serial.SerialPipe_UUID);
+    console.log(
+      "Available characteristics keys:",
+      Object.keys(characteristics)
+    );
+
+    this.#SerialPipe_char =
+      characteristics[Serial.SerialPipe_UUID.toLowerCase()] || null;
+
+    console.log("Resolved SerialPipe char:", this.#SerialPipe_char);
 
     if (!this.isSupported()) {
-      console.log("Serial: Not supported");
+      console.warn("Serial: Not supported");
       return;
     }
+
+    console.log("Serial: supported ✅");
 
     if (!this.#SerialPipe_char.properties.notify) {
       console.log("Serial Notify: Not supported");
