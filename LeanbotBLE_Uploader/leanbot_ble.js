@@ -222,7 +222,7 @@ class Serial {
     this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || null;
 
     if (!this.isSupported()) {
-      console.log("Serial Notify: Serial not supported");
+      console.log("Serial: Not supported");
       return;
     }
 
@@ -416,7 +416,7 @@ class Uploader {
     this.#ControlPipe_char = characteristics[Uploader.ControlPipe_UUID] || null;
 
     if (!this.isSupported()) {
-      console.log("Uploader Notify: Uploader not supported");
+      console.log("Uploader: Not supported");
       return;
     }
 
