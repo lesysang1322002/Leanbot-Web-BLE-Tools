@@ -630,9 +630,16 @@ void loop() {
 
   function appendLog(type, args) {
     const time = new Date().toLocaleTimeString();
-    const text = args.map(a =>
-      typeof a === "object" ? JSON.stringify(a, null, 2) : String(a)
-    ).join(" ");
+    const text = args.map(a => {
+      if (typeof a === "object") {
+        try {
+          return safeStringify(a);
+        } catch {
+          return "[Unserializable Object]";
+        }
+      }
+      return String(a);
+    }).join(" ");
 
     logOutput.textContent += `[${time}] [${type}] ${text}\n`;
     logOutput.scrollTop = logOutput.scrollHeight;
@@ -662,3 +669,25 @@ void loop() {
     logOutput.textContent = "";
   };
 })();
+
+function safeStringify(value) {
+  const seen = new WeakSet();
+  return JSON.stringify(value, (key, val) => {
+    if (typeof val === "object" && val !== null) {
+      if (seen.has(val)) return "[Circular]";
+      seen.add(val);
+    }
+    if (val instanceof Error) {
+      return {
+        name: val.name,
+        message: val.message,
+        stack: val.stack
+      };
+    }
+    if (typeof val === "function") {
+      return `[Function ${val.name || "anonymous"}]`;
+    }
+    return val;
+  }, 2);
+}
+
