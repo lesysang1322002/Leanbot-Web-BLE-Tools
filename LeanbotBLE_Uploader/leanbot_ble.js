@@ -139,33 +139,18 @@ export class LeanbotBLE {
     const chars = await this.#service.getCharacteristics();
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
-
-    console.log("Chars length:", Object.keys(this.#chars).length);
-    console.log("Chars:", this.#chars);
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
-    if (Object.keys(this.#chars).length >= 3){
-      await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
-    }
+    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
     if (this.onConnect) this.onConnect();
 
-    /** --------- SAVE DEVICEINFO TO LOCALSTORAGE --------- */
-    const deviceInfo = {
-      name: this.#device.name,
-      supportSerial: this.Serial.isSupported(),
-      supportUploader: this.Uploader.isSupported(),
-    };
-
-    console.log("Saving device to localStorage:", deviceInfo);
-
-    localStorage.setItem(
-      "lastDeviceInfo",
-      JSON.stringify(deviceInfo)
-    );
+    /** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
+    console.log("Saving device to localStorage:", this.#device.name);
+    localStorage.setItem("lastDeviceInfo", JSON.stringify(this.#device.name));
   }
 
   constructor() {
