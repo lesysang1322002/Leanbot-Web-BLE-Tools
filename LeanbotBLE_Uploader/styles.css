@@ -322,13 +322,13 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
 /* --- WORKSPACE (Editor + Serial) --- */
 
 #workspace{
-  /* flex: 1; */
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;              /* nếu muốn có khoảng cách */
   padding: 8px;          /* nếu muốn */
   box-sizing: border-box;
-  height: 300px;    /* chiều cao cố định cho workspace */
+  /* height: 300px;    chiều cao cố định cho workspace */
 }
 
 /* Editor mặc định full */
@@ -382,7 +382,7 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
 }
 
 /* --- LOG PANEL --- */
-#logPanel {
+/* #logPanel {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -420,6 +420,6 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   border: none;
   padding: 4px 8px;
   cursor: pointer;
-}
+} */
 
 

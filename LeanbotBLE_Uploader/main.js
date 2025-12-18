@@ -624,107 +624,107 @@ void loop() {
     });
 
 // =================== Console Log Panel =================== //
-(() => {
-  function $(id) { return document.getElementById(id); }
+// (() => {
+//   function $(id) { return document.getElementById(id); }
 
-  // Chạy sau khi DOM sẵn sàng để khỏi null
-  function init() {
-    const logOutput = $("logOutput");
-    const btnClear  = $("btnClearLog");
+//   // Chạy sau khi DOM sẵn sàng để khỏi null
+//   function init() {
+//     const logOutput = $("logOutput");
+//     const btnClear  = $("btnClearLog");
 
-    // Nếu thiếu DOM thì không hook để khỏi phá console trên iOS
-    if (!logOutput) {
-      console.warn("[Logger] #logOutput not found, skip hook.");
-      return;
-    }
+//     // Nếu thiếu DOM thì không hook để khỏi phá console trên iOS
+//     if (!logOutput) {
+//       console.warn("[Logger] #logOutput not found, skip hook.");
+//       return;
+//     }
 
-    function appendLine(line) {
-      // iOS: textContent ổn định hơn innerText
-      logOutput.textContent += line + "\n";
-      logOutput.scrollTop = logOutput.scrollHeight;
-    }
+//     function appendLine(line) {
+//       // iOS: textContent ổn định hơn innerText
+//       logOutput.textContent += line + "\n";
+//       logOutput.scrollTop = logOutput.scrollHeight;
+//     }
 
-    function appendLog(type, args) {
-      // ĐỪNG để appendLog throw — nếu throw là chết cả hệ log
-      try {
-        const time = new Date().toLocaleTimeString();
-        const text = args.map(a => safeToText(a)).join(" ");
-        appendLine(`[${time}] [${type}] ${text}`);
-      } catch (e) {
-        // fallback siêu an toàn
-        appendLine(`[LOGGER_ERROR] ${String(e && e.message ? e.message : e)}`);
-      }
-    }
+//     function appendLog(type, args) {
+//       // ĐỪNG để appendLog throw — nếu throw là chết cả hệ log
+//       try {
+//         const time = new Date().toLocaleTimeString();
+//         const text = args.map(a => safeToText(a)).join(" ");
+//         appendLine(`[${time}] [${type}] ${text}`);
+//       } catch (e) {
+//         // fallback siêu an toàn
+//         appendLine(`[LOGGER_ERROR] ${String(e && e.message ? e.message : e)}`);
+//       }
+//     }
 
-    // Giữ console gốc (bind để tránh lỗi context)
-    const _log   = console.log.bind(console);
-    const _warn  = console.warn.bind(console);
-    const _error = console.error.bind(console);
+//     // Giữ console gốc (bind để tránh lỗi context)
+//     const _log   = console.log.bind(console);
+//     const _warn  = console.warn.bind(console);
+//     const _error = console.error.bind(console);
 
-    console.log = (...args) => { appendLog("LOG", args); _log(...args); };
-    console.warn = (...args) => { appendLog("WARN", args); _warn(...args); };
-    console.error = (...args) => { appendLog("ERROR", args); _error(...args); };
+//     console.log = (...args) => { appendLog("LOG", args); _log(...args); };
+//     console.warn = (...args) => { appendLog("WARN", args); _warn(...args); };
+//     console.error = (...args) => { appendLog("ERROR", args); _error(...args); };
 
-    // Bắt luôn lỗi ngoài try/catch (iOS rất hữu ích)
-    window.addEventListener("error", (ev) => {
-      appendLog("WINDOW_ERROR", [ev.message, ev.filename, ev.lineno, ev.colno]);
-    });
+//     // Bắt luôn lỗi ngoài try/catch (iOS rất hữu ích)
+//     window.addEventListener("error", (ev) => {
+//       appendLog("WINDOW_ERROR", [ev.message, ev.filename, ev.lineno, ev.colno]);
+//     });
 
-    window.addEventListener("unhandledrejection", (ev) => {
-      appendLog("PROMISE_REJECTION", [ev.reason]);
-    });
+//     window.addEventListener("unhandledrejection", (ev) => {
+//       appendLog("PROMISE_REJECTION", [ev.reason]);
+//     });
 
-    if (btnClear) {
-      btnClear.addEventListener("click", () => { logOutput.textContent = ""; });
-    }
+//     if (btnClear) {
+//       btnClear.addEventListener("click", () => { logOutput.textContent = ""; });
+//     }
 
-    // test
-    console.log("[Logger] Hooked ✅");
-  }
+//     // test
+//     console.log("[Logger] Hooked ✅");
+//   }
 
-  // iOS: đảm bảo DOM ready
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
-  }
-})();
+//   // iOS: đảm bảo DOM ready
+//   if (document.readyState === "loading") {
+//     document.addEventListener("DOMContentLoaded", init, { once: true });
+//   } else {
+//     init();
+//   }
+// })();
 
-function safeToText(val) {
-  try {
-    if (val instanceof Error) return `${val.name}: ${val.message}\n${val.stack || ""}`;
-    if (typeof val === "string") return val;
-    if (typeof val === "number" || typeof val === "boolean" || val == null) return String(val);
+// function safeToText(val) {
+//   try {
+//     if (val instanceof Error) return `${val.name}: ${val.message}\n${val.stack || ""}`;
+//     if (typeof val === "string") return val;
+//     if (typeof val === "number" || typeof val === "boolean" || val == null) return String(val);
 
-    // Một số object BLE/DOM trên iOS stringify rất dễ nổ → fallback gọn
-    if (typeof val === "object") {
-      // thử stringify có vòng lặp
-      return safeStringify(val);
-    }
+//     // Một số object BLE/DOM trên iOS stringify rất dễ nổ → fallback gọn
+//     if (typeof val === "object") {
+//       // thử stringify có vòng lặp
+//       return safeStringify(val);
+//     }
 
-    if (typeof val === "function") return `[Function ${val.name || "anonymous"}]`;
-    return String(val);
-  } catch {
-    // fallback cuối
-    return "[Unserializable]";
-  }
-}
+//     if (typeof val === "function") return `[Function ${val.name || "anonymous"}]`;
+//     return String(val);
+//   } catch {
+//     // fallback cuối
+//     return "[Unserializable]";
+//   }
+// }
 
-function safeStringify(value) {
-  const seen = new WeakSet();
-  return JSON.stringify(value, (key, val) => {
-    if (typeof val === "object" && val !== null) {
-      if (seen.has(val)) return "[Circular]";
-      seen.add(val);
-    }
-    // iOS: DOMException/BLE objects có khi có properties không enumerable
-    if (val instanceof Error) {
-      return { name: val.name, message: val.message, stack: val.stack };
-    }
-    if (typeof val === "function") {
-      return `[Function ${val.name || "anonymous"}]`;
-    }
-    return val;
-  }, 2);
-}
+// function safeStringify(value) {
+//   const seen = new WeakSet();
+//   return JSON.stringify(value, (key, val) => {
+//     if (typeof val === "object" && val !== null) {
+//       if (seen.has(val)) return "[Circular]";
+//       seen.add(val);
+//     }
+//     // iOS: DOMException/BLE objects có khi có properties không enumerable
+//     if (val instanceof Error) {
+//       return { name: val.name, message: val.message, stack: val.stack };
+//     }
+//     if (typeof val === "function") {
+//       return `[Function ${val.name || "anonymous"}]`;
+//     }
+//     return val;
+//   }, 2);
+// }
 

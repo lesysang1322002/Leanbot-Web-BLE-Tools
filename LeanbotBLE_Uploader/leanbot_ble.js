@@ -137,28 +137,10 @@ export class LeanbotBLE {
 
     /** ---------- CHARACTERISTICS ---------- */
     const chars = await this.#service.getCharacteristics();
-
-    console.log("MARKER_before_chars_log");
-    console.log("BLE characteristics from service:", chars); // object
-    console.log("MARKER_after_chars_log");
-
-    console.log(
-      "BLE characteristics from service:",
-      chars.map(c => ({
-        uuid: c.uuid.toLowerCase(),
-        properties: c.properties
-      }))
-    );
-
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
-    console.log(
-      "All characteristic UUID keys:",
-      Object.keys(this.#chars)
-    );
-
     await this.Serial.setupConnection(this.#chars);
     await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
 
@@ -237,44 +219,16 @@ class Serial {
 
   /** Thiết lập characteristic + notify **/
   async setupConnection(characteristics) {
-    const fullUUID  = Serial.SerialPipe_UUID.toLowerCase();
     const shortUUID = fullUUID.slice(4, 8); // ffe1
-
-    console.log("Serial lookup full UUID:", fullUUID);
-    console.log("Serial lookup short UUID:", shortUUID);
-
-    console.log("Characteristics keys:", Object.keys(characteristics));
-
-    let char = null;
-
-    // 1️⃣ Thử full UUID
-    if (characteristics[fullUUID]) {
-      console.log("SerialPipe found by FULL UUID ✅");
-      char = characteristics[fullUUID];
-    } else {
-      console.warn("SerialPipe NOT found by full UUID ❌");
-    }
-
-    // 2️⃣ Nếu chưa có, thử short UUID
-    if (!char && characteristics[shortUUID]) {
-      console.log("SerialPipe found by SHORT UUID ✅");
-      char = characteristics[shortUUID];
-    } else if (!char) {
-      console.warn("SerialPipe NOT found by short UUID ❌");
-    }
-
-    this.#SerialPipe_char = char;
-
-    console.log("Resolved SerialPipe char =", char);
+    // console.log("Serial lookup short UUID:", shortUUID);
+    // console.log("Characteristics keys:", Object.keys(characteristics));
+    this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || characteristics[shortSerialPipeUUID] || null;
 
     if (!this.isSupported()) {
-      console.warn("Serial: Not supported");
+      console.log("Serial: Not supported");
       return;
     }
-
-    console.log("Serial: supported ✅");
-
-
+    
     if (!this.#SerialPipe_char.properties.notify) {
       console.log("Serial Notify: Not supported");
       return;
