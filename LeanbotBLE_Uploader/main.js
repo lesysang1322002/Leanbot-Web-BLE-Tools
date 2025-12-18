@@ -624,41 +624,41 @@ void loop() {
     });
 
 // =================== Console Log Panel =================== //
-(() => {
-  const logOutput = document.getElementById("logOutput");
-  const btnClear  = document.getElementById("btnClearLog");
+// (() => {
+//   const logOutput = document.getElementById("logOutput");
+//   const btnClear  = document.getElementById("btnClearLog");
 
-  function appendLog(type, args) {
-    const time = new Date().toLocaleTimeString();
-    const text = args.map(a =>
-      typeof a === "object" ? JSON.stringify(a, null, 2) : String(a)
-    ).join(" ");
+//   function appendLog(type, args) {
+//     const time = new Date().toLocaleTimeString();
+//     const text = args.map(a =>
+//       typeof a === "object" ? JSON.stringify(a, null, 2) : String(a)
+//     ).join(" ");
 
-    logOutput.textContent += `[${time}] [${type}] ${text}\n`;
-    logOutput.scrollTop = logOutput.scrollHeight;
-  }
+//     logOutput.textContent += `[${time}] [${type}] ${text}\n`;
+//     logOutput.scrollTop = logOutput.scrollHeight;
+//   }
 
-  // Giữ console gốc
-  const _log   = console.log;
-  const _warn  = console.warn;
-  const _error = console.error;
+//   // Giữ console gốc
+//   const _log   = console.log;
+//   const _warn  = console.warn;
+//   const _error = console.error;
 
-  console.log = (...args) => {
-    appendLog("LOG", args);
-    _log.apply(console, args);
-  };
+//   console.log = (...args) => {
+//     appendLog("LOG", args);
+//     _log.apply(console, args);
+//   };
 
-  console.warn = (...args) => {
-    appendLog("WARN", args);
-    _warn.apply(console, args);
-  };
+//   console.warn = (...args) => {
+//     appendLog("WARN", args);
+//     _warn.apply(console, args);
+//   };
 
-  console.error = (...args) => {
-    appendLog("ERROR", args);
-    _error.apply(console, args);
-  };
+//   console.error = (...args) => {
+//     appendLog("ERROR", args);
+//     _error.apply(console, args);
+//   };
 
-  btnClear.onclick = () => {
-    logOutput.textContent = "";
-  };
-})();
+//   btnClear.onclick = () => {
+//     logOutput.textContent = "";
+//   };
+// })();
