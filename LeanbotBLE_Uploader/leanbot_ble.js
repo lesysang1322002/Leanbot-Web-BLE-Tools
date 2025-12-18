@@ -112,7 +112,7 @@ export class LeanbotBLE {
     if (this.#device) return this.#device.name;
       
     const lastDevice = localStorage.getItem("lastDeviceInfo");
-    return lastDevice ? JSON.parse(lastDevice).name : "No Leanbot";
+    return lastDevice ? JSON.parse(lastDevice) : "No Leanbot";
   }
 
   async #setupConnection() {
