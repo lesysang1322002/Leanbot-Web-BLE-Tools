@@ -225,23 +225,23 @@ class Serial {
     if (characteristics[fullUUID]) {
       char = characteristics[fullUUID];
     } else {
-      console.warn("SerialPipe NOT found by full UUID");
+      console.log("SerialPipe NOT found by full UUID");
     }
 
     if (!char && characteristics[shortUUID]) {
       char = characteristics[shortUUID];
     } else if (!char) {
-      console.warn("SerialPipe NOT found by short UUID");
+      console.log("SerialPipe NOT found by short UUID");
     }
 
     this.#SerialPipe_char = char;
 
     if (!this.isSupported()) {
-      console.warn("Serial: Not supported");
+      console.log("Serial: Not supported");
       return;
     }
 
-    console.log("Serial: supported ✅");
+    console.log("Serial: supported");
 
 
     if (!this.isSupported()) {
@@ -798,7 +798,7 @@ class JDYUploader {
   async #handleGetSyncAck(bytes) {
     this.#isSyncing  = false;
     if (!this.#isACK(bytes)) {
-      console.warn("[SYNC] Invalid SYNC ACK response");
+      console.log("[SYNC] Invalid SYNC ACK response");
       this.#emitUploadMessage("Get Sync failed");
       this.isUploading = false;
       return;
@@ -827,7 +827,7 @@ class JDYUploader {
   async #handleLoadAddressAck(bytes) {
     this.#isLoadingAddress = false;
     if (!this.#isACK(bytes)) {
-      console.warn("[LOAD] Invalid LOAD_ADDRESS ACK response");
+      console.log("[LOAD] Invalid LOAD_ADDRESS ACK response");
       this.#emitUploadMessage("Load address failed");
       this.isUploading = false;
       return;
@@ -900,7 +900,7 @@ class JDYUploader {
   async #handleWriteFlashAck(bytes) {
     this.#isWritingPage = false;
     if (!this.#isACK(bytes)) {
-      console.warn("[WRITE] Invalid PROG_PAGE ACK response");
+      console.log("[WRITE] Invalid PROG_PAGE ACK response");
       this.#emitUploadMessage("Write failed");
       this.isUploading = false;
       return;
@@ -1027,7 +1027,7 @@ class JDYUploader {
       console.log(`[VERIFY] Mode SAMPLE: verifying ${pageIndices.length}/${totalPages} random pages (~1/16)`);
     } 
     else {
-      console.warn(`[VERIFY] Invalid mode "${mode}". Expected "full" or "sample".`);
+      console.log(`[VERIFY] Invalid mode "${mode}". Expected "full" or "sample".`);
       return false;
     }
 
@@ -1045,12 +1045,12 @@ class JDYUploader {
 
       if (!isSame) {
         allOk = false;
-        console.warn(`[VERIFY] Page ${pageIndex} MISMATCH!`);
+        console.log(`[VERIFY] Page ${pageIndex} MISMATCH!`);
 
         // log byte đầu tiên bị sai
         for (let i = 0; i < page.bytes.length; i++) {
           if (page.bytes[i] !== deviceData[i]) {
-            console.warn(
+            console.log(
               `[VERIFY] Page ${pageIndex}, offset ${i}: ` +
               `expected 0x${page.bytes[i].toString(16).padStart(2,'0')}, ` +
               `got 0x${deviceData[i].toString(16).padStart(2,'0')}`
