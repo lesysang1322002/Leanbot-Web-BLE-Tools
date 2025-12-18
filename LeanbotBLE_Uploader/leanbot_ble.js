@@ -243,9 +243,8 @@ class Serial {
       "Available characteristics keys:",
       Object.keys(characteristics)
     );
-
-    this.#SerialPipe_char =
-      characteristics[Serial.SerialPipe_UUID.toLowerCase()] || null;
+    const shortSerialPipeUUID = Serial.SerialPipe_UUID.slice(4, 8);
+    this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || characteristics[shortSerialPipeUUID] || null;
 
     console.log("Resolved SerialPipe char:", this.#SerialPipe_char);
 
