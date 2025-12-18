@@ -625,50 +625,90 @@ void loop() {
 
 // =================== Console Log Panel =================== //
 (() => {
-  const logOutput = document.getElementById("logOutput");
-  const btnClear  = document.getElementById("btnClearLog");
+  function $(id) { return document.getElementById(id); }
 
-  function appendLog(type, args) {
-    const time = new Date().toLocaleTimeString();
-    const text = args.map(a => {
-      if (typeof a === "object") {
-        try {
-          return safeStringify(a);
-        } catch {
-          return "[Unserializable Object]";
-        }
+  // Chạy sau khi DOM sẵn sàng để khỏi null
+  function init() {
+    const logOutput = $("logOutput");
+    const btnClear  = $("btnClearLog");
+
+    // Nếu thiếu DOM thì không hook để khỏi phá console trên iOS
+    if (!logOutput) {
+      console.warn("[Logger] #logOutput not found, skip hook.");
+      return;
+    }
+
+    function appendLine(line) {
+      // iOS: textContent ổn định hơn innerText
+      logOutput.textContent += line + "\n";
+      logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    function appendLog(type, args) {
+      // ĐỪNG để appendLog throw — nếu throw là chết cả hệ log
+      try {
+        const time = new Date().toLocaleTimeString();
+        const text = args.map(a => safeToText(a)).join(" ");
+        appendLine(`[${time}] [${type}] ${text}`);
+      } catch (e) {
+        // fallback siêu an toàn
+        appendLine(`[LOGGER_ERROR] ${String(e && e.message ? e.message : e)}`);
       }
-      return String(a);
-    }).join(" ");
+    }
 
-    logOutput.textContent += `[${time}] [${type}] ${text}\n`;
-    logOutput.scrollTop = logOutput.scrollHeight;
+    // Giữ console gốc (bind để tránh lỗi context)
+    const _log   = console.log.bind(console);
+    const _warn  = console.warn.bind(console);
+    const _error = console.error.bind(console);
+
+    console.log = (...args) => { appendLog("LOG", args); _log(...args); };
+    console.warn = (...args) => { appendLog("WARN", args); _warn(...args); };
+    console.error = (...args) => { appendLog("ERROR", args); _error(...args); };
+
+    // Bắt luôn lỗi ngoài try/catch (iOS rất hữu ích)
+    window.addEventListener("error", (ev) => {
+      appendLog("WINDOW_ERROR", [ev.message, ev.filename, ev.lineno, ev.colno]);
+    });
+
+    window.addEventListener("unhandledrejection", (ev) => {
+      appendLog("PROMISE_REJECTION", [ev.reason]);
+    });
+
+    if (btnClear) {
+      btnClear.addEventListener("click", () => { logOutput.textContent = ""; });
+    }
+
+    // test
+    console.log("[Logger] Hooked ✅");
   }
 
-  // Giữ console gốc
-  const _log   = console.log;
-  const _warn  = console.warn;
-  const _error = console.error;
-
-  console.log = (...args) => {
-    appendLog("LOG", args);
-    _log.apply(console, args);
-  };
-
-  console.warn = (...args) => {
-    appendLog("WARN", args);
-    _warn.apply(console, args);
-  };
-
-  console.error = (...args) => {
-    appendLog("ERROR", args);
-    _error.apply(console, args);
-  };
-
-  btnClear.onclick = () => {
-    logOutput.textContent = "";
-  };
+  // iOS: đảm bảo DOM ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
 })();
+
+function safeToText(val) {
+  try {
+    if (val instanceof Error) return `${val.name}: ${val.message}\n${val.stack || ""}`;
+    if (typeof val === "string") return val;
+    if (typeof val === "number" || typeof val === "boolean" || val == null) return String(val);
+
+    // Một số object BLE/DOM trên iOS stringify rất dễ nổ → fallback gọn
+    if (typeof val === "object") {
+      // thử stringify có vòng lặp
+      return safeStringify(val);
+    }
+
+    if (typeof val === "function") return `[Function ${val.name || "anonymous"}]`;
+    return String(val);
+  } catch {
+    // fallback cuối
+    return "[Unserializable]";
+  }
+}
 
 function safeStringify(value) {
   const seen = new WeakSet();
@@ -677,12 +717,9 @@ function safeStringify(value) {
       if (seen.has(val)) return "[Circular]";
       seen.add(val);
     }
+    // iOS: DOMException/BLE objects có khi có properties không enumerable
     if (val instanceof Error) {
-      return {
-        name: val.name,
-        message: val.message,
-        stack: val.stack
-      };
+      return { name: val.name, message: val.message, stack: val.stack };
     }
     if (typeof val === "function") {
       return `[Function ${val.name || "anonymous"}]`;
