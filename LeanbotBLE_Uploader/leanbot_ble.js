@@ -207,10 +207,8 @@ class Serial {
         console.log("Serial.Send Error: Serial not supported");
         return;
       }
-
       // Chuyển dữ liệu sang Uint8Array nếu là chuỗi
       const buffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
-
       await this.SerialPipe_sendToLeanbot(buffer, withResponse);
     } catch (e) {
       console.log(`Serial.Send Error: ${e}`);
@@ -228,7 +226,7 @@ class Serial {
       console.log("Serial: Not supported");
       return;
     }
-    
+
     if (!this.#SerialPipe_char.properties.notify) {
       console.log("Serial Notify: Not supported");
       return;
