@@ -9,6 +9,8 @@ console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
 console.log(`HASH = ${window.HASH}`);
 
+localStorage.removeItem("leanbot_device)");
+localStorage.removeItem("lastDeviceInfo");
 
 // Import LeanbotCompiler
 import { LeanbotCompiler } from "./leanbot_compiler.js";
