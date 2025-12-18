@@ -328,7 +328,7 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   padding: 8px;          /* nếu muốn */
   box-sizing: border-box;
   
-  min-height: 500px;         /* cực quan trọng để scroll đúng */
+  height: 500px;         /* cực quan trọng để scroll đúng */
 }
 
 /* Editor mặc định full */
