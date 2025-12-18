@@ -715,7 +715,7 @@ class JDYUploader {
     const resultDisc = await this.#leanbot.disconnect();
     console.log("[UPLOAD] Disconnect result:", resultDisc?.message);
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     console.log("[UPLOAD] Reconnecting...");
     let resultReco = null;
