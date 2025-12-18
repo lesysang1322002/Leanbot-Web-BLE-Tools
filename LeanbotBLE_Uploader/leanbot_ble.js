@@ -138,6 +138,10 @@ export class LeanbotBLE {
     /** ---------- CHARACTERISTICS ---------- */
     const chars = await this.#service.getCharacteristics();
 
+    console.log("MARKER_before_chars_log");
+    console.log("BLE characteristics from service:", chars); // object
+    console.log("MARKER_after_chars_log");
+
     console.log(
       "BLE characteristics from service:",
       chars.map(c => ({
