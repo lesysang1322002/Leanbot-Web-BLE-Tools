@@ -217,10 +217,8 @@ class Serial {
 
   /** Thiết lập characteristic + notify **/
   async setupConnection(characteristics) {
-    const shortUUID = fullUUID.slice(4, 8); // ffe1
-    // console.log("Serial lookup short UUID:", shortUUID);
-    // console.log("Characteristics keys:", Object.keys(characteristics));
-    this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || characteristics[shortSerialPipeUUID] || null;
+    const Short_SerialPipe_UUID = Serial.SerialPipe_UUID.slice(4, 8); // ffe1
+    this.#SerialPipe_char = characteristics[Serial.SerialPipe_UUID] || characteristics[Short_SerialPipe_UUID] || null;
 
     if (!this.isSupported()) {
       console.log("Serial: Not supported");
