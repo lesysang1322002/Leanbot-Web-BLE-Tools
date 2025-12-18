@@ -219,7 +219,7 @@ class Serial {
   async setupConnection(characteristics) {
     const fullUUID  = Serial.SerialPipe_UUID;
     const shortUUID = fullUUID.slice(4, 8); // ffe1
-    
+
     let char = null;
 
     if (characteristics[fullUUID]) {
@@ -727,7 +727,7 @@ class JDYUploader {
     const resultDisc = await this.#leanbot.disconnect();
     console.log("[UPLOAD] Disconnect result:", resultDisc?.message);
 
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 3500));
 
     console.log("[UPLOAD] Reconnecting...");
     let resultReco = null;
