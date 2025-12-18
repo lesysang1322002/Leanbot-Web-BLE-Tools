@@ -139,11 +139,15 @@ export class LeanbotBLE {
     const chars = await this.#service.getCharacteristics();
     this.#chars = {};
     for (const c of chars) this.#chars[c.uuid.toLowerCase()] = c;
+
+    console.log("Chars length:", Object.keys(this.#chars).length);
     console.log("Chars:", this.#chars);
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
-    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
+    if (Object.keys(this.#chars).length >= 3){
+      await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
+    }
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
