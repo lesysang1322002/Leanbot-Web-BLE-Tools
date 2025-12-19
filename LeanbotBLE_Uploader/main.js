@@ -32,14 +32,15 @@ function getLeanbotIDWithoutBLE() {
 if (leanbot.getLeanbotID() === "No Leanbot"){
   leanbotStatus.style.display = "inline-block";
   leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
+  console.log("No Leanbot connected.");
 }
 else{
   btnReconnect.style.display  = "inline-block";
-  btnReconnect.textContent    = "Reconnect " + getLeanbotIDWithoutBLE();
+  btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
+  console.log("Leanbot found:", leanbot.getLeanbotID());
 }
 
 leanbot.onConnect = () => {
-  console.log("Leanbot connected:", getLeanbotIDWithoutBLE());
   leanbotStatus.style.display = "inline-block";
   leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
   leanbotStatus.style.color   = "green";
@@ -53,7 +54,7 @@ leanbot.onDisconnect = () => {
   leanbotStatus.style.display = "none";
 
   btnReconnect.style.display  = "inline-block";
-  btnReconnect.textContent    = "Reconnect " + getLeanbotIDWithoutBLE();
+  btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
 };
 
 btnConnect.onclick   = async () => connectLeanbot();
@@ -150,9 +151,9 @@ const fileNameLabel  = document.getElementById("fileName");
 
 let fileLoaded = ""; // lưu nội dung file đã đọc
 
-btnCode.addEventListener("click", () => {
-  modal.classList.remove("hidden");
-});
+// btnCode.addEventListener("click", () => {
+//   modal.classList.remove("hidden");
+// });
 
 closeModal.addEventListener("click", () => {
   modal.classList.add("hidden");
@@ -296,24 +297,25 @@ const UploaderTimeCompile  = document.getElementById("compileTime");
 const UploaderRSSI         = document.getElementById("uploadRSSI");
 const UploaderTimeUpload   = document.getElementById("uploadTime");
 
-UploaderBtnClose.onclick = () => {
-  if (UploaderBtnClose.innerText === "Cancel") {
-    leanbot.Uploader.cancel();
-    UploaderBtnClose.innerText = "Close";
-    // restoreFullSerialLog();
-  }
-  UploaderDialog.style.display = "none";
-};
+// UploaderBtnClose.onclick = () => {
+//   if (UploaderBtnClose.innerText === "Cancel") {
+//     leanbot.Uploader.cancel();
+//     UploaderBtnClose.innerText = "Close";
+//     // restoreFullSerialLog();
+//   }
+//   UploaderDialog.style.display = "none";
+// };
 
-UploaderBtnShowLast.onclick = () => {
-  UploaderDialog.classList.remove("fade-out");
-  UploaderDialog.style.display = "flex";
-};
+// UploaderBtnShowLast.onclick = () => {
+//   UploaderDialog.classList.remove("fade-out");
+//   UploaderDialog.style.display = "flex";
+// };
 
 // Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
 function uiUploadDialogOpen() {
-  UploaderDialog.style.display = "flex";
-  UploaderDialog.classList.remove("fade-out");
+  // UploaderDialog.style.display = "flex";
+  // UploaderDialog.classList.remove("fade-out");
+  document.querySelector('#serialTabs .serial-tab[data-tab="program"]')?.click();
 
   // reset progress bars
   [UploaderCompile, UploaderTransfer, UploaderWrite, UploaderVerify].forEach(b => {
@@ -324,7 +326,7 @@ function uiUploadDialogOpen() {
 
   // reset 
   UploaderLog.value = "";
-  UploaderBtnClose.innerText      = "Cancel";
+  // UploaderBtnClose.innerText      = "Cancel";
   UploaderTimeCompile.textContent = "0.0 sec";
   UploaderTimeUpload.textContent  = "0.0 sec";
   UploaderTitleUpload.textContent = "Upload to " + getLeanbotIDWithoutBLE();
@@ -402,7 +404,7 @@ leanbot.Uploader.onVerifyError = () => {
 leanbot.Uploader.onSuccess = () => {
   // restoreFullSerialLog();
   UploaderTitleUpload.className = "green";
-  UploaderBtnClose.innerText = "Close";
+  // UploaderBtnClose.innerText = "Close";
   if (UploaderAutoClose.checked) {
     setTimeout(() => {
       UploaderDialog.classList.add("fade-out");
@@ -413,7 +415,7 @@ leanbot.Uploader.onSuccess = () => {
 
 leanbot.Uploader.onError = (err) => {
   // restoreFullSerialLog();
-  UploaderBtnClose.innerText = "Close";
+  // UploaderBtnClose.innerText = "Close";
   UploaderTitleUpload.className = "red";
 };
 
@@ -435,6 +437,7 @@ btnSerial.addEventListener("click", () => {
 
   // (tuỳ chọn) đổi style nút để biết đang bật
   btnSerial.classList.toggle("active", open);
+  document.querySelector('#serialTabs .serial-tab[data-tab="program"]')?.click();
 });
 
 // =================== Monaco Editor for Arduino =================== //
@@ -622,107 +625,27 @@ void loop() {
       });
     });
 
-// =================== Console Log Panel =================== //
-// (() => {
-//   function $(id) { return document.getElementById(id); }
 
-//   // Chạy sau khi DOM sẵn sàng để khỏi null
-//   function init() {
-//     const logOutput = $("logOutput");
-//     const btnClear  = $("btnClearLog");
+(function initSerialTabs(){
+  const tabs = document.querySelectorAll("#serialTabs .serial-tab");
+  const monitorPanel = document.getElementById("monitorPanel");
+  const programPanel = document.getElementById("programPanel");
 
-//     // Nếu thiếu DOM thì không hook để khỏi phá console trên iOS
-//     if (!logOutput) {
-//       console.warn("[Logger] #logOutput not found, skip hook.");
-//       return;
-//     }
+  function setTab(name){
+    tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+    monitorPanel.classList.toggle("active", name === "monitor");
+    programPanel.classList.toggle("active", name === "program");
+  }
 
-//     function appendLine(line) {
-//       // iOS: textContent ổn định hơn innerText
-//       logOutput.textContent += line + "\n";
-//       logOutput.scrollTop = logOutput.scrollHeight;
-//     }
+  tabs.forEach(t => {
+    t.addEventListener("click", () => setTab(t.dataset.tab));
+  });
 
-//     function appendLog(type, args) {
-//       // ĐỪNG để appendLog throw — nếu throw là chết cả hệ log
-//       try {
-//         const time = new Date().toLocaleTimeString();
-//         const text = args.map(a => safeToText(a)).join(" ");
-//         appendLine(`[${time}] [${type}] ${text}`);
-//       } catch (e) {
-//         // fallback siêu an toàn
-//         appendLine(`[LOGGER_ERROR] ${String(e && e.message ? e.message : e)}`);
-//       }
-//     }
+  // mặc định mở MONITOR
+  setTab("monitor");
 
-//     // Giữ console gốc (bind để tránh lỗi context)
-//     const _log   = console.log.bind(console);
-//     const _warn  = console.warn.bind(console);
-//     const _error = console.error.bind(console);
+  // Nếu bạn muốn khi bấm Serial thì luôn mở MONITOR:
+  // window.openSerialMonitor = () => setTab("monitor");
+})();
 
-//     console.log = (...args) => { appendLog("LOG", args); _log(...args); };
-//     console.warn = (...args) => { appendLog("WARN", args); _warn(...args); };
-//     console.error = (...args) => { appendLog("ERROR", args); _error(...args); };
-
-//     // Bắt luôn lỗi ngoài try/catch (iOS rất hữu ích)
-//     window.addEventListener("error", (ev) => {
-//       appendLog("WINDOW_ERROR", [ev.message, ev.filename, ev.lineno, ev.colno]);
-//     });
-
-//     window.addEventListener("unhandledrejection", (ev) => {
-//       appendLog("PROMISE_REJECTION", [ev.reason]);
-//     });
-
-//     if (btnClear) {
-//       btnClear.addEventListener("click", () => { logOutput.textContent = ""; });
-//     }
-
-//     // test
-//     console.log("[Logger] Hooked ✅");
-//   }
-
-//   // iOS: đảm bảo DOM ready
-//   if (document.readyState === "loading") {
-//     document.addEventListener("DOMContentLoaded", init, { once: true });
-//   } else {
-//     init();
-//   }
-// })();
-
-// function safeToText(val) {
-//   try {
-//     if (val instanceof Error) return `${val.name}: ${val.message}\n${val.stack || ""}`;
-//     if (typeof val === "string") return val;
-//     if (typeof val === "number" || typeof val === "boolean" || val == null) return String(val);
-
-//     // Một số object BLE/DOM trên iOS stringify rất dễ nổ → fallback gọn
-//     if (typeof val === "object") {
-//       // thử stringify có vòng lặp
-//       return safeStringify(val);
-//     }
-
-//     if (typeof val === "function") return `[Function ${val.name || "anonymous"}]`;
-//     return String(val);
-//   } catch {
-//     // fallback cuối
-//     return "[Unserializable]";
-//   }
-// }
-
-// function safeStringify(value) {
-//   const seen = new WeakSet();
-//   return JSON.stringify(value, (key, val) => {
-//     if (typeof val === "object" && val !== null) {
-//       if (seen.has(val)) return "[Circular]";
-//       seen.add(val);
-//     }
-//     // iOS: DOMException/BLE objects có khi có properties không enumerable
-//     if (val instanceof Error) {
-//       return { name: val.name, message: val.message, stack: val.stack };
-//     }
-//     if (typeof val === "function") {
-//       return `[Function ${val.name || "anonymous"}]`;
-//     }
-//     return val;
-//   }, 2);
-// }
+// =================== END OF FILE =================== //

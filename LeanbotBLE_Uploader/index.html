@@ -16,7 +16,7 @@
           <img class="lb-tab-icon" id="logoIcon" src="./img/logo-lb.png" />
         </button>
 
-        <button id="btnCode" class="lb-tab active">
+        <button id="btnCode" class="lb-tab disabled">
           <img class="lb-tab-icon" id="codeIcon" src="./img/icons/code.png" />
           <span>CODE</span>
         </button>
@@ -44,7 +44,15 @@
     </div>
 
     <div class="lb-top-right">
-      <button class="lb-icon-btn disabled" >
+
+      <span id="fileName" hidden>No file</span>
+      <button class="lb-icon-btn" id="btnLoadFile">
+        <img class="lb-icon-img" src="./img/icons/loadfile.png" />
+        <span>LOAD FILE</span>
+      </button>
+      <input type="file" id="FileInput" accept=".ino" hidden> 
+
+      <button class="lb-icon-btn" >
         <img class="lb-icon-img" src="./img/icons/compile.png" />
         <span>COMPILE</span>
       </button>
@@ -71,46 +79,102 @@
 
     <!-- SERIAL MONITOR -->
     <div id="serialSection" class="is-hidden">
-      <div id="serialTop">
-        <div id="serialOptions">
-          <label><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
-          <label><input type="checkbox" id="showTimestamp"> Timestamp</label>
-        </div>
-        <div>
-          <button id="btnClear">Clear</button>
-          <button id="btnCopy">Copy</button>
-        </div>
+
+      <!-- Tabs -->
+      <div id="serialTabs">
+        <button class="serial-tab" data-tab="program">PROGRAM</button>
+        <button class="serial-tab active" data-tab="monitor">MONITOR</button>
       </div>
 
-      <textarea id="serialLog" readonly></textarea>
+      <!-- Panels -->
+      <div id="serialPanels">
 
-      <div id="serialBottom">
-        <button id="btnSend">Send</button>
-        <input type="text" id="serialInput" placeholder="Send Message -> ...">
-        <label><input type="checkbox" id="addNewline" checked> Newline</label>
+        <!-- PROGRAM PANEL -->
+        <div id="programPanel" class="serial-panel">
+          <div id="programGrid">
+
+            <!-- LEFT: progress -->
+            <div id="programLeft">
+
+              <!-- COMPILE GROUP -->
+              <div class="group-box compile">
+                <div class="group-header">
+                  <div class="rssi"></div>
+                  <span class="title" id="compileTitle">Compile</span>
+                  <span class="time" id="compileTime">0.0 sec</span>
+                </div>
+
+                <div class="progress-wrapper">
+                  <progress id="progCompile" class="yellow" value="0" max="100"></progress>
+                </div>
+              </div>
+
+              <!-- UPLOAD GROUP -->
+              <div class="group-box upload">
+                <div class="group-header">
+                  <div class="rssi" id="uploadRSSI">0 dBm</div>
+                  <span class="title" id="uploadTitle">Upload</span>
+                  <span class="time" id="uploadTime">0.0 sec</span>
+                </div>
+
+                <div class="progress-wrapper">
+                  <progress id="progTransfer" class="yellow" value="0" max="100"></progress>
+                  <div class="progress-label">Transfer</div>
+                </div>
+
+                <div class="progress-wrapper">
+                  <progress id="progWrite" class="yellow" value="0" max="100"></progress>
+                  <div class="progress-label">Write</div>
+                </div>
+
+                <div class="progress-wrapper">
+                  <progress id="progVerify" class="yellow" value="0" max="100"></progress>
+                  <div class="progress-label">Verify</div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- RIGHT: log/details -->
+            <div id="programRight">
+
+              <div class="details-block">
+                <textarea id="uploadLog" readonly></textarea>
+              </div>
+
+              <!-- FOOTER -->
+              <!-- <div class="upload-footer">
+                <label class="auto-close">
+                  <input type="checkbox" id="chkAutoClose" checked>
+                  Auto Close on success
+                </label>
+                <button id="btnCloseUpload">Cancel</button>
+              </div> -->
+            </div>
+          </div>
+        </div>
+
+
+        <!-- MONITOR PANEL -->
+        <div id="monitorPanel" class="serial-panel active">
+          <textarea id="serialLog" readonly></textarea>
+
+          <div id="serialBottom">
+            <button id="btnSend">Send</button>
+            <input type="text" id="serialInput" placeholder="Send Message -> ...">
+            <label class="text-checkbox"><input type="checkbox" id="addNewline" checked> Newline</label>
+            <label class="text-checkbox"><input type="checkbox" id="autoScroll" checked > Autoscroll</label>
+            <label class="text-checkbox"><input type="checkbox" id="showTimestamp"> Timestamp</label>
+            <button id="btnClear">Clear</button>
+            <button id="btnCopy">Copy</button>
+          </div>
+        </div>
+
       </div>
     </div>
+
   </div>
 
-  <!-- Phần log console thêm vào để hiển thị các thông báo và lỗi -->
-  <!-- <div id="logPanel">
-    <div class="log-header">
-      <span>Console Log</span>
-      <button id="btnClearLog">Clear</button>
-    </div>
-    <pre id="logOutput"></pre>
-  </div> -->
-
-  <!-- BOTTOM BAR -->
-  <!-- <div id="bottomBar">
-    <div id="leftStatus">
-      <span class="logo">Leanbot BLE © 2025</span>
-    </div>
-
-    <div id="rightButtons">
-      
-    </div>
-  </div> -->
   <!-- BOTTOM BAR -->
   <footer class="lb-bottombar">
     <!-- LEFT -->
@@ -128,75 +192,15 @@
 
     <!-- RIGHT -->
     <div class="lb-bottom-right">
-      <span id="leanbotStatus" class="disconnected">NO LEANBOT</span>
-      <button id="btnReconnect" class="lb-icon-btn">RECONNECT</button>
-      <button id="btnConnect"   class="lb-icon-btn">CONNECT...</button>
-      <button class="lb-icon-btn disabled" >
-        <span>BOARD: ARDUINO UNO</span>
-      </button>
+      <button id="btnConnect"    class="lb-icon-btn">SELECT LEANBOT...</button>
+      <span   id="leanbotStatus" class="disconnected">No Leanbot</span>
+      <button id="btnReconnect"  class="lb-icon-btn">RECONNECT</button>
       <button class="lb-icon-btn disabled" >
         <span class="lb-meta">SERVER:</span>
         <span class="lb-pill online">ONLINE</span>
       </button>
     </div>
   </footer>
-
-  <!-- UPLOAD DIALOG -->
-  <div id="uploadDialog" class="upload-dialog">
-    <div class="upload-box">
-
-      <!-- COMPILE GROUP -->
-      <div class="group-box">
-        <div class="group-header">
-          <div class="rssi"></div>
-          <span class="title" id="compileTitle">Compile</span>
-          <span class="time" id="compileTime">0.0 sec</span>
-        </div>
-
-        <div class="progress-wrapper">
-          <progress id="progCompile" class="yellow"></progress>
-        </div>
-      </div>
-
-      <!-- UPLOAD GROUP -->
-      <div class="group-box">
-        <div class="group-header">
-          <div class="rssi" id="uploadRSSI">0 dBm</div>
-          <span class="title" id="uploadTitle">Upload</span>
-          <span class="time" id="uploadTime">0.0 sec</span>
-        </div>
-
-        <div class="progress-wrapper">
-          <progress id="progTransfer" class="yellow"></progress>
-          <div class="progress-label">Transfer</div>
-        </div>
-
-        <div class="progress-wrapper">
-          <progress id="progWrite" class="yellow"></progress>
-          <div class="progress-label">Write</div>
-        </div>
-
-        <div class="progress-wrapper">
-          <progress id="progVerify" class="yellow"></progress>
-          <div class="progress-label">Verify</div>
-        </div>
-
-        <div class="details-block">
-          <textarea id="uploadLog" readonly></textarea>
-        </div>
-      </div>
-
-      <!-- FOOTER -->
-      <div class="upload-footer">
-        <label class="auto-close">
-          <input type="checkbox" id="chkAutoClose" checked>
-          Auto Close on success
-        </label>
-        <button id="btnCloseUpload">Cancel</button>
-      </div>
-
-    </div>
-  </div>
 
   <!-- FILE SELECTION MODAL -->
   <div id="fileModal" class="hidden">
@@ -219,21 +223,6 @@
         LbRGB
       </button>
       <button id="closeModal">Cancel</button>
-    </div>
-  </div>
-
-  <div id="topBar">
-    <div id="leftButtons">
-      <!-- <button id="btnCode">{ } Code</button> -->
-      <button id="btnShowLast" hidden>Show Last Upload</button>
-    </div>
-
-    <div id="rightButtons">
-      <span id="fileName" hidden>No file</span>
-      <button id="btnLoadFile" hidden>Load File</button>
-      <input type="file" id="FileInput" accept=".ino" hidden> <!-- chỉ chấp nhận file .ino -->
-      <!-- <button id="btnUpload">Upload</button> -->
-      <!-- <button id="btnSerial">Serial</button> -->
     </div>
   </div>
 
