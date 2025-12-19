@@ -588,8 +588,7 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   color:#fff;
 }
 
-#btnReconnect,
-#btnConnect{
+#btnReconnect{
   border: 1px solid;
 }
 
