@@ -9,6 +9,8 @@ console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
 console.log(`HASH = ${window.HASH}`);
 
+localStorage.removeItem("lastDeviceInfo");
+
 // Import LeanbotCompiler
 import { LeanbotCompiler } from "./leanbot_compiler.js";
 // Khởi tạo đối tượng LeanbotCompiler
@@ -31,13 +33,11 @@ function getLeanbotIDWithoutBLE() {
 
 if (leanbot.getLeanbotID() === "No Leanbot"){
   leanbotStatus.style.display = "inline-block";
-  leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
-  console.log("No Leanbot connected.");
+  leanbotStatus.textContent   = "NO Leanbot"
 }
 else{
   btnReconnect.style.display  = "inline-block";
   btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
-  console.log("Leanbot found:", leanbot.getLeanbotID());
 }
 
 leanbot.onConnect = () => {
