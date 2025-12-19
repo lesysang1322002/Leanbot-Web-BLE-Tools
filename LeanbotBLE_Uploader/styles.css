@@ -1,11 +1,20 @@
-body {
+/* styles.css */
+html,body{
+  margin:0;
+  font-family:"Roboto", system-ui, -apple-system, "Segoe UI", Arial;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 0px);
+}
+
+/* body {
   font-family: "Segoe UI", sans-serif;
   margin: 10px;
   background: #fafafa;
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 20px);
-}
+} */
 
 /* --- TOP BAR --- */
 #topBar {
@@ -119,6 +128,7 @@ button:hover {
 #fileModal.hidden {
   display: none;
 }
+
 #fileModal {
   position: fixed;
   inset: 0;
@@ -421,5 +431,168 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   padding: 4px 8px;
   cursor: pointer;
 } */
+
+/* ===== TOP BAR ===== */
+.lb-topbar{
+  height:36px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 8px;
+  border-bottom:1px solid #e5e5e5;
+  background:#f8f9f9;
+}
+
+.lb-top-left,
+.lb-top-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.lb-tabs{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+/* ===== BUTTONS (tabs + right actions) ===== */
+.lb-tab,
+.lb-icon-btn{
+  display:inline-flex;
+  align-items:center;       /* căn dọc icon + text */
+  justify-content:center;
+  gap:6px;
+  padding:5px 8px;
+  border:0;                 /* không viền */
+  background:transparent;   /* không nền mặc định */
+  border-radius:3px;
+  cursor:pointer;
+  line-height:1;
+  font-size:12px;
+  font-weight: bold;        /* chữ đậm */
+  outline:none;
+  letter-spacing:0.5px;
+}
+
+.lb-tab.active{
+  background:#e0e0e0;
+}
+
+.lb-tab.disabled,
+.lb-icon-btn.disabled{
+  pointer-events:none;
+  opacity:0.5;
+}
+
+/* hover/active nhẹ giống IDE */
+.lb-tab:hover,
+.lb-icon-btn:hover{
+  background:#e0e0e0;
+}
+.lb-tab:active,
+.lb-icon-btn:active{
+  background:#d5d5d5;
+}
+
+/* ===== ICONS ===== */
+.lb-tab-icon,
+.lb-icon-img{
+  width:14px;
+  height:14px;
+  object-fit:contain;
+  display:block; /* tránh lệch baseline */
+}
+
+#ptutorIcon{
+  width:20px;
+  height:20px;
+  object-fit:contain;
+  display:block;
+}
+
+/* Logo (nếu bạn còn dùng class lb-logo ở nơi khác) */
+#logoIcon{
+  height:16px;
+  width:auto;
+  display:block;
+}
+
+#codeIcon{
+  width:12px;
+  height:12px;
+}
+
+/* ===== BOTTOM BAR ===== */
+.lb-bottombar{
+  height:32px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 10px;
+  border-top:1px solid #e5e5e5;
+  background:#fff;
+  font-size:11px;
+  color:#000;
+}
+
+/* LEFT */
+.lb-bottom-left{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.lb-link{
+  color:#000;
+  text-decoration:none;
+  font-weight:600;
+}
+
+.lb-link:hover{
+  text-decoration:underline;
+}
+
+.lb-sep{
+  color:#777;
+}
+
+/* RIGHT */
+.lb-bottom-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.lb-meta{
+  font-size:11px;
+  color:#000;
+  white-space:nowrap;
+}
+
+/* SERVER STATUS */
+.lb-pill{
+  padding:2px 8px;
+  border-radius:10px;
+  font-size:10px;
+  font-weight:700;
+}
+
+.lb-pill.online{
+  background:#1fa400;
+  color:#fff;
+}
+
+.lb-pill.offline{
+  background:#d80000;
+  color:#fff;
+}
+
+#btnReconnect,
+#btnConnect{
+  border: 1px solid;
+}
+
+
 
 

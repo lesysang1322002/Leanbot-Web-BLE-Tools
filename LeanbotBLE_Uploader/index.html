@@ -4,26 +4,67 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leanbot BLE</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/png" href="./img/logo-lb-title.png">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <!-- TOP BAR -->
-  <div id="topBar">
-    <div id="leftButtons">
-      <button id="btnCode">{ } Code</button>
-      <button id="btnShowLast">Show Last Upload</button>
+  <div id="topBar" class="lb-topbar">
+    <div class="lb-top-left">
+      <div class="lb-tabs">
+        <button class ="lb-tab disabled" >
+          <img class="lb-tab-icon" id="logoIcon" src="./img/logo-lb.png" />
+        </button>
+
+        <button id="btnCode" class="lb-tab active">
+          <img class="lb-tab-icon" id="codeIcon" src="./img/icons/code.png" />
+          <span>CODE</span>
+        </button>
+
+        <button class="lb-tab disabled" >
+          <img class="lb-tab-icon" src="./img/icons/libraries.png" />
+          <span>LIBRARIES</span>
+        </button>
+
+        <button class="lb-tab disabled" >
+          <img class="lb-tab-icon" src="./img/icons/tools.png" />
+          <span>TOOLS</span>
+        </button>
+
+        <button class="lb-tab disabled" >
+          <img class="lb-tab-icon" src="./img/icons/about.png" />
+          <span>ABOUT</span>
+        </button>
+
+        <button class="lb-tab disabled" >
+          <img class="lb-tab-icon" id="ptutorIcon" src="./img/icons/ptutor.png" />
+          <span>PTUTOR</span>
+        </button>
+      </div>
     </div>
 
-    <div id="rightButtons">
-      <span id="fileName" hidden>No file</span>
-      <button id="btnLoadFile">Load File</button>
-      <input type="file" id="FileInput" accept=".ino" hidden> <!-- chỉ chấp nhận file .ino -->
-      <button id="btnUpload">Upload</button>
-      <button id="btnSerial">Serial</button>
+    <div class="lb-top-right">
+      <button class="lb-icon-btn disabled" >
+        <img class="lb-icon-img" src="./img/icons/compile.png" />
+        <span>COMPILE</span>
+      </button>
+
+      <button id="btnUpload" class="lb-icon-btn">
+        <img class="lb-icon-img" src="./img/icons/upload.png" />
+        <span>UPLOAD</span>
+      </button>
+
+      <button id="btnSerial" class="lb-icon-btn">
+        <img class="lb-icon-img" src="./img/icons/serial.png" />
+        <span>SERIAL</span>
+      </button>
     </div>
   </div>
 
+  <!-- WORKSPACE -->
   <div id="workspace">
+    
+    <!-- EDITOR -->
     <div id="editorSection">
       <div id="codeEditor"></div>
     </div>
@@ -61,17 +102,44 @@
   </div> -->
 
   <!-- BOTTOM BAR -->
-  <div id="bottomBar">
+  <!-- <div id="bottomBar">
     <div id="leftStatus">
-      <span class="logo">© Leanbot BLE 3.5</span>
+      <span class="logo">Leanbot BLE © 2025</span>
     </div>
 
     <div id="rightButtons">
-      <span id="leanbotStatus" class="disconnected">No Leanbot</span>
-      <button id="btnReconnect">Reconnect</button>
-      <button id="btnConnect">Connect...</button>
+      
     </div>
-  </div>
+  </div> -->
+  <!-- BOTTOM BAR -->
+  <footer class="lb-bottombar">
+    <!-- LEFT -->
+    <div class="lb-bottom-left">
+      <span>Leanbot BLE © 2025</span>
+      <button class="lb-icon-btn disabled" >
+        <img class="lb-icon-img" src="./img/icons/git.png" />
+        <span>LEANBOT GIT</span>
+      </button>
+      <button class="lb-icon-btn disabled" >
+        <img class="lb-icon-img" src="./img/icons/blockly.png" />
+        <span>BLOCKLY LEANBOT</span>
+      </button>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="lb-bottom-right">
+      <span id="leanbotStatus" class="disconnected">NO LEANBOT</span>
+      <button id="btnReconnect" class="lb-icon-btn">RECONNECT</button>
+      <button id="btnConnect"   class="lb-icon-btn">CONNECT...</button>
+      <button class="lb-icon-btn disabled" >
+        <span>BOARD: ARDUINO UNO</span>
+      </button>
+      <button class="lb-icon-btn disabled" >
+        <span class="lb-meta">SERVER:</span>
+        <span class="lb-pill online">ONLINE</span>
+      </button>
+    </div>
+  </footer>
 
   <!-- UPLOAD DIALOG -->
   <div id="uploadDialog" class="upload-dialog">
@@ -124,7 +192,6 @@
           <input type="checkbox" id="chkAutoClose" checked>
           Auto Close on success
         </label>
-
         <button id="btnCloseUpload">Cancel</button>
       </div>
 
@@ -151,11 +218,22 @@
         data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/LbRGB.ino">
         LbRGB
       </button>
-      <!-- <button class="fileOption"
-        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/ledDemo.hex">
-        LED Demo
-      </button> -->
       <button id="closeModal">Cancel</button>
+    </div>
+  </div>
+
+  <div id="topBar">
+    <div id="leftButtons">
+      <!-- <button id="btnCode">{ } Code</button> -->
+      <button id="btnShowLast" hidden>Show Last Upload</button>
+    </div>
+
+    <div id="rightButtons">
+      <span id="fileName" hidden>No file</span>
+      <button id="btnLoadFile" hidden>Load File</button>
+      <input type="file" id="FileInput" accept=".ino" hidden> <!-- chỉ chấp nhận file .ino -->
+      <!-- <button id="btnUpload">Upload</button> -->
+      <!-- <button id="btnSerial">Serial</button> -->
     </div>
   </div>
 
