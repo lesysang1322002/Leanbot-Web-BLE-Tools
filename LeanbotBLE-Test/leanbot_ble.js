@@ -4,6 +4,7 @@
 export class LeanbotBLE {
   // ===== SERVICE UUID CHUNG =====
   static SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
+  static SERVICE_UUID_ESP = 'ffffffff-0000-1000-8000-00805f9b34fb'
 
   // ---- PRIVATE MEMBERS ----
   #device  = null;
@@ -17,7 +18,8 @@ export class LeanbotBLE {
       // Nếu deviceName rỗng → quét tất cả thiết bị có service UUID tương ứng
       if (!deviceName || deviceName.trim() === "") {
         this.#device = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
+          filters: [{ services: [LeanbotBLE.SERVICE_UUID_ESP], namePrefix: 'Leanbot  '}],
+          optionalServices: [LeanbotBLE.SERVICE_UUID],
         });
       } 
       // Nếu có deviceName → chỉ quét thiết bị có tên trùng khớp
@@ -143,6 +145,14 @@ export class LeanbotBLE {
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
     await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
+     
+    if (Object.keys(this.#chars).length >= 3){
+      await this.Uploader.setupConnection(this.#chars, 
+        window.BLE_MaxLength, 
+        window.BLE_Interval, 
+        window.HASH
+      );
+    }
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
