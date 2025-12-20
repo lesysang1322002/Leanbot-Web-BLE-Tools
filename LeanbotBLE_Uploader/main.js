@@ -233,7 +233,7 @@ async function doCompile() {
     return null;
   }
 
-  uiUploadDialogOpen();
+  uiOpenProgramTab();
 
   compileStart = performance.now();
   UploaderTitleCompile.className = "yellow";
@@ -306,7 +306,7 @@ const UploaderRSSI         = document.getElementById("uploadRSSI");
 const UploaderTimeUpload   = document.getElementById("uploadTime");
 
 // Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
-function uiUploadDialogOpen() {
+function uiOpenProgramTab() {
   // show PROGRAM Tab
   uiSetTab("program");
 
