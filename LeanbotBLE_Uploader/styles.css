@@ -7,20 +7,6 @@ html,body{
   min-height: calc(100vh - 0px);
 }
 
-.lb-topbar{
-  flex: 0 0 auto;
-}
-
-#workspace{
-  flex: 1 1 auto;   
-  min-height: 0; 
-  overflow: auto;   
-}
-
-.lb-bottombar{
-  flex: 0 0 auto;
-}
-
 #leanbotStatus{
   font-weight: bold;
   color: #d32f2f;
@@ -59,7 +45,6 @@ button:hover {
   display:flex;
   align-items:center;
   gap:14px;
-  /* border-bottom:1px solid #e3e3e3; */
   padding:6px 2px 8px;
   margin-bottom:6px;
 }
@@ -384,15 +369,15 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;              /* nếu muốn có khoảng cách */
+  gap: 8px;              
   box-sizing: border-box;
-  min-height: 0;         /* cực quan trọng để scroll đúng */
+  min-height: 0;        
 }
 
 /* Editor mặc định full */
 #editorSection{
   flex: 1 1 0;
-  min-height: 0;         /* cực quan trọng để scroll đúng */
+  min-height: 0;         
 }
 
 /* Serial mặc định ẩn */
@@ -681,66 +666,4 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   border-radius:4px;
 }
 
-.group-box,
-.progress-wrapper,
-.progress-wrapper progress{
-  box-sizing: border-box;
-}
-
-#programLeft .group-box.upload{
-  min-height: 0;
-  overflow: auto;              
-  overscroll-behavior: contain;
-  gap: 2px;
-}
-
-#programLeft .group-box.upload .progress-wrapper{
-  flex: 0 0 auto;              
-  min-height: unset;
-  margin-top: 2px;             
-}
-
-#programLeft .group-box.upload .progress-wrapper progress{
-  height: 14px;                
-  width: 100%;
-}
-
-#programLeft .group-box.upload .progress-label{
-  max-width: 90%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-  line-height: 1;
-}
-
-/* ===============================
-   MOBILE LANDSCAPE: gọn hơn nữa khi thấp
-   =============================== */
-@media (max-width: 950px) and (orientation: landscape) {
-
-  .group-box{
-    padding: 2px;
-  }
-
-  #programLeft .group-box.upload .progress-wrapper progress{
-    height: 16px;
-  }
-
-  #programLeft .group-box.upload .progress-label{
-    font-size: 10px;
-  }
-}
-
-@media (max-height: 430px) and (orientation: landscape) {
-  .group-box{ padding: 8px; }
-
-  #programLeft .group-box.upload .progress-wrapper progress{
-    height: 16px;
-  }
-
-  #programLeft .group-box.upload .progress-label{
-    font-size: 10px;
-  }
-}
 
