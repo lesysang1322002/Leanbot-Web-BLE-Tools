@@ -233,6 +233,10 @@ async function doCompile() {
     return null;
   }
 
+  if (!leanbot.Uploader.isSupported()){
+    leanbot.Uploader.prepareUpload(); 
+  }
+
   uiOpenProgramTab();
 
   compileStart = performance.now();
@@ -395,12 +399,6 @@ leanbot.Uploader.onVerifyError = () => {
 
 leanbot.Uploader.onSuccess = () => {
   UploaderTitleUpload.className = "green";
-  if (UploaderAutoClose.checked) {
-    setTimeout(() => {
-      UploaderDialog.classList.add("fade-out");
-      setTimeout(() => { UploaderDialog.style.display = "none"; }, 600);
-    }, 1000);
-  }
 };
 
 leanbot.Uploader.onError = (err) => {

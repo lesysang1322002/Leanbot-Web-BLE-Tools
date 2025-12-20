@@ -24,6 +24,7 @@ export class LeanbotCompiler {
     const payloadHash = SparkMD5.hash( JSON.stringify({ payload, compileServer }) );
 
     if (payloadHash === this.#prevHash) {
+      await new Promise((resolve) => setTimeout(resolve, 500)); // simulate network delay
       return this.#prevResponse;
     }
 

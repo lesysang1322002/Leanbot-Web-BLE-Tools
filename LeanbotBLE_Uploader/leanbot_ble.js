@@ -370,6 +370,10 @@ class Uploader {
     return !!this.#DataPipe_char && !!this.#ControlPipe_char;
   }
 
+  prepareUpload() {
+    if (this.#JDYUploader) return this.#JDYUploader.prepareUpload();
+  }
+
   /** Upload HEX */
   async upload(hexText) {
     if (!this.isSupported()) {
@@ -697,6 +701,10 @@ class JDYUploader {
 
   #startTime = null;
 
+  #intervalGetSync = null;
+  #isGetSyncOK = false;
+  #isCompileOK = false;
+
   #responseACK = new Uint8Array([0x14, 0x10]); // STK_OK
   #isACK(bytes){
     return bytes[0] === this.#responseACK[0] 
@@ -717,12 +725,26 @@ class JDYUploader {
 
   /* ------------------- UPLOAD HEX ------------------- */
   async upload(hexText) {
+    this.#isCompileOK = true; // Đã compile xong
+    if (this.#intervalGetSync) clearInterval(this.#intervalGetSync); // xóa interval get sync nếu có
+
+    this.#startTime = Date.now();
+    this.#BLEPackets = convertHexToBlePackets(hexText, { returnStep2: true });
+
+    while (!this.#isGetSyncOK) await new Promise(resolve => setTimeout(resolve, 5));
+
+    await this.#uploadCode();
+  }
+
+  async prepareUpload() {
     if (!this.#serial.isSupported()) {
       console.log("[UPLOAD] Error: Serial not supported.");
       return;
     }
-    
-    this.#startTime = Date.now();
+
+    this.#isGetSyncOK = false;
+    this.#isCompileOK = false;
+
     console.log("[UPLOAD] Disconnecting...");
     const resultDisc = await this.#leanbot.disconnect();
     console.log("[UPLOAD] Disconnect result:", resultDisc?.message);
@@ -730,41 +752,29 @@ class JDYUploader {
     await new Promise(resolve => setTimeout(resolve, 3500));
 
     console.log("[UPLOAD] Reconnecting...");
-    let resultReco = null;
-    let retryCount = 0;
-
-    while (true) {
+    let resultReco;
+    while (!(resultReco?.success)) {
       try {
-        retryCount++;
         resultReco = await this.#leanbot.reconnect();
-
-        if (resultReco?.success) {
-          this.#emitUploadMessage(`Reconnect successful after ${retryCount} retries (50 ms interval)`);
-          break;
-        }
-      } catch (err) {
-        // ignore lỗi, tiếp tục thử
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 50));
+      } catch {}
+      await new Promise(r => setTimeout(r, 50));
     }
-    this.#emitUploadMessage(`Reconnect result: ${resultReco.message}`);
-
-    if (!resultReco.success) {
-      console.log("[UPLOAD] Reconnect failed:", resultReco.message);
-      return;
-    }
-
-    console.log("[UPLOAD] Reconnect success:");
+    console.log("[UPLOAD] Reconnect success.");
     this.isUploading = true;
-    this.#BLEPackets = convertHexToBlePackets(hexText, { returnStep2: true });
 
     console.log("[UPLOAD] Starting SYNC...");
-    await this.#getSync();
+    if (this.#isCompileOK) {
+      // Nếu đã compile xong thì chỉ cần get sync 1 lần
+      await this.#getSync();
+    } else {
+      // Nếu chưa compile xong thì cứ 500ms get sync 1 lần
+      this.#intervalGetSync = setInterval(() => this.#getSync(), 500);
+    }
   }
 
   /* ------------------- HANDLE RESPONSE ------------------- */
   async #handleResponse(bytes) {
+    console.log("[UPLOAD] Received response: ", bytes.toString());
     if (this.#isSyncing ) {
       await this.#handleGetSyncAck(bytes);
       return;
@@ -804,8 +814,8 @@ class JDYUploader {
       return;
     }
     console.log("[SYNC] SYNC ACK received!");
-    // Bắt đầu upload code
-    await this.#uploadCode();
+    this.#isGetSyncOK = true;
+    // this.#emitUploadMessage("Get Sync successful");
   }
   
   /* ------------------- LOAD ADDRESS ------------------- */
@@ -890,6 +900,8 @@ class JDYUploader {
     await this.#serial.SerialPipe_sendToLeanbot(pageData, false);
     await this.#serial.SerialPipe_sendToLeanbot(progPageTail, false);
 
+    this.#emitUploadMessage(`Receive ${pageIndex + 1}`);
+
     this.#isWritingPage = true;
 
     while (this.#isWritingPage) await new Promise(resolve => setTimeout(resolve, 5));
@@ -918,12 +930,9 @@ class JDYUploader {
     this.#uploader.totalPackets   = pages.length;
     this.#uploader.totalBytesData = totalBytesData;
 
-    let writtenBytes = 0;
-
     const t1 = performance.now();
     for (const page of pages) {
       await this.#writeFlash(page.pageIndex, page.bytes);
-      this.#emitUploadMessage(`Receive ${page.pageIndex + 1}`);
     }
     const t2 = performance.now();
     console.log(`[UPLOAD] Completed in ${((t2 - t1) / 1000).toFixed(2)} s`);
