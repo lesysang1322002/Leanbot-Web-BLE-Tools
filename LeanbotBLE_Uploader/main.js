@@ -1,5 +1,8 @@
 // main.js
-
+/* ============================================================
+ *  URL PARAMETERS
+ *  - ?BLE_MaxLength=...&BLE_Interval=...&HASH=...
+ * ============================================================ */
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
@@ -9,23 +12,21 @@ console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
 console.log(`HASH = ${window.HASH}`);
 
-localStorage.removeItem("lastDeviceInfo");
 
-// Import LeanbotCompiler
+/* ============================================================
+ *  IMPORTS & INIT
+ * ============================================================ */
 import { LeanbotCompiler } from "./leanbot_compiler.js";
-// Khởi tạo đối tượng LeanbotCompiler
-const leanbotCompiler = new LeanbotCompiler();
-
-// Import LeanbotBLE SDK
 import { LeanbotBLE } from "./leanbot_ble.js";
 
-// =================== BLE Connection =================== //
+// Instances
+const leanbotCompiler = new LeanbotCompiler();
+const leanbot         = new LeanbotBLE();
+
+// ================== Leanbot Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");
 const btnConnect    = document.getElementById("btnConnect");
 const btnReconnect  = document.getElementById("btnReconnect");
-
-// Khởi tạo đối tượng LeanbotBLE
-const leanbot = new LeanbotBLE();
 
 function getLeanbotIDWithoutBLE() {
   return leanbot.getLeanbotID().replace(" BLE", "");
@@ -44,15 +45,11 @@ leanbot.onConnect = () => {
   leanbotStatus.style.display = "inline-block";
   leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
   leanbotStatus.style.color   = "green";
-
   btnReconnect.style.display  = "none";
 }
 
 leanbot.onDisconnect = () => {
-  // restoreFullSerialLog();
-
   leanbotStatus.style.display = "none";
-
   btnReconnect.style.display  = "inline-block";
   btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
 };
@@ -151,10 +148,6 @@ const fileNameLabel  = document.getElementById("fileName");
 
 let fileLoaded = ""; // lưu nội dung file đã đọc
 
-// btnCode.addEventListener("click", () => {
-//   modal.classList.remove("hidden");
-// });
-
 closeModal.addEventListener("click", () => {
   modal.classList.add("hidden");
 });
@@ -196,7 +189,7 @@ document.querySelectorAll(".fileOption").forEach((btn) => {
 });
 
 
-// =================== Button Load HEX =================== //
+// =================== Button Load File =================== //
 const btnLoadFile = document.getElementById("btnLoadFile");
 const fileInput   = document.getElementById("FileInput");
 
@@ -226,48 +219,65 @@ async function loadFile() {
   });
 }
 
+// =================== Button Compile =================== //
+const btnCompile = document.getElementById("btnCompile");
+
+btnCompile.addEventListener("click", async () => {
+  await doCompile();
+});
+
+async function doCompile() {
+  const sourceCode = getSourceCode();
+  if (!sourceCode || sourceCode.trim() === "") {
+    alert("No code to compile!");
+    return null;
+  }
+
+  uiUploadDialogOpen();
+
+  compileStart = performance.now();
+  UploaderTitleCompile.className = "yellow";
+  uiUpdateProgress(UploaderCompile, 1, 2);
+
+  const response = await leanbotCompiler.compile(sourceCode);
+
+  uiUpdateProgress(UploaderCompile, 2, 2);
+  uiUpdateTime(compileStart, UploaderTimeCompile);
+  UploaderLog.value += "\n" + response.log;
+
+  if (response.hex && response.hex.trim() !== "") {
+    UploaderTitleCompile.className = "green";
+    return response; // compile OK
+  } else {
+    UploaderCompile.className      = "red";
+    UploaderTitleCompile.className = "red";
+    return null; // compile fail
+  }
+}
+
 // =================== Button Upload =================== //
 const btnUpload = document.getElementById("btnUpload");
 
 btnUpload.addEventListener("click", async () => {
-  // Kết nối Leanbot nếu chưa kết nối
+  // ===== CONNECT =====
   const result = await leanbot.reconnect();
   if (!result.success) {
     alert("Please connect to Leanbot first!");
     return;
   }
-  
-  const sourceCode = getSourceCode();      
-  if (!sourceCode || sourceCode.trim() === "") {
-    alert("No code to upload! Please write or load an Leanbot sketch.");
-    return;
-  }
-  
-  uiUploadDialogOpen();                            // Mở dialog upload
 
-  compileStart = performance.now();                // Bắt đầu đếm thời gian compile
-  UploaderTitleCompile.className = "yellow";       // Title Compile yellow: đang compile
-  uiUpdateProgress(UploaderCompile, 1, 2);         // progress: 50% + yellow
+  // ===== COMPILE =====
+  const response = await doCompile();
+  if (!response) return; // compile fail → dừng
 
-  const response = await leanbotCompiler.compile(sourceCode);
+  // ===== UPLOAD =====
+  uploadStart = performance.now();
+  UploaderTitleUpload.className = "yellow";
 
-  uiUpdateProgress(UploaderCompile, 2, 2);         // progress:100% + green
-  uiUpdateTime(compileStart, UploaderTimeCompile); // Hiển thị thời gian compile
-
-  UploaderLog.value += "\n" + response.log;        // Hiển thị log compile
-
-  if( response.hex && response.hex.trim() !== "") {// Compile thành công, có hex trả về
-    UploaderTitleCompile.className = "green";      // Title Compile green: compile thành công
-
-    uploadStart = performance.now();               // Bắt đầu đếm thời gian upload  
-    UploaderTitleUpload.className = "yellow";      // Title Upload yellow: đang upload
-    const hexCode = base64ToText(response.hex);    // Giải mã hex từ base64
-    await leanbot.Uploader.upload(hexCode);        // Bắt đầu upload
-  } else {                                         // Compile thất bại, không có hex trả về
-    UploaderCompile.className      = "red";        // progress: red
-    UploaderTitleCompile.className = "red";        // Title Compile red: compile thất bại
-  }
+  const hexCode = base64ToText(response.hex);
+  await leanbot.Uploader.upload(hexCode);
 });
+
 
 function base64ToText(b64) {
   // atob: base64 -> "binary string" (mỗi ký tự 0..255)
@@ -291,31 +301,14 @@ const UploaderVerify       = document.getElementById("progVerify");
 const UploaderLog          = document.getElementById("uploadLog");
 
 const UploaderAutoClose    = document.getElementById("chkAutoClose");
-const UploaderBtnClose     = document.getElementById("btnCloseUpload");
-
 const UploaderTimeCompile  = document.getElementById("compileTime");
 const UploaderRSSI         = document.getElementById("uploadRSSI");
 const UploaderTimeUpload   = document.getElementById("uploadTime");
 
-// UploaderBtnClose.onclick = () => {
-//   if (UploaderBtnClose.innerText === "Cancel") {
-//     leanbot.Uploader.cancel();
-//     UploaderBtnClose.innerText = "Close";
-//     // restoreFullSerialLog();
-//   }
-//   UploaderDialog.style.display = "none";
-// };
-
-// UploaderBtnShowLast.onclick = () => {
-//   UploaderDialog.classList.remove("fade-out");
-//   UploaderDialog.style.display = "flex";
-// };
-
 // Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
 function uiUploadDialogOpen() {
-  // UploaderDialog.style.display = "flex";
-  // UploaderDialog.classList.remove("fade-out");
-  document.querySelector('#serialTabs .serial-tab[data-tab="program"]')?.click();
+  // show PROGRAM Tab
+  uiSetTab("program");
 
   // reset progress bars
   [UploaderCompile, UploaderTransfer, UploaderWrite, UploaderVerify].forEach(b => {
@@ -326,7 +319,6 @@ function uiUploadDialogOpen() {
 
   // reset 
   UploaderLog.value = "";
-  // UploaderBtnClose.innerText      = "Cancel";
   UploaderTimeCompile.textContent = "0.0 sec";
   UploaderTimeUpload.textContent  = "0.0 sec";
   UploaderTitleUpload.textContent = "Upload to " + getLeanbotIDWithoutBLE();
@@ -402,9 +394,7 @@ leanbot.Uploader.onVerifyError = () => {
 };
 
 leanbot.Uploader.onSuccess = () => {
-  // restoreFullSerialLog();
   UploaderTitleUpload.className = "green";
-  // UploaderBtnClose.innerText = "Close";
   if (UploaderAutoClose.checked) {
     setTimeout(() => {
       UploaderDialog.classList.add("fade-out");
@@ -414,8 +404,6 @@ leanbot.Uploader.onSuccess = () => {
 };
 
 leanbot.Uploader.onError = (err) => {
-  // restoreFullSerialLog();
-  // UploaderBtnClose.innerText = "Close";
   UploaderTitleUpload.className = "red";
 };
 
@@ -424,21 +412,65 @@ function getSourceCode() {
   return window.arduinoEditor?.getValue() || "";
 }
 
-// =================== Serial Monitor Toggle =================== //
-const workspace = document.getElementById("workspace");
-const btnSerial = document.getElementById("btnSerial");
+// =================== SERIAL =================== //
+const workspace     = document.getElementById("workspace");
 const serialSection = document.getElementById("serialSection");
+const btnSerial     = document.getElementById("btnSerial");
 
+const programPanel  = document.getElementById("programPanel");
+const monitorPanel  = document.getElementById("monitorPanel");
+const tabs          = document.querySelectorAll("#serialTabs .serial-tab");
+const btnCloseSerial = document.getElementById("btnCloseSerial");
+
+function openSerial() {
+  workspace.classList.add("serial-open");
+  serialSection.classList.remove("is-hidden");
+}
+
+function closeSerial() {
+  workspace.classList.remove("serial-open");
+  serialSection.classList.add("is-hidden");
+}
+
+btnCloseSerial.addEventListener("click", () => {
+  closeSerial();
+}); 
+
+function uiSetTab(name) {
+  openSerial();
+
+  // active tab
+  tabs.forEach(tab =>
+    tab.classList.toggle("active", tab.dataset.tab === name)
+  );
+
+  // show / hide panel
+  programPanel.classList.toggle("is-hidden", name !== "program");
+  monitorPanel.classList.toggle("is-hidden", name !== "monitor");
+}
+
+// Click SERIAL → mở PROGRAM
 btnSerial.addEventListener("click", () => {
-  const open = workspace.classList.toggle("serial-open");
-
-  // sync trạng thái ẩn/hiện theo class
-  serialSection.classList.toggle("is-hidden", !open);
-
-  // (tuỳ chọn) đổi style nút để biết đang bật
-  btnSerial.classList.toggle("active", open);
-  document.querySelector('#serialTabs .serial-tab[data-tab="program"]')?.click();
+  uiSetTab("monitor");
 });
+
+// Click tab
+tabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    uiSetTab(tab.dataset.tab);
+  });
+});
+
+// Cho chỗ khác gọi
+window.openProgramTab = () => uiSetTab("program");
+window.openMonitorTab = () => uiSetTab("monitor");
+
+// Tab mặc định theo HTML
+const defaultTab =
+  document.querySelector("#serialTabs .serial-tab.active")?.dataset.tab
+  || "program";
+
+uiSetTab(defaultTab);
 
 // =================== Monaco Editor for Arduino =================== //
 
@@ -624,28 +656,5 @@ void loop() {
         },
       });
     });
-
-
-(function initSerialTabs(){
-  const tabs = document.querySelectorAll("#serialTabs .serial-tab");
-  const monitorPanel = document.getElementById("monitorPanel");
-  const programPanel = document.getElementById("programPanel");
-
-  function setTab(name){
-    tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === name));
-    monitorPanel.classList.toggle("active", name === "monitor");
-    programPanel.classList.toggle("active", name === "program");
-  }
-
-  tabs.forEach(t => {
-    t.addEventListener("click", () => setTab(t.dataset.tab));
-  });
-
-  // mặc định mở MONITOR
-  setTab("monitor");
-
-  // Nếu bạn muốn khi bấm Serial thì luôn mở MONITOR:
-  // window.openSerialMonitor = () => setTab("monitor");
-})();
 
 // =================== END OF FILE =================== //

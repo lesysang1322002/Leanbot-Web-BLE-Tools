@@ -52,7 +52,7 @@
       </button>
       <input type="file" id="FileInput" accept=".ino" hidden> 
 
-      <button class="lb-icon-btn" >
+      <button id="btnCompile" class="lb-icon-btn" >
         <img class="lb-icon-img" src="./img/icons/compile.png" />
         <span>COMPILE</span>
       </button>
@@ -81,9 +81,15 @@
     <div id="serialSection" class="is-hidden">
 
       <!-- Tabs -->
-      <div id="serialTabs">
-        <button class="serial-tab" data-tab="program">PROGRAM</button>
-        <button class="serial-tab active" data-tab="monitor">MONITOR</button>
+      <div id="serialTabsBar">
+        <div id="serialTabs">
+          <button class="serial-tab active" data-tab="program">PROGRAM</button>
+          <button class="serial-tab" data-tab="monitor">MONITOR</button>
+        </div>
+
+        <button id="btnCloseSerial">
+          <img class="lb-icon-img" src="./img/icons/close.png" />
+        </button>
       </div>
 
       <!-- Panels -->
@@ -156,7 +162,7 @@
 
 
         <!-- MONITOR PANEL -->
-        <div id="monitorPanel" class="serial-panel active">
+        <div id="monitorPanel" class="serial-panel is-hidden">
           <textarea id="serialLog" readonly></textarea>
 
           <div id="serialBottom">

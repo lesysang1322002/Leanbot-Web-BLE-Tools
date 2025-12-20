@@ -45,10 +45,9 @@ button:hover {
   display:flex;
   align-items:center;
   gap:14px;
-  border-bottom:1px solid #e3e3e3;
+  /* border-bottom:1px solid #e3e3e3; */
   padding:6px 2px 8px;
   margin-bottom:6px;
-  background:#f8f9f9;
 }
 #serialTabs .serial-tab{
   border:0;
@@ -66,7 +65,7 @@ button:hover {
   background:#efefef;
 }
 
-/* panels */
+/* panels (dùng is-hidden giống JS) */
 #serialPanels,
 .serial-panel{
   display:flex;
@@ -74,8 +73,12 @@ button:hover {
   flex:1;
   min-height:200px;
 }
-.serial-panel{ display:none; }
-.serial-panel.active{ display:flex; }
+
+/* panel mặc định hiện */
+.serial-panel{ display:flex; }
+
+/* panel nào bị is-hidden thì ẩn */
+.serial-panel.is-hidden{ display:none; }
 
 /* bottom bar */
 #serialBottom{
@@ -169,14 +172,14 @@ button:hover {
 /* Upload box */
 .upload-box {
   background: #fff;
-  border-radius: 5px;
+  /* border-radius: 5px; */
   box-shadow: 0 0 20px rgba(0,0,0,0.2);
 }
 
 /* GROUP BOX */
 .group-box {
   border: 1px solid #ccc;
-  border-radius: 8px;
+  /* border-radius: 8px; */
   padding: 12px;
   background: #fff;
 }
@@ -262,7 +265,7 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   min-height: 0px;
   background: #fafafa;
   border: 1px solid #bbb;
-  border-radius: 6px;
+  /* border-radius: 6px; */
   padding: 6px;
   font-family: monospace;
   resize: none;
@@ -583,4 +586,31 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   appearance: none;
   -webkit-appearance: none;
 }
+
+#serialTabsBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid #ccc;
+  background:#f8f9f9;
+}
+
+#serialTabs{
+  display:flex;
+  gap:6px;
+}
+
+#btnCloseSerial{
+  border:none;
+  background:transparent;
+  font-size:16px;
+  cursor:pointer;
+  padding:4px 8px;
+}
+
+#btnCloseSerial:hover{
+  background:#eee;
+  border-radius:4px;
+}
+
 
