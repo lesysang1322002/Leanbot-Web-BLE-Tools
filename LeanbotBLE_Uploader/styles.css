@@ -668,3 +668,121 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
 }
 
 
+/* ===============================
+   MOBILE LANDSCAPE TUNING
+   (điện thoại xoay ngang)
+   =============================== */
+@media (max-width: 950px) and (orientation: landscape) {
+
+  /* 1) Top/bottom bar gọn lại để tiết kiệm chiều cao */
+  .lb-topbar{
+    height: 32px;
+    padding: 0 6px;
+  }
+  .lb-bottombar{
+    height: 28px;
+    padding: 0 8px;
+    font-size: 10.5px;
+  }
+
+  .lb-top-left,
+  .lb-top-right{
+    gap: 8px;
+  }
+  .lb-tabs{
+    gap: 8px;
+  }
+
+  .lb-tab,
+  .lb-icon-btn{
+    padding: 4px 6px;
+    gap: 5px;
+    font-size: 11px;
+    letter-spacing: .3px;
+  }
+
+  .lb-tab-icon,
+  .lb-icon-img{
+    width: 13px;
+    height: 13px;
+  }
+  #ptutorIcon{
+    width: 18px;
+    height: 18px;
+  }
+
+  /* 2) Workspace: giảm gap để rộng chỗ cho editor/serial */
+  #workspace{
+    gap: 6px;
+  }
+
+  /* 3) Serial tabs gọn hơn */
+  #serialTabs{
+    gap: 8px;
+    padding: 4px 2px 6px;
+    margin-bottom: 4px;
+  }
+  #serialTabs .serial-tab{
+    padding: 5px 7px;
+    font-size: 11px;
+    letter-spacing: .6px;
+  }
+
+  /* 4) Serial bottom bar: cho phép wrap + giảm min-width để không tràn */
+  #serialBottom{
+    gap: 6px;
+    padding: 6px 6px;
+    align-items: center;
+  }
+
+  .serial-group{
+    gap: 6px;
+  }
+
+  /* Cụm send chiếm full hàng nếu cần */
+  .serial-send{
+    flex: 1 1 100%;
+    min-width: 0;          /* bỏ min-width 260px gây tràn */
+  }
+
+  #serialInput{
+    min-width: 0;          /* bỏ min-width 180px gây tràn */
+    width: 100%;
+  }
+
+  /* Cụm toggles & actions tự xuống dòng đẹp */
+  .serial-toggles{
+    flex: 1 1 auto;
+  }
+  .serial-actions{
+    margin-left: 0;        /* bỏ ép qua phải, để wrap tự nhiên */
+    flex: 0 0 auto;
+  }
+
+  /* 6) Serial log: chữ nhỏ hơn nhẹ để nhìn nhiều dòng hơn */
+  #serialLog{
+    font-size: 12px;
+  }
+
+  /* 7) Nếu chiều cao màn hình quá thấp (landscape “lùn”), giảm min-height panel */
+  #serialPanels,
+  .serial-panel{
+    min-height: 140px;
+  }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  /* cực lùn: ưu tiên không bị “ngộp” */
+  .lb-topbar{ height: 30px; }
+  .lb-bottombar{ height: 26px; }
+
+  #serialTabs .serial-tab{
+    padding: 4px 6px;
+  }
+  #serialBottom button{
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+}
+
+
