@@ -49,6 +49,7 @@ button:hover {
   padding:6px 2px 8px;
   margin-bottom:6px;
 }
+
 #serialTabs .serial-tab{
   border:0;
   background:transparent;
@@ -84,30 +85,83 @@ button:hover {
 #serialBottom{
   display:flex;
   align-items:center;
-  gap:6px;
-  flex-wrap:wrap;
-  justify-content:space-between;
-  padding:3px 0;
+  gap:10px;
+  padding:6px 8px;
+  border-top:1px solid #ddd;
+  background:#fafafa;
+  flex-wrap:nowrap;           /* 1 hàng */
 }
 
+/* nhóm */
+.serial-group{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+
+/* cụm trái: ăn rộng nhất */
+.serial-send{
+  flex:1;
+  min-width:260px;
+}
+
+/* input rộng nhất trong cụm trái */
 #serialInput{
   flex:1;
-  min-width:120px;
+  min-width:180px;
   font-family:monospace;
+  padding:6px 8px;
+  border:1px solid #cfcfcf;
+  border-radius:6px;
+  box-sizing:border-box;
 }
 
+/* nút chung */
 #serialBottom button{
-  background:#f5f5f5;
+  background:#fff;
   border:1px solid #cfcfcf;
-  border-radius:2px;
-  padding:0px 6px;
+  border-radius:6px;
+  padding:6px 10px;
   font-size:13px;
   cursor:pointer;
-  transition:backg
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+#serialBottom button:hover{
+  background:#f2f2f2;
 }
 
-.text-checkbox {
-  font-size: 14px;
+/* Send đứng sát bên phải input */
+#btnSend{
+  flex:0 0 auto;
+}
+
+/* cụm toggles ở giữa */
+.serial-toggles{
+  justify-content:center;
+}
+
+/* cụm actions đẩy hẳn sang phải */
+.serial-actions{
+  margin-left:auto;   /* đẩy cụm actions sang phải */
+  gap:6px;
+}
+
+/* nút nhỏ hơn cho Clear/Copy */
+.btn-small{
+  padding:6px 8px;
+  min-width:56px;
+}
+
+/* checkbox */
+.text-checkbox{
+  font-size:13px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.text-checkbox input{
+  transform: translateY(0.5px);
 }
   
 /* --- MODAL (File Selection) --- */

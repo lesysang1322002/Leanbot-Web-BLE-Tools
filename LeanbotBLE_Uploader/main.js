@@ -461,17 +461,6 @@ tabs.forEach(tab => {
   });
 });
 
-// Cho chỗ khác gọi
-window.openProgramTab = () => uiSetTab("program");
-window.openMonitorTab = () => uiSetTab("monitor");
-
-// Tab mặc định theo HTML
-const defaultTab =
-  document.querySelector("#serialTabs .serial-tab.active")?.dataset.tab
-  || "program";
-
-uiSetTab(defaultTab);
-
 // =================== Monaco Editor for Arduino =================== //
 
 require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs" } });

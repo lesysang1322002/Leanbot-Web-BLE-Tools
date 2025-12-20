@@ -148,14 +148,6 @@
                 <textarea id="uploadLog" readonly></textarea>
               </div>
 
-              <!-- FOOTER -->
-              <!-- <div class="upload-footer">
-                <label class="auto-close">
-                  <input type="checkbox" id="chkAutoClose" checked>
-                  Auto Close on success
-                </label>
-                <button id="btnCloseUpload">Cancel</button>
-              </div> -->
             </div>
           </div>
         </div>
@@ -166,14 +158,28 @@
           <textarea id="serialLog" readonly></textarea>
 
           <div id="serialBottom">
-            <button id="btnSend">Send</button>
-            <input type="text" id="serialInput" placeholder="Send Message -> ...">
-            <label class="text-checkbox"><input type="checkbox" id="addNewline" checked> Newline</label>
-            <label class="text-checkbox"><input type="checkbox" id="autoScroll" checked > Autoscroll</label>
-            <label class="text-checkbox"><input type="checkbox" id="showTimestamp"> Timestamp</label>
-            <button id="btnClear">Clear</button>
-            <button id="btnCopy">Copy</button>
+
+            <!-- 1) INPUT + SEND (trái, input rộng nhất) -->
+            <div class="serial-group serial-send">
+              <input type="text" id="serialInput" placeholder="Send Message -> ..." />
+              <button id="btnSend">Send</button>
+            </div>
+
+            <!-- 2) TOGGLES (giữa) -->
+            <div class="serial-group serial-toggles">
+              <label class="text-checkbox"><input type="checkbox" id="addNewline" checked> Newline</label>
+              <label class="text-checkbox"><input type="checkbox" id="autoScroll" checked> Autoscroll</label>
+              <label class="text-checkbox"><input type="checkbox" id="showTimestamp"> Timestamp</label>
+            </div>
+
+            <!-- 3) ACTIONS (phải) -->
+            <div class="serial-group serial-actions">
+              <button id="btnClear" class="btn-small">Clear</button>
+              <button id="btnCopy" class="btn-small">Copy</button>
+            </div>
+
           </div>
+
         </div>
 
       </div>
