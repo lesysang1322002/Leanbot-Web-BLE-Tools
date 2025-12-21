@@ -744,6 +744,7 @@ class JDYUploader {
 
     this.#isGetSyncOK = false;
     this.#isCompileOK = false;
+    clearInterval(this.#intervalGetSync);
 
     console.log("[UPLOAD] Disconnecting...");
     const resultDisc = await this.#leanbot.disconnect();
