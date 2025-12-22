@@ -141,7 +141,6 @@ async function send() {
 }
 
 // =================== FILE SELECTION MODAL =================== //
-const btnCode        = document.getElementById("btnCode");
 const modal          = document.getElementById("fileModal");
 const closeModal     = document.getElementById("closeModal");
 const fileNameLabel  = document.getElementById("fileName");
@@ -221,6 +220,7 @@ async function loadFile() {
 
 // =================== Button Compile =================== //
 const btnCompile = document.getElementById("btnCompile");
+const UploaderLogCompile = document.getElementById("compileLog");
 
 btnCompile.addEventListener("click", async () => {
   await doCompile();
@@ -237,17 +237,16 @@ async function doCompile() {
     leanbot.Uploader.prepareUpload(); 
   }
 
-  uiOpenProgramTab();
+  uiSetTab("program");
 
+  uiResetCompile();
   compileStart = performance.now();
-  UploaderTitleCompile.className = "yellow";
-  uiUpdateProgress(UploaderCompile, 1, 2);
 
   const response = await leanbotCompiler.compile(sourceCode);
 
   uiUpdateProgress(UploaderCompile, 2, 2);
   uiUpdateTime(compileStart, UploaderTimeCompile);
-  UploaderLog.value += "\n" + response.log;
+  UploaderLogCompile.value += "\n" + response.log;
 
   if (response.hex && response.hex.trim() !== "") {
     UploaderTitleCompile.className = "green";
@@ -275,8 +274,8 @@ btnUpload.addEventListener("click", async () => {
   if (!response) return; // compile fail → dừng
 
   // ===== UPLOAD =====
+  uiResetUpload();
   uploadStart = performance.now();
-  UploaderTitleUpload.className = "yellow";
 
   const hexCode = base64ToText(response.hex);
   await leanbot.Uploader.upload(hexCode);
@@ -292,9 +291,6 @@ function base64ToText(b64) {
 }
 
 // =================== Upload DOM Elements =================== //
-const UploaderDialog       = document.getElementById("uploadDialog");
-const UploaderBtnShowLast  = document.getElementById("btnShowLast");
-
 const UploaderTitleUpload  = document.getElementById("uploadTitle");
 const UploaderTitleCompile = document.getElementById("compileTitle");
 
@@ -302,33 +298,33 @@ const UploaderCompile      = document.getElementById("progCompile");
 const UploaderTransfer     = document.getElementById("progTransfer");
 const UploaderWrite        = document.getElementById("progWrite");
 const UploaderVerify       = document.getElementById("progVerify");
-const UploaderLog          = document.getElementById("uploadLog");
+const UploaderLogUpload          = document.getElementById("uploadLog");
 
-const UploaderAutoClose    = document.getElementById("chkAutoClose");
 const UploaderTimeCompile  = document.getElementById("compileTime");
 const UploaderRSSI         = document.getElementById("uploadRSSI");
 const UploaderTimeUpload   = document.getElementById("uploadTime");
 
-// Gọi khi nhấn nút Upload và bắt đầu gửi dữ liệu
-function uiOpenProgramTab() {
-  // show PROGRAM Tab
-  uiSetTab("program");
+function uiResetCompile() {
+  uiUpdateProgress(UploaderCompile, 1, 2);
+  UploaderCompile.className = "yellow";
+  UploaderLogCompile.value = "";
+  UploaderTitleCompile.className  = "yellow";
+  UploaderTimeCompile.textContent = "0.0 sec";
+}
 
-  // reset progress bars
-  [UploaderCompile, UploaderTransfer, UploaderWrite, UploaderVerify].forEach(b => {
+function uiResetUpload() {
+  [UploaderTransfer, UploaderWrite, UploaderVerify].forEach(b => {
     b.value = 0;
     b.max   = 1;
     b.className = "yellow";
   });
 
   // reset 
-  UploaderLog.value = "";
-  UploaderTimeCompile.textContent = "0.0 sec";
-  UploaderTimeUpload.textContent  = "0.0 sec";
+  UploaderLogUpload.value = "";
   UploaderTitleUpload.textContent = "Upload to " + getLeanbotIDWithoutBLE();
+  UploaderTitleUpload.className   = "yellow";
+  UploaderTimeUpload.textContent  = "0.0 sec";
   UploaderRSSI.textContent        = "0 dBm";
-  UploaderTitleUpload.className   = "black";
-  UploaderTitleCompile.className  = "black";
 }
 
 async function SimulateCompiler() {
@@ -364,8 +360,8 @@ function uiUpdateProgress(element, progress, total) {
 leanbot.Uploader.onMessage = (msg) => {
   uiUpdateTime(uploadStart, UploaderTimeUpload);
 
-  UploaderLog.value += "\n" + msg;
-  UploaderLog.scrollTop = UploaderLog.scrollHeight;
+  UploaderLogUpload.value += "\n" + msg;
+  UploaderLogUpload.scrollTop = UploaderLogUpload.scrollHeight;
 };
 
 leanbot.Uploader.onRSSI = (rssi) => {

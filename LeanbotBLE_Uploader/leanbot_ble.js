@@ -151,7 +151,7 @@ export class LeanbotBLE {
     /** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
     console.log("Saving device to localStorage:", this.#device.name);
     localStorage.setItem("lastDeviceInfo", JSON.stringify(this.#device.name));
-  }
+  }    
 
   constructor() {
     this.onConnect = null;

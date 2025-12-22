@@ -1,429 +1,32 @@
-/* styles.css */
-html,body{
+/* ========== BASE ========== */
+html, body{
   margin:0;
+  height:100%;
   font-family:"Roboto", system-ui, -apple-system, "Segoe UI", Arial;
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 0px);
 }
 
-#leanbotStatus{
-  font-weight: bold;
-  color: #d32f2f;
-  display: none;
-  font-size: 12px;
-}
-
-button:hover {
-  background-color: #f1f1f1;
-}
-
-/* --- SERIAL MONITOR --- */
-#serialSection{
-  border:1px solid #ccc;
-  background:#fff;
+body{
   display:flex;
   flex-direction:column;
+  min-height:100vh;
 }
 
-/* log area */
-#serialLog{
-  flex:1;
-  background:#000;
-  color:#fff;
-  font:13px monospace;
-  overflow-y:auto;
-  white-space:pre-wrap;
-  border:1px solid #999;
-  box-sizing:border-box;
-  resize:none;
-  caret-color:transparent;
-}
+button:hover{ background-color:#f1f1f1; }
 
-/* tabs */
-#serialTabs{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  padding:6px 2px 8px;
-  margin-bottom:6px;
-}
-
-#serialTabs .serial-tab{
-  border:0;
-  background:transparent;
-  padding:6px 8px;
-  border-radius:8px;
+.time,.rssi{
   font-size:12px;
+  opacity:0.7;
+}
+
+/* Status */
+#leanbotStatus{
   font-weight:700;
-  letter-spacing:.8px;
-  color:#666;
-  cursor:pointer;
-}
-#serialTabs .serial-tab.active{
-  color:#1d1d1d;
-  background:#efefef;
-}
-
-/* panels (dùng is-hidden giống JS) */
-#serialPanels,
-.serial-panel{
-  display:flex;
-  flex-direction:column;
-  flex:1;
-  min-height:200px;
-}
-
-/* panel mặc định hiện */
-.serial-panel{ display:flex; }
-
-/* panel nào bị is-hidden thì ẩn */
-.serial-panel.is-hidden{ display:none; }
-
-/* bottom bar */
-#serialBottom{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:6px 8px;
-  border-top:1px solid #ddd;
-  background:#fafafa;
-  flex-wrap:nowrap;           /* 1 hàng */
-}
-
-/* nhóm */
-.serial-group{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  white-space:nowrap;
-}
-
-/* cụm trái: ăn rộng nhất */
-.serial-send{
-  flex:1;
-  min-width:260px;
-}
-
-/* input rộng nhất trong cụm trái */
-#serialInput{
-  flex:1;
-  min-width:180px;
-  font-family:monospace;
-  padding:6px 8px;
-  border:1px solid #cfcfcf;
-  border-radius:6px;
-  box-sizing:border-box;
-}
-
-/* nút chung */
-#serialBottom button{
-  background:#fff;
-  border:1px solid #cfcfcf;
-  border-radius:6px;
-  padding:6px 10px;
-  font-size:13px;
-  cursor:pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-#serialBottom button:hover{
-  background:#f2f2f2;
-}
-
-/* Send đứng sát bên phải input */
-#btnSend{
-  flex:0 0 auto;
-}
-
-/* cụm toggles ở giữa */
-.serial-toggles{
-  justify-content:center;
-}
-
-/* cụm actions đẩy hẳn sang phải */
-.serial-actions{
-  margin-left:auto;   /* đẩy cụm actions sang phải */
-  gap:6px;
-}
-
-/* nút nhỏ hơn cho Clear/Copy */
-.btn-small{
-  padding:6px 8px;
-  min-width:56px;
-}
-
-/* checkbox */
-.text-checkbox{
-  font-size:13px;
-  display:flex;
-  align-items:center;
-  gap:6px;
-}
-.text-checkbox input{
-  transform: translateY(0.5px);
-}
-  
-/* --- MODAL (File Selection) --- */
-#fileModal.hidden {
-  display: none;
-}
-
-#fileModal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
-}
-.modal-content {
-  background: #fff;
-  padding: 20px;
-  border-radius: 6px;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-.modal-content h3 {
-  margin-bottom: 10px;
-}
-.fileOption {
-  display: block;
-  width: 180px;
-  margin: 8px auto;
-  padding: 8px 10px;
-  border-radius: 4px;
-  border: 1px solid #444;
-  cursor: pointer;
-}
-.fileOption:hover {
-  background: #eaeaea;
-}
-#closeModal {
-  margin-top: 12px;
-}
-
-/* --- UPLOAD DIALOG --- */
-.upload-dialog {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(3px);
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
-  opacity: 1;
-  transition: opacity 0.6s;
-}
-
-/* Fade out animation */
-.upload-dialog.fade-out {
-  opacity: 0;
-}
-
-/* Upload box */
-.upload-box {
-  background: #fff;
-  /* border-radius: 5px; */
-  box-shadow: 0 0 20px rgba(0,0,0,0.2);
-}
-
-/* GROUP BOX */
-.group-box {
-  border: 1px solid #ccc;
-  /* border-radius: 8px; */
-  padding: 12px;
-  background: #fff;
-}
-
-.group-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 3px;
-  font-weight: bold;
-}
-
-.group-header .rssi {
-  flex: 1;  /* tạo cột ảo bên trái */
-}
-
-.group-header .title {
-  flex: 0;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.group-header .time {
-  flex: 1;          /* cột ảo bên phải */
-  text-align: right; /* đẩy time sang phải */
-}
-
-/* PROGRESS WRAPPER: chứa progress + text */
-.progress-wrapper {
-  position: relative;
-  width: 100%;
-  margin-top: 8px;
-}
-
-/* Progress bar */
-.progress-wrapper progress {
-  width: 100%;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-/* Label nằm giữa progress bar */
-.progress-label {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 12px;
-  color: white;
-  pointer-events: none;
-  font-weight: 500;
-}
-
-/* Progress màu */
-progress.yellow::-webkit-progress-value { background: #f4c542; }
-progress.yellow::-moz-progress-bar { background: #f4c542; }
-
-progress.green::-webkit-progress-value { background: #4caf50; }
-progress.green::-moz-progress-bar { background: #4caf50; }
-
-progress.red::-webkit-progress-value { background: #d32f2f; }
-progress.red::-moz-progress-bar { background: #d32f2f; }
-
-/* TITLE COLORS */
-.black  { color: #000; }
-.yellow { color: #f4c542; }
-.green  { color: #4caf50; }
-.red    { color: #d32f2f; }
-
-/* DETAILS */
-.details-block {
-  margin-top: 0px;
-  flex:1;
-}
-
-.details-title {
-  font-weight: bold;
-  font-size: 13px;
-}
-
-#uploadLog {
-  width: 100%;
-  height: 100%;
-  min-height: 0px;
-  background: #fafafa;
-  border: 1px solid #bbb;
-  /* border-radius: 6px; */
-  padding: 6px;
-  font-family: monospace;
-  resize: none;
-  box-sizing: border-box;
-  caret-color: transparent;
-
-  white-space: pre;        /* không wrap */
-  overflow-x: auto;        /* scroll ngang */
-}
-
-/* FOOTER */
-.upload-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* Checkbox */
-.auto-close {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  user-select: none;
-}
-
-/* Close button */
-#btnCloseUpload {
-  padding: 6px 14px;
-  border: none;
-  background: #1976d2;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.time,.rssi {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-#btnReconnect{
-  display:none;
   color:#d32f2f;
+  font-size:12px;
+  display:none;
 }
 
-/* --- WORKSPACE (Editor + Serial) --- */
-#workspace{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;              
-  box-sizing: border-box;
-  min-height: 0;        
-}
-
-/* Editor mặc định full */
-#editorSection{
-  flex: 1 1 0;
-  min-height: 0;         
-}
-
-/* Serial mặc định ẩn */
-#serialSection.is-hidden{
-  display: none;
-}
-
-/* Khi mở serial: chia tỉ lệ editor : serial = 2 : 1 */
-#workspace.serial-open #editorSection{
-  flex: 1 1 0;
-  min-height: 0;
-}
-#workspace.serial-open #serialSection{
-  display: flex;         /* hoặc block */
-  flex: 1 1 0;
-  min-height: 0;
-}
-
-/* Code editor fill đầy */
-#codeEditor{
-  width: 100%;
-  height: 100%;
-  resize: none;
-  border: 1px solid #bbb;
-  border-radius: 6px;
-  padding: 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  box-sizing: border-box;
-}
-
-/* để log serial scroll nội bộ (tuỳ bạn đang dùng textarea/log div) */
-#serialSection textarea,
-#serialSection #serialMonitor,
-#serialSection #serialLog{
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-}
-
-#codeEditor{
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-}
-
-/* ===== TOP BAR ===== */
+/* ========== TOP BAR ========== */
 .lb-topbar{
   height:36px;
   display:flex;
@@ -447,28 +50,26 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   gap:12px;
 }
 
-/* ===== BUTTONS (tabs + right actions) ===== */
+/* buttons */
 .lb-tab,
 .lb-icon-btn{
   display:inline-flex;
-  align-items:center;       /* căn dọc icon + text */
+  align-items:center;
   justify-content:center;
   gap:6px;
   padding:5px 8px;
-  border:0;                 /* không viền */
-  background:transparent;   /* không nền mặc định */
+  border:0;
+  background:transparent;
   border-radius:3px;
   cursor:pointer;
   line-height:1;
   font-size:12px;
-  font-weight: bold;        /* chữ đậm */
-  outline:none;
+  font-weight:700;
   letter-spacing:0.5px;
+  outline:none;
 }
 
-.lb-tab.active{
-  background:#e0e0e0;
-}
+.lb-tab.active{ background:#e0e0e0; }
 
 .lb-tab.disabled,
 .lb-icon-btn.disabled{
@@ -476,23 +77,19 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   opacity:0.5;
 }
 
-/* hover/active nhẹ giống IDE */
 .lb-tab:hover,
-.lb-icon-btn:hover{
-  background:#e0e0e0;
-}
-.lb-tab:active,
-.lb-icon-btn:active{
-  background:#d5d5d5;
-}
+.lb-icon-btn:hover{ background:#e0e0e0; }
 
-/* ===== ICONS ===== */
+.lb-tab:active,
+.lb-icon-btn:active{ background:#d5d5d5; }
+
+/* icons */
 .lb-tab-icon,
 .lb-icon-img{
   width:14px;
   height:14px;
   object-fit:contain;
-  display:block; /* tránh lệch baseline */
+  display:block;
 }
 
 #ptutorIcon{
@@ -502,23 +99,11 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   display:block;
 }
 
-/* Logo (nếu bạn còn dùng class lb-logo ở nơi khác) */
-#logoIcon{
-  height:16px;
-  width:auto;
-  display:block;
-}
+#logoIcon{ height:16px; width:auto; display:block; }
+#codeIcon{ width:12px; height:12px; }
+#btnCode{ background:#e0e0e0; }
 
-#codeIcon{
-  width:12px;
-  height:12px;
-}
-
-#btnCode{
-  background:#e0e0e0;
-}
-
-/* ===== BOTTOM BAR ===== */
+/* ========== BOTTOM BAR ========== */
 .lb-bottombar{
   height:32px;
   display:flex;
@@ -531,28 +116,12 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   color:#000;
 }
 
-/* LEFT */
 .lb-bottom-left{
   display:flex;
   align-items:center;
   gap:6px;
 }
 
-.lb-link{
-  color:#000;
-  text-decoration:none;
-  font-weight:600;
-}
-
-.lb-link:hover{
-  text-decoration:underline;
-}
-
-.lb-sep{
-  color:#777;
-}
-
-/* RIGHT */
 .lb-bottom-right{
   display:flex;
   align-items:center;
@@ -565,81 +134,66 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
   white-space:nowrap;
 }
 
-/* SERVER STATUS */
+/* server pill */
 .lb-pill{
   padding:2px 8px;
   border-radius:10px;
   font-size:10px;
   font-weight:700;
 }
+.lb-pill.online{ background:#1fa400; color:#fff; }
+.lb-pill.offline{ background:#d80000; color:#fff; }
 
-.lb-pill.online{
-  background:#1fa400;
-  color:#fff;
+#btnReconnect{
+  display:none;
+  color:#d32f2f;
 }
 
-.lb-pill.offline{
-  background:#d80000;
-  color:#fff;
-}
-
-/* ===============================
-   PROGRAM: 2 columns UI
-   =============================== */
-#programPanel, #programGrid, #programRight{
-  min-height: 0;
-  height: 100%;
-}
-
-#programGrid{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-#programLeft, #programRight{
+/* ========== WORKSPACE ========== */
+#workspace{
+  flex:1;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:8px;
+  box-sizing:border-box;
+  min-height:0;
 }
 
-#programLeft{
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  height: 100%;
-  min-height: 0;
+#editorSection{
+  flex:1 1 0;
+  min-height:0;
 }
 
-/* Group Compile (1 thanh) */
-#programLeft .group-box.compile{
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+#codeEditor{
+  width:100%;
+  height:100%;
+  box-sizing:border-box;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
-/* Group Upload (3 thanh) */
-#programLeft .group-box.upload{
-  flex: 2 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+/* serial open ratio (editor : serial = 1 : 1) */
+#serialSection.is-hidden{ display:none; }
+
+#workspace.serial-open #editorSection{
+  flex:1 1 0;
+  min-height:0;
+}
+#workspace.serial-open #serialSection{
+  display:flex;
+  flex:1 1 0;
+  min-height:0;
 }
 
-.progress-wrapper{
-  flex: 1 1 0;
-  min-height: 18px;
-  position: relative;
+/* ========== SERIAL SECTION ========== */
+#serialSection{
+  border:1px solid #ccc;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
 }
 
-.progress-wrapper progress{
-  width: 100%;
-  height: 100%;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
+/* Tabs bar */
 #serialTabsBar{
   display:flex;
   align-items:center;
@@ -651,18 +205,293 @@ progress.red::-moz-progress-bar { background: #d32f2f; }
 #serialTabs{
   display:flex;
   gap:6px;
+  padding:6px 8px;
+}
+
+#serialTabs .serial-tab{
+  border:0;
+  background:transparent;
+  padding:6px 8px;
+  border-radius:8px;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.8px;
+  color:#666;
+  cursor:pointer;
+}
+
+#serialTabs .serial-tab.active{
+  color:#1d1d1d;
+  background:#efefef;
 }
 
 #btnCloseSerial{
   border:none;
   background:transparent;
-  font-size:16px;
   cursor:pointer;
   padding:4px 8px;
 }
-
 #btnCloseSerial:hover{
   background:#eee;
   border-radius:4px;
 }
 
+/* Panels */
+#serialPanels{
+  display:flex;
+  flex-direction:column;
+  flex:1;
+  min-height:0;
+}
+
+.serial-panel{
+  display:flex;
+  flex-direction:column;
+  flex:1;
+  min-height:0;
+}
+
+.serial-panel.is-hidden{ display:none; }
+
+/* Monitor log */
+#serialLog{
+  flex:1;
+  min-height:0;
+  width:100%;
+  background:#000;
+  color:#fff;
+  font:13px monospace;
+  overflow-y:auto;
+  white-space:pre-wrap;
+  border:1px solid #999;
+  box-sizing:border-box;
+  resize:none;
+  caret-color:transparent;
+}
+
+/* Monitor bottom bar */
+#serialBottom{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:6px 8px;
+  border-top:1px solid #ddd;
+  background:#fafafa;
+  flex-wrap:nowrap;
+}
+
+.serial-group{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+
+.serial-send{
+  flex:1;
+  min-width:260px;
+}
+
+#serialInput{
+  flex:1;
+  min-width:180px;
+  font-family:monospace;
+  padding:6px 8px;
+  border:1px solid #cfcfcf;
+  border-radius:6px;
+  box-sizing:border-box;
+}
+
+#serialBottom button{
+  background:#fff;
+  border:1px solid #cfcfcf;
+  border-radius:6px;
+  padding:6px 10px;
+  font-size:13px;
+  cursor:pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+#serialBottom button:hover{ background:#f2f2f2; }
+
+.serial-actions{
+  margin-left:auto;
+  gap:6px;
+}
+
+.btn-small{
+  padding:6px 8px;
+  min-width:56px;
+}
+
+.text-checkbox{
+  font-size:13px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.text-checkbox input{ transform: translateY(0.5px); }
+
+/* ========== PROGRAM (COMPILE | UPLOAD) ========== */
+#programPanel{ min-height:0; }
+#programGrid{
+  flex:1;
+  min-height:0;
+  height:100%;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+
+.group-box{
+  border:1px solid #ccc;
+  padding:12px;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+
+.group-header{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 8px;
+  flex:0 0 auto;
+  font-weight:bold;
+}
+
+.group-header .rssi{ flex:1; }
+.group-header .title{
+  flex:0;
+  text-align:center;
+  white-space:nowrap;
+}
+.group-header .time{
+  flex:1;
+  text-align:right;
+}
+
+/* progress (label nằm dưới thanh) */
+.progress-wrapper{
+position:relative;
+padding:6px 8px;
+flex:0 0 auto;
+box-sizing:border-box;
+min-width:0;
+}
+
+.progress-wrapper progress{
+width:100%;
+height:18px;
+appearance:none;
+-webkit-appearance:none;
+display:block;
+box-sizing:border-box;
+}
+
+.progress-label{
+position:absolute;
+left:8px;
+right:8px;
+top:50%;
+transform:translateY(-50%);
+margin:0;
+font-size:12px;
+line-height:1;
+text-align:center;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+pointer-events:none;
+color:white;
+}
+
+/* progress colors */
+progress.yellow::-webkit-progress-value{ background:#f4c542; }
+progress.yellow::-moz-progress-bar{ background:#f4c542; }
+
+progress.green::-webkit-progress-value{ background:#4caf50; }
+progress.green::-moz-progress-bar{ background:#4caf50; }
+
+progress.red::-webkit-progress-value{ background:#d32f2f; }
+progress.red::-moz-progress-bar{ background:#d32f2f; }
+
+/* title colors (nếu JS gán class cho title) */
+.black{ color:#000; }
+.yellow{ color:#f4c542; }
+.green{ color:#4caf50; }
+.red{ color:#d32f2f; }
+
+/* message areas */
+.msg-box{
+  padding:6px 8px 8px 8px;
+  flex:1 1 auto;
+  min-height:0;
+  box-sizing:border-box;
+}
+
+.msg-box textarea{
+  width:100%;
+  height:100%;
+  min-height:0;
+  resize:none;
+  box-sizing:border-box;
+  font-family:monospace;
+  overflow:auto;
+  background:#fafafa;
+  border:1px solid #bbb;
+  padding:6px;
+  caret-color:transparent;
+}
+
+/* giữ format cho uploadLog giống bản cũ */
+#uploadLog{
+  white-space:pre;
+  overflow-x:auto;
+}
+
+/* ========== MODAL (FILE SELECTION) ========== */
+#fileModal.hidden{ display:none; }
+
+#fileModal{
+  position:fixed;
+  inset:0;
+  background: rgba(0,0,0,0.6);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+
+.modal-content{
+  background:#fff;
+  padding:20px;
+  border-radius:6px;
+  text-align:center;
+  box-shadow:0 4px 12px rgba(0,0,0,0.25);
+}
+
+.modal-content h3{ margin-bottom:10px; }
+
+.fileOption{
+  display:block;
+  width:180px;
+  margin:8px auto;
+  padding:8px 10px;
+  border-radius:4px;
+  border:1px solid #444;
+  cursor:pointer;
+}
+
+.fileOption:hover{ background:#eaeaea; }
+
+#closeModal{ margin-top:12px; }
+
+/* ========== RESPONSIVE (ngang điện thoại) ========== */
+@media (max-width: 760px){
+  #programGrid{ gap:8px; }
+  .group-header{ padding:5px 6px; }
+  .progress-wrapper{ padding:5px 6px; }
+  .msg-box{ padding:5px 6px 6px 6px; }
+}

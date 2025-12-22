@@ -100,55 +100,50 @@
           <div id="programGrid">
 
             <!-- LEFT: progress -->
-            <div id="programLeft">
-
-              <!-- COMPILE GROUP -->
-              <div class="group-box compile">
-                <div class="group-header">
-                  <div class="rssi"></div>
-                  <span class="title" id="compileTitle">Compile</span>
-                  <span class="time" id="compileTime">0.0 sec</span>
-                </div>
-
-                <div class="progress-wrapper">
-                  <progress id="progCompile" class="yellow" value="0" max="100"></progress>
-                </div>
+            <div id="programCompile" class="group-box compile">
+              <div class="group-header">
+                <div class="rssi"></div>
+                <span class="title" id="compileTitle">Compile</span>
+                <span class="time" id="compileTime">0.0 sec</span>
               </div>
 
-              <!-- UPLOAD GROUP -->
-              <div class="group-box upload">
-                <div class="group-header">
-                  <div class="rssi" id="uploadRSSI">0 dBm</div>
-                  <span class="title" id="uploadTitle">Upload</span>
-                  <span class="time" id="uploadTime">0.0 sec</span>
-                </div>
-
-                <div class="progress-wrapper">
-                  <progress id="progTransfer" class="yellow" value="0" max="100"></progress>
-                  <div class="progress-label">Transfer</div>
-                </div>
-
-                <div class="progress-wrapper">
-                  <progress id="progWrite" class="yellow" value="0" max="100"></progress>
-                  <div class="progress-label">Write</div>
-                </div>
-
-                <div class="progress-wrapper">
-                  <progress id="progVerify" class="yellow" value="0" max="100"></progress>
-                  <div class="progress-label">Verify</div>
-                </div>
+              <div class="progress-wrapper">
+                <progress id="progCompile" class="yellow" value="0" max="100"></progress>
               </div>
 
+              <div class="msg-box">
+                <textarea id="compileLog" readonly></textarea>
+              </div>
             </div>
 
-            <!-- RIGHT: log/details -->
-            <div id="programRight">
+            <!-- RIGHT: UPLOAD -->
+            <div id="programUpload" class="group-box upload">
+              <div class="group-header">
+                <div class="rssi" id="uploadRSSI">0 dBm</div>
+                <span class="title" id="uploadTitle">Upload</span>
+                <span class="time" id="uploadTime">0.0 sec</span>
+              </div>
 
-              <div class="details-block">
+              <div class="progress-wrapper">
+                <progress id="progTransfer" class="yellow" value="0" max="100"></progress>
+                <div class="progress-label" id="uploadStatus1">Transfer</div>
+              </div>
+
+              <div class="progress-wrapper">
+                <progress id="progWrite" class="yellow" value="0" max="100"></progress>
+                <div class="progress-label" id="uploadStatus2">Write</div>
+              </div>
+
+              <div class="progress-wrapper">
+                <progress id="progVerify" class="yellow" value="0" max="100"></progress>
+                <div class="progress-label" id="uploadStatus3">Verify</div>
+              </div>
+
+              <div class="msg-box">
                 <textarea id="uploadLog" readonly></textarea>
               </div>
-
             </div>
+
           </div>
         </div>
 
