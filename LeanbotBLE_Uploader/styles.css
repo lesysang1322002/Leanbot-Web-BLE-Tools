@@ -339,12 +339,12 @@ button:hover{ background-color:#f1f1f1; }
   height:100%;
   display:grid;
   grid-template-columns: 1fr 1fr;
-  gap:10px;
+  gap:5px;
 }
 
 .group-box{
   border:1px solid #ccc;
-  padding:12px;
+  padding:6px;
   background:#fff;
   display:flex;
   flex-direction:column;
@@ -355,8 +355,8 @@ button:hover{ background-color:#f1f1f1; }
 .group-header{
   display:flex;
   align-items:center;
-  gap:8px;
-  padding:6px 8px;
+  gap:4px;
+  padding:3px 4px;
   flex:0 0 auto;
   font-weight:bold;
 }
@@ -374,37 +374,37 @@ button:hover{ background-color:#f1f1f1; }
 
 /* progress (label nằm dưới thanh) */
 .progress-wrapper{
-position:relative;
-padding:6px 8px;
-flex:0 0 auto;
-box-sizing:border-box;
-min-width:0;
+  position:relative;
+  padding:3px 4px;
+  flex:0 0 auto;
+  box-sizing:border-box;
+  min-width:0;
 }
 
 .progress-wrapper progress{
-width:100%;
-height:18px;
-appearance:none;
--webkit-appearance:none;
-display:block;
-box-sizing:border-box;
+  width:100%;
+  height:25px;
+  appearance:none;
+  -webkit-appearance:none;
+  display:block;
+  box-sizing:border-box;
 }
 
 .progress-label{
-position:absolute;
-left:8px;
-right:8px;
-top:50%;
-transform:translateY(-50%);
-margin:0;
-font-size:12px;
-line-height:1;
-text-align:center;
-white-space:nowrap;
-overflow:hidden;
-text-overflow:ellipsis;
-pointer-events:none;
-color:white;
+  position:absolute;
+  left:4px;
+  right:4px;
+  top:50%;
+  transform:translateY(-50%);
+  margin:0;
+  font-size:12px;
+  line-height:1;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  pointer-events:none;
+  color:white;
 }
 
 /* progress colors */
@@ -425,7 +425,7 @@ progress.red::-moz-progress-bar{ background:#d32f2f; }
 
 /* message areas */
 .msg-box{
-  padding:6px 8px 8px 8px;
+  padding:3px 4px 4px 4px;
   flex:1 1 auto;
   min-height:0;
   box-sizing:border-box;
