@@ -489,7 +489,7 @@ progress.red::-moz-progress-bar{ background:#d32f2f; }
 #closeModal{ margin-top:12px; }
 
 /* ========== RESPONSIVE (ngang điện thoại) ========== */
-@media (max-width: 900px) and (orientation: landscape){
+@media (max-width: 760px) and (orientation: landscape){
   #programGrid{ gap:4px; }
 
   .group-box{ padding:4px; }
