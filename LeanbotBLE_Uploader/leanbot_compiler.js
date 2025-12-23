@@ -2,6 +2,10 @@ export class LeanbotCompiler {
   #prevHash = "";
   #prevResponse = null;
 
+  onCompileSucess = null;
+  onCompileError = null;
+  onCompileProgress = null;
+
   async compile(sourceCode, compileServer = "ide-server-qa.leanbot.space") {
     const sketchName = "LeanbotSketch";
 
@@ -17,7 +21,29 @@ export class LeanbotCompiler {
       libs: [],
     };
 
-    return await this.#requestCompile(payload, compileServer);
+    const startMs = Date.now();
+    const predictedTotal = 10;
+
+    const emitProgress = () => {
+      const elapsedTime = (Date.now() - startMs) / 1000;
+      const estimatedTotal = Math.sqrt(elapsedTime ** 2 + predictedTotal ** 2);
+      if (this.onCompileProgress) this.onCompileProgress(elapsedTime, estimatedTotal);
+    };
+
+    const progressTimer = setInterval(emitProgress, 500);
+
+    const compileResult = await this.#requestCompile(payload, compileServer);
+
+    const elapsedTime = (Date.now() - startMs) / 1000;
+    if (this.onCompileProgress) this.onCompileProgress(elapsedTime, elapsedTime);
+    clearInterval(progressTimer);
+
+    if (compileResult.hex && compileResult.hex.trim() !== "") {
+      this.onCompileSucess && this.onCompileSucess();
+    } else {
+      this.onCompileError && this.onCompileError();
+    }
+    return compileResult;
   }
 
   async #requestCompile(payload, compileServer) {

@@ -243,20 +243,23 @@ async function doCompile() {
   compileStart = performance.now();
 
   const response = await leanbotCompiler.compile(sourceCode);
-
-  uiUpdateProgress(UploaderCompile, 2, 2);
-  uiUpdateTime(compileStart, UploaderTimeCompile);
   UploaderLogCompile.value = response.log;
-
-  if (response.hex && response.hex.trim() !== "") {
-    UploaderTitleCompile.className = "green";
-    return response; // compile OK
-  } else {
-    UploaderCompile.className      = "red";
-    UploaderTitleCompile.className = "red";
-    return null; // compile fail
-  }
+  return response;
 }
+
+leanbotCompiler.onCompileSucess = () => {
+  UploaderTitleCompile.className = "green";
+};
+
+leanbotCompiler.onCompileError = () => {
+  UploaderCompile.className = "red";
+  UploaderTitleCompile.className = "red";
+};
+
+leanbotCompiler.onCompileProgress = (elapsedTime, estimatedTotal) => {
+  uiUpdateTime(compileStart, UploaderTimeCompile);
+  uiUpdateProgress(UploaderCompile, elapsedTime, estimatedTotal); 
+};
 
 // =================== Button Upload =================== //
 const btnUpload = document.getElementById("btnUpload");
@@ -305,7 +308,8 @@ const UploaderRSSI         = document.getElementById("uploadRSSI");
 const UploaderTimeUpload   = document.getElementById("uploadTime");
 
 function uiResetCompile() {
-  uiUpdateProgress(UploaderCompile, 1, 2);
+  UploaderCompile.value = 0;
+  UploaderCompile.max   = 1;
   UploaderCompile.className = "yellow";
   UploaderLogCompile.value = "";
   UploaderTitleCompile.className  = "yellow";
