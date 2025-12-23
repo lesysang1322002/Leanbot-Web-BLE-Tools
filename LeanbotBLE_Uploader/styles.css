@@ -332,23 +332,58 @@ button:hover{ background-color:#f1f1f1; }
 .text-checkbox input{ transform: translateY(0.5px); }
 
 /* ========== PROGRAM (COMPILE | UPLOAD) ========== */
-#programPanel{ min-height:0; }
+#programPanel{min-height:0}
+
 #programGrid{
   flex:1;
   min-height:0;
   height:100%;
   display:grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-rows:2fr 3fr;
   gap:5px;
+}
+
+#programCompile,#programUpload,.group-box{
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+
+#compileContent,#uploadContent{
+  flex:1;
+  min-height:0;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:5px;
+}
+
+#progCompile{width:100%}
+
+#compileLog,#uploadLog{
+  grid-column:2/3;
+  width:100%;
+  height:100%;
+  min-height:0;
+  box-sizing:border-box;
+}
+
+#uploadLog{
+  white-space:pre;
+  overflow-x:auto;
+}
+
+#uploadProgress{
+  grid-column:1/2;
+  min-height:0;
+  height:100%;
+  display:flex;
+  flex-direction:column;
 }
 
 .group-box{
   border:1px solid #ccc;
-  padding:6px;
+  padding:3px;
   background:#fff;
-  display:flex;
-  flex-direction:column;
-  min-height:0;
   overflow:hidden;
 }
 
@@ -356,78 +391,18 @@ button:hover{ background-color:#f1f1f1; }
   display:flex;
   align-items:center;
   gap:4px;
-  padding:3px 4px;
-  flex:0 0 auto;
+  padding:3px;
   font-weight:bold;
-}
-
-.group-header .rssi{ flex:1; }
-.group-header .title{
-  flex:0;
-  text-align:center;
-  white-space:nowrap;
-}
-.group-header .time{
-  flex:1;
-  text-align:right;
-}
-
-/* progress (label nằm dưới thanh) */
-.progress-wrapper{
-  position:relative;
-  padding:3px 4px;
   flex:0 0 auto;
-  box-sizing:border-box;
-  min-width:0;
 }
+.group-header .rssi{flex:1}
+.group-header .title{text-align:center;white-space:nowrap}
+.group-header .time{flex:1;text-align:right}
 
-.progress-wrapper progress{
-  width:100%;
-  height:25px;
-  appearance:none;
-  -webkit-appearance:none;
-  display:block;
-  box-sizing:border-box;
-}
-
-.progress-label{
-  position:absolute;
-  left:4px;
-  right:4px;
-  top:50%;
-  transform:translateY(-50%);
-  margin:0;
-  font-size:12px;
-  line-height:1;
-  text-align:center;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  pointer-events:none;
-  color:white;
-}
-
-/* progress colors */
-progress.yellow::-webkit-progress-value{ background:#f4c542; }
-progress.yellow::-moz-progress-bar{ background:#f4c542; }
-
-progress.green::-webkit-progress-value{ background:#4caf50; }
-progress.green::-moz-progress-bar{ background:#4caf50; }
-
-progress.red::-webkit-progress-value{ background:#d32f2f; }
-progress.red::-moz-progress-bar{ background:#d32f2f; }
-
-/* title colors (nếu JS gán class cho title) */
-.black{ color:#000; }
-.yellow{ color:#f4c542; }
-.green{ color:#4caf50; }
-.red{ color:#d32f2f; }
-
-/* message areas */
 .msg-box{
-  padding:3px 4px 4px 4px;
   flex:1 1 auto;
   min-height:0;
+  padding:3px;
   box-sizing:border-box;
 }
 
@@ -441,15 +416,73 @@ progress.red::-moz-progress-bar{ background:#d32f2f; }
   overflow:auto;
   background:#fafafa;
   border:1px solid #bbb;
-  padding:6px;
   caret-color:transparent;
 }
 
-/* giữ format cho uploadLog giống bản cũ */
-#uploadLog{
-  white-space:pre;
-  overflow-x:auto;
+.progress-label{
+  position:absolute;
+  left:3px;
+  right:3px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:12px;
+  line-height:1;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  pointer-events:none;
+  color:#fff;
 }
+
+#compileContent .progress-wrapper{
+  height:100%;
+  min-height:0;
+  display:flex;
+  align-items:center;
+  padding:3px;
+  position:relative;
+  box-sizing:border-box;
+}
+
+#compileContent .progress-wrapper progress{
+  width:100%;
+  height:50%;
+  display:block;
+  appearance:none;
+  -webkit-appearance:none;
+  box-sizing:border-box;
+}
+
+#uploadProgress .progress-wrapper{
+  flex:1;
+  min-height:0;
+  display:flex;
+  padding:3px;
+  position:relative;
+  box-sizing:border-box;
+}
+
+#uploadProgress .progress-wrapper progress{
+  width:100%;
+  height:100%;
+  display:block;
+  appearance:none;
+  -webkit-appearance:none;
+  box-sizing:border-box;
+}
+
+progress.yellow::-webkit-progress-value{background:#f4c542}
+progress.yellow::-moz-progress-bar{background:#f4c542}
+progress.green::-webkit-progress-value{background:#4caf50}
+progress.green::-moz-progress-bar{background:#4caf50}
+progress.red::-webkit-progress-value{background:#d32f2f}
+progress.red::-moz-progress-bar{background:#d32f2f}
+
+.black{color:#000}
+.yellow{color:#f4c542}
+.green{color:#4caf50}
+.red{color:#d32f2f}
 
 /* ========== MODAL (FILE SELECTION) ========== */
 #fileModal.hidden{ display:none; }

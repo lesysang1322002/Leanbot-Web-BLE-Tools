@@ -99,7 +99,7 @@
         <div id="programPanel" class="serial-panel">
           <div id="programGrid">
 
-            <!-- LEFT: progress -->
+            <!-- COMPILE -->
             <div id="programCompile" class="group-box compile">
               <div class="group-header">
                 <div class="rssi"></div>
@@ -107,16 +107,18 @@
                 <span class="time" id="compileTime">0.0 sec</span>
               </div>
 
-              <div class="progress-wrapper">
-                <progress id="progCompile" class="yellow" value="0" max="100"></progress>
-              </div>
+              <div id ="compileContent">
+                <div class="progress-wrapper">
+                  <progress id="progCompile" class="yellow" value="0" max="100"></progress>
+                </div>
 
-              <div class="msg-box">
-                <textarea id="compileLog" readonly></textarea>
+                <div class="msg-box">
+                  <textarea id="compileLog" readonly></textarea>
+                </div>
               </div>
             </div>
 
-            <!-- RIGHT: UPLOAD -->
+            <!--UPLOAD -->
             <div id="programUpload" class="group-box upload">
               <div class="group-header">
                 <div class="rssi" id="uploadRSSI">0 dBm</div>
@@ -124,29 +126,32 @@
                 <span class="time" id="uploadTime">0.0 sec</span>
               </div>
 
-              <div class="progress-wrapper">
-                <progress id="progTransfer" class="yellow" value="0" max="100"></progress>
-                <div class="progress-label" id="uploadStatus1">Transfer</div>
-              </div>
+              <div id="uploadContent">
+                <div id ="uploadProgress">
+                  <div class="progress-wrapper">
+                    <progress id="progTransfer" class="yellow" value="0" max="100"></progress>
+                    <div class="progress-label" id="uploadStatus1">Transfer</div>
+                  </div>
 
-              <div class="progress-wrapper">
-                <progress id="progWrite" class="yellow" value="0" max="100"></progress>
-                <div class="progress-label" id="uploadStatus2">Write</div>
-              </div>
+                  <div class="progress-wrapper">
+                    <progress id="progWrite" class="yellow" value="0" max="100"></progress>
+                    <div class="progress-label" id="uploadStatus2">Write</div>
+                  </div>
 
-              <div class="progress-wrapper">
-                <progress id="progVerify" class="yellow" value="0" max="100"></progress>
-                <div class="progress-label" id="uploadStatus3">Verify</div>
-              </div>
+                  <div class="progress-wrapper">
+                    <progress id="progVerify" class="yellow" value="0" max="100"></progress>
+                    <div class="progress-label" id="uploadStatus3">Verify</div>
+                  </div>
+                </div>
 
-              <div class="msg-box">
-                <textarea id="uploadLog" readonly></textarea>
+                <div class="msg-box">
+                  <textarea id="uploadLog" readonly></textarea>
+                </div>
               </div>
             </div>
 
           </div>
         </div>
-
 
         <!-- MONITOR PANEL -->
         <div id="monitorPanel" class="serial-panel is-hidden">

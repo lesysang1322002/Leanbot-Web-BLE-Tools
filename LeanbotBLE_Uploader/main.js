@@ -246,7 +246,7 @@ async function doCompile() {
 
   uiUpdateProgress(UploaderCompile, 2, 2);
   uiUpdateTime(compileStart, UploaderTimeCompile);
-  UploaderLogCompile.value += "\n" + response.log;
+  UploaderLogCompile.value = response.log;
 
   if (response.hex && response.hex.trim() !== "") {
     UploaderTitleCompile.className = "green";
