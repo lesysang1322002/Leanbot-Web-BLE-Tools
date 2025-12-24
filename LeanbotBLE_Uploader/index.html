@@ -101,15 +101,19 @@
 
             <!-- COMPILE -->
             <div id="programCompile" class="group-box compile">
-              <div class="group-header">
-                <div class="rssi"></div>
-                <span class="title" id="compileTitle">Compile</span>
-                <span class="time" id="compileTime">0.0 sec</span>
-              </div>
+              <div class="group-body">
+                <div class="col-progress">
+                  <div class="group-header">
+                    <div class="rssi"></div>
+                    <span class="title" id="compileTitle">Compile</span>
+                    <span class="time" id="compileTime">0.0 sec</span>
+                  </div>
 
-              <div id ="compileContent">
-                <div class="progress-wrapper">
-                  <progress id="progCompile" class="yellow" value="0" max="100"></progress>
+                  <div class="progress-list">
+                    <div class="progress-wrapper">
+                      <progress id="progCompile" class="yellow" value="0" max="100"></progress>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="msg-box">
@@ -118,29 +122,31 @@
               </div>
             </div>
 
-            <!--UPLOAD -->
+            <!-- UPLOAD -->
             <div id="programUpload" class="group-box upload">
-              <div class="group-header">
-                <div class="rssi" id="uploadRSSI">0 dBm</div>
-                <span class="title" id="uploadTitle">Upload</span>
-                <span class="time" id="uploadTime">0.0 sec</span>
-              </div>
-
-              <div id="uploadContent">
-                <div id ="uploadProgress">
-                  <div class="progress-wrapper">
-                    <progress id="progTransfer" class="yellow" value="0" max="100"></progress>
-                    <div class="progress-label" id="uploadStatus1">Transfer</div>
+              <div class="group-body">
+                <div class="col-progress">
+                  <div class="group-header">
+                    <div class="rssi" id="uploadRSSI"></div>
+                    <span class="title" id="uploadTitle">Upload</span>
+                    <span class="time" id="uploadTime">0.0 sec</span>
                   </div>
 
-                  <div class="progress-wrapper">
-                    <progress id="progWrite" class="yellow" value="0" max="100"></progress>
-                    <div class="progress-label" id="uploadStatus2">Write</div>
-                  </div>
+                  <div class="progress-list">
+                    <div class="progress-wrapper">
+                      <progress id="progTransfer" class="yellow" value="0" max="100"></progress>
+                      <div class="progress-label" id="uploadStatus1">Transfer</div>
+                    </div>
 
-                  <div class="progress-wrapper">
-                    <progress id="progVerify" class="yellow" value="0" max="100"></progress>
-                    <div class="progress-label" id="uploadStatus3">Verify</div>
+                    <div class="progress-wrapper">
+                      <progress id="progWrite" class="yellow" value="0" max="100"></progress>
+                      <div class="progress-label" id="uploadStatus2">Write</div>
+                    </div>
+
+                    <div class="progress-wrapper">
+                      <progress id="progVerify" class="yellow" value="0" max="100"></progress>
+                      <div class="progress-label" id="uploadStatus3">Verify</div>
+                    </div>
                   </div>
                 </div>
 
@@ -149,6 +155,7 @@
                 </div>
               </div>
             </div>
+
 
           </div>
         </div>

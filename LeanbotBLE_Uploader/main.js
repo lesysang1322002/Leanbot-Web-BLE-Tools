@@ -16,11 +16,9 @@ console.log(`HASH = ${window.HASH}`);
 /* ============================================================
  *  IMPORTS & INIT
  * ============================================================ */
-import { LeanbotCompiler } from "./leanbot_compiler.js";
 import { LeanbotBLE } from "./leanbot_ble.js";
 
 // Instances
-const leanbotCompiler = new LeanbotCompiler();
 const leanbot         = new LeanbotBLE();
 
 // ================== Leanbot Connection =================== //
@@ -220,7 +218,8 @@ async function loadFile() {
 
 // =================== Button Compile =================== //
 const btnCompile = document.getElementById("btnCompile");
-const UploaderLogCompile = document.getElementById("compileLog");
+const UploaderCompileLog = document.getElementById("compileLog");
+const ProgramTab     = document.getElementById("programGrid");
 
 btnCompile.addEventListener("click", async () => {
   await doCompile();
@@ -233,71 +232,64 @@ async function doCompile() {
     return null;
   }
 
-  if (!leanbot.Uploader.isSupported()){
-    leanbot.Uploader.prepareUpload(); 
-  }
-
-  uiSetTab("program");
-
-  uiResetCompile();
   compileStart = performance.now();
-
-  const response = await leanbotCompiler.compile(sourceCode);
-  UploaderLogCompile.value = response.log;
-  return response;
+  ProgramTab.classList.add("hide-upload");
+  uiSetTab("program");
+  uiResetCompile();
+  return await leanbot.Compiler.compile(sourceCode);
 }
 
-leanbotCompiler.onCompileSucess = () => {
-  UploaderTitleCompile.className = "green";
+leanbot.Compiler.onCompileSucess = (compileMessage) => {
+  UploaderCompileLog.value = compileMessage;
+  UploaderCompileTitle.className = "green";
+  if (!isCompileAndUpload) return;
+  uploadStart = performance.now(); // reset upload start time
+  ProgramTab.classList.remove("hide-upload");
 };
 
-leanbotCompiler.onCompileError = () => {
-  UploaderCompile.className = "red";
-  UploaderTitleCompile.className = "red";
+leanbot.Compiler.onCompileError = (compileMessage) => {
+  UploaderCompileLog.value = compileMessage;
+  UploaderCompileProg.className = "red";
+  UploaderCompileTitle.className = "red";
 };
 
-leanbotCompiler.onCompileProgress = (elapsedTime, estimatedTotal) => {
+leanbot.Compiler.onCompileProgress = (elapsedTime, estimatedTotal) => {
   uiUpdateTime(compileStart, UploaderTimeCompile);
-  uiUpdateProgress(UploaderCompile, elapsedTime, estimatedTotal); 
+  uiUpdateProgress(UploaderCompileProg, elapsedTime, estimatedTotal); 
 };
 
 // =================== Button Upload =================== //
 const btnUpload = document.getElementById("btnUpload");
 
+let isCompileAndUpload = false;
+
 btnUpload.addEventListener("click", async () => {
-  // ===== CONNECT =====
   const result = await leanbot.reconnect();
   if (!result.success) {
     alert("Please connect to Leanbot first!");
     return;
   }
 
-  // ===== COMPILE =====
-  const response = await doCompile();
-  if (!response) return; // compile fail → dừng
+  const sourceCode = getSourceCode();
+  if (!sourceCode || sourceCode.trim() === "") {
+    alert("No code to compile!");
+    return null;
+  }
 
-  // ===== UPLOAD =====
+  compileStart = performance.now();
+  ProgramTab.classList.add("hide-upload"); // Ẩn upload khi compile
+  uiSetTab("program");
+  uiResetCompile();
   uiResetUpload();
-  uploadStart = performance.now();
-
-  const hexCode = base64ToText(response.hex);
-  await leanbot.Uploader.upload(hexCode);
+  isCompileAndUpload = true;
+  await leanbot.compileAndUpload(sourceCode, "ide-server-qa.leanbot.space");
 });
-
-
-function base64ToText(b64) {
-  // atob: base64 -> "binary string" (mỗi ký tự 0..255)
-  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-
-  // Chuyển bytes -> string UTF-8
-  return new TextDecoder("utf-8").decode(bytes);
-}
 
 // =================== Upload DOM Elements =================== //
 const UploaderTitleUpload  = document.getElementById("uploadTitle");
-const UploaderTitleCompile = document.getElementById("compileTitle");
+const UploaderCompileTitle = document.getElementById("compileTitle");
 
-const UploaderCompile      = document.getElementById("progCompile");
+const UploaderCompileProg      = document.getElementById("progCompile");
 const UploaderTransfer     = document.getElementById("progTransfer");
 const UploaderWrite        = document.getElementById("progWrite");
 const UploaderVerify       = document.getElementById("progVerify");
@@ -308,11 +300,11 @@ const UploaderRSSI         = document.getElementById("uploadRSSI");
 const UploaderTimeUpload   = document.getElementById("uploadTime");
 
 function uiResetCompile() {
-  UploaderCompile.value = 0;
-  UploaderCompile.max   = 1;
-  UploaderCompile.className = "yellow";
-  UploaderLogCompile.value = "";
-  UploaderTitleCompile.className  = "yellow";
+  UploaderCompileProg.value = 0;
+  UploaderCompileProg.max   = 1;
+  UploaderCompileProg.className = "yellow";
+  UploaderCompileLog.value = "";
+  UploaderCompileTitle.className  = "yellow";
   UploaderTimeCompile.textContent = "0.0 sec";
 }
 
@@ -328,18 +320,18 @@ function uiResetUpload() {
   UploaderTitleUpload.textContent = "Upload to " + getLeanbotIDWithoutBLE();
   UploaderTitleUpload.className   = "yellow";
   UploaderTimeUpload.textContent  = "0.0 sec";
-  UploaderRSSI.textContent        = "0 dBm";
+  UploaderRSSI.textContent        = "";
 }
 
 async function SimulateCompiler() {
-  UploaderTitleCompile.className = "yellow";
+  UploaderCompileTitle.className = "yellow";
   const total = 3;
   for (let i = 1; i <= total; i++) {
     await new Promise(r => setTimeout(r, 100));
     uiUpdateTime(compileStart, UploaderTimeCompile);
-    uiUpdateProgress(UploaderCompile, i, total);
+    uiUpdateProgress(UploaderCompileProg, i, total);
   }
-  UploaderTitleCompile.className = "green";
+  UploaderCompileTitle.className = "green";
 }
 
 // =================== Uploader UI Updates =================== //

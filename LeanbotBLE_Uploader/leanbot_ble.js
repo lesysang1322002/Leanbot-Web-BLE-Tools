@@ -1,6 +1,8 @@
 // leanbot_ble.js
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
+import { LeanbotCompiler } from "./leanbot_compiler.js";
+
 export class LeanbotBLE {
   // ===== SERVICE UUID CHUNG =====
   static SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
@@ -151,7 +153,24 @@ export class LeanbotBLE {
     /** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
     console.log("Saving device to localStorage:", this.#device.name);
     localStorage.setItem("lastDeviceInfo", JSON.stringify(this.#device.name));
-  }    
+  }
+
+  #base64ToText(b64) {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+  
+  async compileAndUpload(SourceCode, compileServer) {
+    if (!this.Uploader.isSupported()){
+      this.JDYUploader.prepareUpload(); 
+    }
+
+    const compileResult = await this.Compiler.compile(SourceCode, compileServer);
+
+    if (compileResult.hex && compileResult.hex.trim() !== "") {
+      await this.Uploader.upload(this.#base64ToText(compileResult.hex));
+    }
+  }
 
   constructor() {
     this.onConnect = null;
@@ -160,6 +179,7 @@ export class LeanbotBLE {
     this.Serial      = new Serial(this);
     this.Uploader    = new Uploader(this);
     this.JDYUploader = new JDYUploader(this, this.Serial, this.Uploader);
+    this.Compiler    = new LeanbotCompiler();
     
     this.Serial.setJDYUploader(this.JDYUploader);
     this.Uploader.setJDYUploader(this.JDYUploader);
@@ -368,10 +388,6 @@ class Uploader {
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
     return !!this.#DataPipe_char && !!this.#ControlPipe_char;
-  }
-
-  prepareUpload() {
-    if (this.#JDYUploader) return this.#JDYUploader.prepareUpload();
   }
 
   /** Upload HEX */

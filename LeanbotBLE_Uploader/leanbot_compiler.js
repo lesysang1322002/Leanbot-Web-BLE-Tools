@@ -30,20 +30,28 @@ export class LeanbotCompiler {
       if (this.onCompileProgress) this.onCompileProgress(elapsedTime, estimatedTotal);
     };
 
-    const progressTimer = setInterval(emitProgress, 500);
+    const progressTimer = setInterval(emitProgress, 500); // emit progress every 500ms
 
-    const compileResult = await this.#requestCompile(payload, compileServer);
+    try {
+      const compileResult = await this.#requestCompile(payload, compileServer);
 
-    const elapsedTime = (Date.now() - startMs) / 1000;
-    if (this.onCompileProgress) this.onCompileProgress(elapsedTime, elapsedTime);
-    clearInterval(progressTimer);
+      const elapsedTime = (Date.now() - startMs) / 1000;
+      if (this.onCompileProgress) this.onCompileProgress(elapsedTime, elapsedTime);
 
-    if (compileResult.hex && compileResult.hex.trim() !== "") {
-      this.onCompileSucess && this.onCompileSucess();
-    } else {
-      this.onCompileError && this.onCompileError();
+      if (compileResult.hex && compileResult.hex.trim() !== "") {
+        if (this.onCompileSucess) this.onCompileSucess(compileResult.log);
+      } else {
+        if (this.onCompileError) this.onCompileError(compileResult.log);
+      }
+
+      return compileResult;
+    } catch (err) {
+      const message = err.message || String(err);
+      if (this.onCompileError) this.onCompileError(message);
+      throw err;
+    } finally {
+      clearInterval(progressTimer);
     }
-    return compileResult;
   }
 
   async #requestCompile(payload, compileServer) {
