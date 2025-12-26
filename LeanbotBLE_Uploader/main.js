@@ -1047,7 +1047,7 @@ addEventListener("keydown", (e) => { if (e.key === "Escape") hideCtxMenu(); });
 
 ctxMenu?.addEventListener("click", (e) => e.stopPropagation());
 
-// delete
+// Xóa item 
 function deleteSubtree(id) {
   const it = items[id];
   if (!it) return;
@@ -1093,7 +1093,7 @@ ctxDeleteBtn?.addEventListener("click", (e) => {
   deleteItemById(id);
 });
 
-// rename ngay khi bấm Rename
+// Rename ngay khi bấm rename trong context menu
 ctxRenameBtn?.addEventListener("click", (e) => {
   e.stopPropagation();
   const id = ctxTargetId;
@@ -1215,7 +1215,7 @@ reactRoot.render(
   )
 );
 
-// mở file mặc định
+// Mở file mặc định
 pendingTreeFocusId = window.__pendingOpenFileId || "main_ino";
 openFileInMonaco(window.__pendingOpenFileId || "main_ino");
 
