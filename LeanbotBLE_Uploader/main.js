@@ -952,7 +952,6 @@ function insertIntoFolder(folderId, childId, index) {
 
   f.children ||= [];
 
-  // chống trùng: xóa trước nếu đã tồn tại
   f.children = f.children.filter((x) => x !== childId);
 
   let idx = Number.isFinite(index) ? index : f.children.length;
