@@ -994,21 +994,19 @@ function handleDrop(itemsDragged, target) {
 
   const changed = new Set([destFolderId, targetItemId]);
 
-  // remove khỏi mọi nơi trước
   for (const id of draggedIds) {
     const oldParent = removeFromParent(id);
     if (oldParent) changed.add(oldParent);
   }
 
-  // nếu destFolderId cũng bị thay đổi children, đảm bảo có trong changed
   changed.add(destFolderId);
 
-  // chèn lần lượt
   draggedIds.forEach((id, i) => {
     insertIntoFolder(destFolderId, id, insertIndex + i);
     changed.add(id);
   });
 
+  rebuildParents();                 // cập nhật parent sau move
   emitChanged(Array.from(changed));
 }
 
@@ -1070,18 +1068,13 @@ function deleteSubtree(id) {
 function deleteItemById(id) {
   if (!id || !items[id] || id === "root") return;
 
-  const parentId = items[id].parent || "root";
-
-  const parent = items[parentId];
-  if (parent && Array.isArray(parent.children)) {
-    const idx = parent.children.indexOf(id);
-    if (idx >= 0) parent.children.splice(idx, 1);
-  }
+  // gỡ id khỏi mọi folder trước, tránh lệch parent sau drag
+  const removedParent = removeFromParent(id) || (items[id].parent || "root");
 
   deleteSubtree(id);
 
-  // chọn lại item hợp lệ trong tree
-  pendingTreeFocusId = items[parentId] ? parentId : "root";
+  // focus lại
+  pendingTreeFocusId = items[removedParent] ? removedParent : "root";
 
   // nếu đang mở file bị xóa, mở file an toàn
   if (window.currentFileId && !items[window.currentFileId]) {
@@ -1092,8 +1085,10 @@ function deleteItemById(id) {
   if (!items[lastFocusedId]) lastFocusedId = pendingTreeFocusId;
   if (lastSelectedIds.some((x) => !items[x])) lastSelectedIds = [lastFocusedId];
 
-  emitChanged([parentId, "root"]);
+  rebuildParents();
+  emitChanged([removedParent, "root"]);
 }
+
 
 ctxDeleteBtn?.addEventListener("click", (e) => {
   e.stopPropagation();
@@ -1182,7 +1177,7 @@ reactRoot.render(
           (context.isSelected ? " is-selected" : "") +
           (context.isFocused ? " is-focused" : "");
 
-        const indent = Math.max(0, (depth || 0)) * 14; // chỉnh 14 -> 16 nếu muốn lùi nhiều hơn
+        const indent = Math.max(0, (depth || 0)) * 14; // thụt lề
 
         return window.React.createElement(
           "li",
