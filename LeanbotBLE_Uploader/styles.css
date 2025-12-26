@@ -159,6 +159,76 @@ button:hover{ background-color:#f1f1f1; }
   min-height:0;
 }
 
+#editorRow{
+  display:grid;
+  grid-template-columns:280px 1fr;
+  flex:1 1 0;
+  min-height:0;
+}
+
+#fileTreePanel{
+  min-height:0;
+  overflow:auto;
+  border-right:1px solid #333;
+  background: #fafafa;
+}
+
+#fileTreeToolbar .lb-icon-btn{
+  justify-content:flex-start;
+  text-align:left;
+  width:100%;
+}
+
+/* ========== TREE CONTEXT MENU ========== */
+.ctx-menu{
+  position:fixed;
+  z-index:9999;
+  background:#fff;
+  border:1px solid #cfcfcf;
+  border-radius:6px;
+  padding:6px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.18);
+  min-width:140px;
+}
+
+.ctx-menu.is-hidden{ display:none; }
+
+.ctx-menu button{
+  width:100%;
+  text-align:left;
+  border:0;
+  background:transparent;
+  padding:8px 10px;
+  border-radius:4px;
+  cursor:pointer;
+  font-size:13px;
+}
+
+/* File tree selected / focused */
+.file-tree-item {
+  width: 100%;
+}
+
+.file-tree-item.is-selected {
+  background: #dbeafe;       /* xanh nhạt */
+}
+
+.file-tree-item.is-focused {
+  outline: 1px solid #93c5fd;
+}
+
+#fileTreePanel.is-drop-hover{
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+  background: #f0f9ff;
+}
+
+.ctx-menu button:hover{ background:#f2f2f2; }
+
+#editorSection{
+  min-height:0;
+}
+
 #editorSection{
   flex:1 1 0;
   min-height:0;
@@ -174,7 +244,7 @@ button:hover{ background-color:#f1f1f1; }
 /* serial open ratio (editor : serial = 1 : 1) */
 #serialSection.is-hidden{ display:none; }
 
-#workspace.serial-open #editorSection{
+#workspace.serial-open #editorRow{
   flex:1 1 0;
   min-height:0;
 }
@@ -409,7 +479,7 @@ button:hover{ background-color:#f1f1f1; }
 
 progress{
   width:100%;
-  height:100%;
+  height:35px;
   display:block;
   appearance:none;
   -webkit-appearance:none;
@@ -429,7 +499,6 @@ progress{
   box-sizing:border-box;
   font-family:monospace;
   overflow:auto;
-  background:#fafafa;
   border:1px solid #bbb;
   caret-color:transparent;
 }

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Leanbot BLE</title>
   <link rel="icon" type="image/png" href="./img/logo-lb-title.png">
+  <link href="https://unpkg.com/react-complex-tree/lib/style.css" rel="stylesheet" />
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -46,10 +47,6 @@
     <div class="lb-top-right">
 
       <span id="fileName" hidden>No file</span>
-      <button class="lb-icon-btn" id="btnLoadFile">
-        <img class="lb-icon-img" src="./img/icons/loadfile.png" />
-        <span>LOAD FILE</span>
-      </button>
       <input type="file" id="FileInput" accept=".ino" hidden> 
 
       <button id="btnCompile" class="lb-icon-btn" >
@@ -71,10 +68,27 @@
 
   <!-- WORKSPACE -->
   <div id="workspace">
-    
-    <!-- EDITOR -->
-    <div id="editorSection">
-      <div id="codeEditor"></div>
+
+    <div id="editorRow">
+      <!-- `FILE EXPLORER -->
+      <div id="fileTreePanel">
+        <div id="fileTreeToolbar">   <!-- toolbar cho file tree -->
+          <button class="lb-icon-btn" id="btnNewFile"  >+ File</button>
+          <button class="lb-icon-btn" id="btnLoadFile" >Load File</button>
+          <button class="lb-icon-btn" id="btnNewFolder">+ Folder</button>
+        </div>
+
+        <div id="fileTreeMount"></div> <!-- mount cho react-complex-tree -->
+        <div id="treeCtxMenu" class="ctx-menu is-hidden">
+          <button type="button" id="ctxRename">Rename</button>
+          <button type="button" id="ctxDelete">Delete</button>
+        </div>
+      </div>
+
+      <!-- EDITOR -->
+      <div id="editorSection">
+        <div id="codeEditor"></div>
+      </div>
     </div>
 
     <!-- SERIAL MONITOR -->
@@ -244,6 +258,10 @@
       <button id="closeModal">Cancel</button>
     </div>
   </div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/react-complex-tree/lib/bundle.js"></script>
 
   <script type="module" src="main.js"></script>
   <script src="spark-md5.min.js"></script>

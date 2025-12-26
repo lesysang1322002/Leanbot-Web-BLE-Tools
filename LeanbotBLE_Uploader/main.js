@@ -12,7 +12,6 @@ console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
 console.log(`HASH = ${window.HASH}`);
 
-
 /* ============================================================
  *  IMPORTS & INIT
  * ============================================================ */
@@ -191,10 +190,14 @@ const btnLoadFile = document.getElementById("btnLoadFile");
 const fileInput   = document.getElementById("FileInput");
 
 btnLoadFile.addEventListener("click", async () => {
-  fileInput.click(); // Mở hộp thoại chọn file
-  fileLoaded = await loadFile(); // Đợi người dùng chọn file và load nội dung
-  window.arduinoEditor?.setValue(fileLoaded.text); // Hiển thị nội dung file lên editor
+  fileInput.click();                // mở hộp chọn file
+  const loaded = await loadFile();  // { fileName, ext, text }
+  if (!loaded) return;
+
+  // chuyển cho FILE TREE tạo file mới + mở trong Monaco
+  window.importLocalFileToTree?.(loaded);
 });
+
 
 // Hàm load file và trả về đối tượng { fileName, ext, text }
 async function loadFile() {
@@ -244,13 +247,14 @@ leanbot.Compiler.onCompileSucess = (compileMessage) => {
   UploaderCompileTitle.className = "green";
   if (!isCompileAndUpload) return;
   uploadStart = performance.now(); // reset upload start time
-  ProgramTab.classList.remove("hide-upload");
 };
 
 leanbot.Compiler.onCompileError = (compileMessage) => {
   UploaderCompileLog.value = compileMessage;
   UploaderCompileProg.className = "red";
   UploaderCompileTitle.className = "red";
+  if (!isCompileAndUpload) return;
+  ProgramTab.classList.add("hide-upload"); // Ẩn upload khi compile lỗi
 };
 
 leanbot.Compiler.onCompileProgress = (elapsedTime, estimatedTotal) => {
@@ -277,7 +281,7 @@ btnUpload.addEventListener("click", async () => {
   }
 
   compileStart = performance.now();
-  ProgramTab.classList.add("hide-upload"); // Ẩn upload khi compile
+  ProgramTab.classList.remove("hide-upload"); // Hiện phần upload
   uiSetTab("program");
   uiResetCompile();
   uiResetUpload();
@@ -289,7 +293,7 @@ btnUpload.addEventListener("click", async () => {
 const UploaderTitleUpload  = document.getElementById("uploadTitle");
 const UploaderCompileTitle = document.getElementById("compileTitle");
 
-const UploaderCompileProg      = document.getElementById("progCompile");
+const UploaderCompileProg  = document.getElementById("progCompile");
 const UploaderTransfer     = document.getElementById("progTransfer");
 const UploaderWrite        = document.getElementById("progWrite");
 const UploaderVerify       = document.getElementById("progVerify");
@@ -521,42 +525,28 @@ require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0
 
       // Create editor
       window.arduinoEditor = monaco.editor.create(document.getElementById("codeEditor"), {
-value: `/*Basic Leanbot Motion
-
-  Wait for TB1A+TB1B touch signal, then go straight for 100 mm, then stop.
-
-  More Leanbot examples at  https://git.pythaverse.space/leanbot/Examples
-*/
-
-
-#include <Leanbot.h>                    // use Leanbot library
-
-
-void setup() {
-  Leanbot.begin();                      // initialize Leanbot
-}
-
-
-void loop() {
-  LbMission.begin( TB1A + TB1B );       // start mission when both TB1A and TB1B touched
-
-  LbMotion.runLR( +1000, +1000 );       // go straight forward with speed 1000 steps/s
-  LbMotion.waitDistanceMm( 100 );       // for 100 mm distance
-
-  LbMission.end();                      // stop, finish mission
-}`,
-        language: "arduino",
-        automaticLayout: true,   
-        lineNumbers: "on",      
-        fontSize: 13,           
-        tabSize: 2,
-        insertSpaces: true,
-        wordWrap: "off",
-        minimap: { enabled: true },
-        smoothScrolling: true,
-        cursorSmoothCaretAnimation: "on",
-        bracketPairColorization: { enabled: true },
+      value: '',
+      language: "arduino",
+      automaticLayout: true,   
+      lineNumbers: "on",      
+      fontSize: 13,           
+      tabSize: 2,
+      insertSpaces: true,
+      wordWrap: "off",
+      minimap: { enabled: true },
+      smoothScrolling: true,
+      cursorSmoothCaretAnimation: "on",
+      bracketPairColorization: { enabled: true },
       });
+
+      window.__isMonacoReady = true;
+
+      if (window.__pendingOpenFileId) {
+        const id = window.__pendingOpenFileId;
+        window.__pendingOpenFileId = null;
+        openFileInMonaco(id);
+      }
+
 
       window.arduinoEditor.updateOptions({
         scrollBeyondLastLine: false,       // Dòng cuối luôn nằm sát đáy editor
@@ -636,4 +626,596 @@ void loop() {
       });
     });
 
-// =================== END OF FILE =================== //
+
+//==================== FILE TREE =================== //
+// trạng thái Monaco
+window.__isMonacoReady ||= false;
+window.__pendingOpenFileId ||= "main_ino";
+
+// Tạo dữ liệu tree
+const items = {
+  root:      { index: "root",     isFolder: true,  children: ["src"],      data: "Workspace" },
+  src:       { index: "src",      isFolder: true,  children: ["main_ino"], data: "src" },
+  main_ino:  { index: "main_ino", isFolder: false, children: [],           data: "BasicLeanbotMotion.ino" },
+};
+
+// nội dung file, key theo id file (item.index)
+const fileContents = {
+  main_ino:
+`/*Basic Leanbot Motion
+
+  Wait for TB1A+TB1B touch signal, then go straight for 100 mm, then stop.
+
+  More Leanbot examples at  https://git.pythaverse.space/leanbot/Examples
+*/
+
+
+#include <Leanbot.h>                    // use Leanbot library
+
+
+void setup() {
+  Leanbot.begin();                      // initialize Leanbot
+}
+
+
+void loop() {
+  LbMission.begin( TB1A + TB1B );       // start mission when both TB1A and TB1B touched
+
+  LbMotion.runLR( +1000, +1000 );       // go straight forward with speed 1000 steps/s
+  LbMotion.waitDistanceMm( 100 );       // for 100 mm distance
+
+  LbMission.end();                      // stop, finish mission
+}`,
+};
+
+// track focus, selection để tạo file, folder, move đúng vị trí
+let lastFocusedId = "main_ino";
+let lastSelectedIds = ["main_ino"];
+
+// gắn parent cho mỗi node, để move nhanh
+function rebuildParents() {
+  for (const id in items) items[id].parent = null;
+  for (const id in items) {
+    const ch = items[id].children;
+    if (!Array.isArray(ch)) continue;
+    for (const cid of ch) if (items[cid]) items[cid].parent = id;
+  }
+}
+rebuildParents();
+console.log("INIT TREE STATE");
+console.log(JSON.stringify(items, null, 2));
+
+
+const mount = document.getElementById("fileTreeMount");
+const { UncontrolledTreeEnvironment, Tree, StaticTreeDataProvider } = window.ReactComplexTree;
+
+const dataProvider = new StaticTreeDataProvider(items, (item, data) => ({ ...item, data }));
+const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
+
+// autosave nội dung từ Monaco về fileContents
+function hookMonacoAutosaveOnce() {
+  if (window.__monacoAutosaveHooked) return;
+  if (!window.arduinoEditor) return;
+
+  window.__monacoAutosaveHooked = true;
+  window.arduinoEditor.onDidChangeModelContent(() => {
+    const id = window.currentFileId;
+    if (!id) return;
+    fileContents[id] = window.arduinoEditor.getValue();
+  });
+}
+
+function openFileInMonaco(fileId) {
+  if (!window.__isMonacoReady || !window.arduinoEditor) {
+    window.__pendingOpenFileId = fileId;
+    return;
+  }
+
+  hookMonacoAutosaveOnce();
+
+  const content = fileContents[fileId] ?? "";
+  window.currentFileId = fileId;
+  window.arduinoEditor.setValue(content);
+}
+
+// id generator
+function slugifyId(name) {
+  const base = String(name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_\.]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return base || "item";
+}
+
+function uniqueId(base) {
+  let id = base;
+  let i = 1;
+  while (items[id]) id = base + "_" + i++;
+  return id;
+}
+
+// lấy folder đích để thêm file, folder
+function getTargetFolderId() {
+  const focus = items[lastFocusedId] ? lastFocusedId : "root";
+  if (items[focus]?.isFolder) return focus;
+
+  const parent = items[focus]?.parent;
+  if (parent && items[parent]?.isFolder) return parent;
+
+  return "root";
+}
+
+// nhận file local đã đọc từ loadFile() và tạo file mới trong tree
+window.importLocalFileToTree = (loaded) => {
+  if (!loaded) return;
+
+  const fileName = String(loaded.fileName || "New_File.ino");
+  const text = String(loaded.text ?? "");
+
+  const parentId = getTargetFolderId();
+
+  // id theo tên file, chống trùng
+  const id = uniqueId(slugifyId(fileName));
+
+  items[id] = {
+    index: id,
+    isFolder: false,
+    children: [],
+    data: fileName,
+    parent: parentId
+  };
+
+  items[parentId].children ||= [];
+  items[parentId].children.push(id);
+
+  fileContents[id] = text;
+
+  emitChanged([parentId, id]);
+
+  pendingTreeFocusId = id;
+  openFileInMonaco(id);
+};
+
+const fileTreePanel = document.getElementById("fileTreePanel");
+
+function isValidDropFile(file) {
+  if (!file || !file.name) return false;
+  const name = file.name.toLowerCase();
+  return name.endsWith(".ino") || name.endsWith(".h") || name.endsWith(".cpp") || name.endsWith(".c");
+}
+
+fileTreePanel?.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  fileTreePanel.classList.add("is-drop-hover");
+});
+
+fileTreePanel?.addEventListener("dragleave", () => {
+  fileTreePanel.classList.remove("is-drop-hover");
+});
+
+fileTreePanel?.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  fileTreePanel.classList.remove("is-drop-hover");
+
+  const files = Array.from(e.dataTransfer?.files || []);
+  if (files.length === 0) return;
+
+  for (const f of files) {
+    if (!isValidDropFile(f)) continue;
+
+    try {
+      const text = await readFileAsText(f);
+      window.importLocalFileToTree?.({
+        fileName: f.name,
+        ext: (f.name.split(".").pop() || "").toLowerCase(),
+        text
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert("Drop file lỗi: " + msg);
+      break;
+    }
+  }
+});
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error || new Error("Read file failed"));
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.readAsText(file);
+  });
+}
+
+// ===== sync state tree (selected, focused) cho thao tác ngoài tree =====
+window.__rctItemActions ||= new Map();
+const rememberItemActions = (id, ctx) => id && ctx && window.__rctItemActions.set(id, ctx);
+
+let pendingTreeFocusId = null;
+
+function focusTreeItemNow(id) {
+  const ctx = window.__rctItemActions.get(id);
+  if (!ctx) return false;
+
+  try { ctx.focusItem?.(); } catch (e) {}
+  try { ctx.selectItem?.(); } catch (e) {}
+
+  lastFocusedId = id;
+  lastSelectedIds = [id];
+  return true;
+}
+
+// thêm file, folder
+function createItem(isFolder, defaultName) {
+  const parentId = getTargetFolderId();
+  const name = defaultName;
+
+  const id = uniqueId(slugifyId(name));
+
+  items[id] = { index: id, isFolder, children: [], data: name, parent: parentId };
+  items[parentId].children ||= [];
+  items[parentId].children.push(id);
+
+  if (!isFolder) fileContents[id] = "";
+
+  emitChanged([parentId, id]);
+
+  if (!isFolder) {
+    pendingTreeFocusId = id;   // để tree highlight đúng item mới
+    openFileInMonaco(id);      // mở luôn trong Monaco
+  } else {
+    pendingTreeFocusId = id;   // tạo folder xong cũng focus để dễ thao tác tiếp
+  }
+}
+
+document.getElementById("btnNewFile")?.addEventListener("click", () => createItem(false, "New_File.ino"));
+document.getElementById("btnNewFolder")?.addEventListener("click", () => createItem(true, "New_Folder"));
+
+// rename file bằng F2
+function renameFileId(oldId, newDisplayName) {
+  const oldItem = items[oldId];
+  if (!oldItem) return;
+
+  // folder: chỉ đổi data
+  if (oldItem.isFolder) {
+    oldItem.data = newDisplayName;
+    emitChanged([oldId]);
+    pendingTreeFocusId = oldId;
+    return;
+  }
+
+  const newId = uniqueId(slugifyId(newDisplayName));
+  const parentId = oldItem.parent || "root";
+
+  items[newId] = { ...oldItem, index: newId, data: newDisplayName, parent: parentId };
+
+  const arr = items[parentId]?.children || [];
+  const pos = arr.indexOf(oldId);
+  if (pos >= 0) arr[pos] = newId;
+
+  fileContents[newId] = fileContents[oldId] ?? "";
+  delete fileContents[oldId];
+
+  if (window.currentFileId === oldId) window.currentFileId = newId;
+  if (lastFocusedId === oldId) lastFocusedId = newId;
+
+  delete items[oldId];
+
+  emitChanged([parentId, oldId, newId]);
+
+  pendingTreeFocusId = newId;
+  openFileInMonaco(newId);
+}
+
+// drag drop, reorder, move folder
+function removeFromParent(childId) {
+  let removedParent = null;
+
+  const p = items[childId]?.parent;
+  if (p && items[p]?.children) {
+    const list = items[p].children;
+    const before = list.length;
+    items[p].children = list.filter((x) => x !== childId);
+    if (items[p].children.length !== before) removedParent = p;
+  }
+
+  // fallback: nếu parent bị sai, quét toàn bộ folder để xóa mọi chỗ đang chứa childId
+  for (const id in items) {
+    const it = items[id];
+    if (!it?.isFolder || !Array.isArray(it.children)) continue;
+
+    const before = it.children.length;
+    it.children = it.children.filter((x) => x !== childId);
+    if (it.children.length !== before) removedParent = removedParent || id;
+  }
+
+  return removedParent;
+}
+
+
+function insertIntoFolder(folderId, childId, index) {
+  const f = items[folderId];
+  if (!f || !f.isFolder) return;
+
+  f.children ||= [];
+
+  // chống trùng: xóa trước nếu đã tồn tại
+  f.children = f.children.filter((x) => x !== childId);
+
+  let idx = Number.isFinite(index) ? index : f.children.length;
+  if (idx < 0) idx = 0;
+  if (idx > f.children.length) idx = f.children.length;
+
+  f.children.splice(idx, 0, childId);
+  items[childId].parent = folderId;
+}
+
+
+function isDescendantOf(candidateChild, candidateParent) {
+  let p = items[candidateChild]?.parent;
+  while (p) {
+    if (p === candidateParent) return true;
+    p = items[p]?.parent;
+  }
+  return false;
+}
+
+function handleDrop(itemsDragged, target) {
+  if (!target) return;
+
+  const draggedIds = Array.from(new Set(itemsDragged.map((x) => x.index)));
+
+  const targetItemId = target.targetItem;
+  const targetItem = items[targetItemId];
+  if (!targetItem) return;
+
+  const destFolderId = targetItem.isFolder ? targetItemId : (targetItem.parent || "root");
+
+  for (const id of draggedIds) {
+    if (id === destFolderId) return;
+    if (items[id]?.isFolder && isDescendantOf(destFolderId, id)) return;
+  }
+
+  let insertIndex = target.childIndex;
+  if (!Number.isFinite(insertIndex)) insertIndex = items[destFolderId]?.children?.length ?? 0;
+
+  const changed = new Set([destFolderId, targetItemId]);
+
+  // remove khỏi mọi nơi trước
+  for (const id of draggedIds) {
+    const oldParent = removeFromParent(id);
+    if (oldParent) changed.add(oldParent);
+  }
+
+  // nếu destFolderId cũng bị thay đổi children, đảm bảo có trong changed
+  changed.add(destFolderId);
+
+  // chèn lần lượt
+  draggedIds.forEach((id, i) => {
+    insertIntoFolder(destFolderId, id, insertIndex + i);
+    changed.add(id);
+  });
+
+  emitChanged(Array.from(changed));
+}
+
+// initial viewState
+const viewState = {
+  tree: {
+    expandedItems: ["root", "src"],
+    selectedItems: ["main_ino"],
+    focusedItem: "main_ino",
+  },
+};
+
+// ==================== TREE CONTEXT MENU (RIGHT CLICK) ==================== //
+const ctxMenu = document.getElementById("treeCtxMenu");
+const ctxRenameBtn = document.getElementById("ctxRename");
+const ctxDeleteBtn = document.getElementById("ctxDelete");
+
+let ctxTargetId = null;
+
+function hideCtxMenu() {
+  ctxMenu?.classList.add("is-hidden");
+  ctxTargetId = null;
+}
+
+function showCtxMenu(x, y, itemId) {
+  if (!ctxMenu) return;
+  ctxTargetId = itemId;
+
+  ctxMenu.classList.remove("is-hidden");
+
+  const pad = 6;
+  const w = ctxMenu.offsetWidth || 160;
+  const h = ctxMenu.offsetHeight || 90;
+
+  ctxMenu.style.left = Math.max(pad, Math.min(x, innerWidth - w - pad)) + "px";
+  ctxMenu.style.top = Math.max(pad, Math.min(y, innerHeight - h - pad)) + "px";
+}
+
+addEventListener("click", hideCtxMenu);
+addEventListener("scroll", hideCtxMenu, true);
+addEventListener("keydown", (e) => { if (e.key === "Escape") hideCtxMenu(); });
+
+ctxMenu?.addEventListener("click", (e) => e.stopPropagation());
+
+// delete
+function deleteSubtree(id) {
+  const it = items[id];
+  if (!it) return;
+
+  if (it.isFolder && Array.isArray(it.children)) {
+    for (const cid of it.children) deleteSubtree(cid);
+  } else {
+    delete fileContents[id];
+  }
+
+  delete items[id];
+}
+
+function deleteItemById(id) {
+  if (!id || !items[id] || id === "root") return;
+
+  const parentId = items[id].parent || "root";
+
+  const parent = items[parentId];
+  if (parent && Array.isArray(parent.children)) {
+    const idx = parent.children.indexOf(id);
+    if (idx >= 0) parent.children.splice(idx, 1);
+  }
+
+  deleteSubtree(id);
+
+  // chọn lại item hợp lệ trong tree
+  pendingTreeFocusId = items[parentId] ? parentId : "root";
+
+  // nếu đang mở file bị xóa, mở file an toàn
+  if (window.currentFileId && !items[window.currentFileId]) {
+    window.currentFileId = "main_ino";
+    if (items.main_ino) openFileInMonaco("main_ino");
+  }
+
+  if (!items[lastFocusedId]) lastFocusedId = pendingTreeFocusId;
+  if (lastSelectedIds.some((x) => !items[x])) lastSelectedIds = [lastFocusedId];
+
+  emitChanged([parentId, "root"]);
+}
+
+ctxDeleteBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const id = ctxTargetId;
+  hideCtxMenu();
+  deleteItemById(id);
+});
+
+// rename ngay khi bấm Rename
+ctxRenameBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const id = ctxTargetId;
+  hideCtxMenu();
+
+  const ctx = window.__rctItemActions.get(id);
+  if (!ctx?.startRenamingItem) return;
+
+  try { ctx.focusItem?.(); } catch (err) {}
+  try { ctx.selectItem?.(); } catch (err) {}
+  try { ctx.startRenamingItem(); } catch (err) {}
+});
+
+const reactRoot = window.ReactDOM.createRoot(mount);
+
+reactRoot.render(
+  window.React.createElement(
+    UncontrolledTreeEnvironment,
+    {
+      dataProvider,
+      getItemTitle: (item) => item.data,
+      viewState,
+
+      allowRenaming: true,
+
+      canDragAndDrop: true,
+      canDropOnFolder: true,
+      canReorderItems: true,
+
+      onFocusItem: (item) => {
+        if (!item) return;
+        lastFocusedId = item.index;
+      },
+
+      onSelectItems: (ids) => {
+        lastSelectedIds = Array.isArray(ids) ? ids.slice() : [];
+        if (lastSelectedIds.length > 0) lastFocusedId = lastSelectedIds[lastSelectedIds.length - 1];
+      },
+
+      onPrimaryAction: (item) => {
+        if (!item || item.isFolder) return;
+
+        pendingTreeFocusId = item.index;
+        openFileInMonaco(item.index);
+      },
+
+      onRenameItem: (item, name) => {
+        if (!item) return;
+        renameFileId(item.index, name);
+      },
+
+      onDrop: (itemsDragged, target) => {
+        handleDrop(itemsDragged, target);
+      },
+
+      renderItem: ({ item, title, arrow, context, children }) => {
+        rememberItemActions(item.index, context);
+
+        if (pendingTreeFocusId === item.index) {
+          pendingTreeFocusId = null;
+          setTimeout(() => focusTreeItemNow(item.index), 0);
+        }
+
+        const Tag = context.isRenaming ? "div" : "button";
+
+        const onCtx = (e) => {
+          e.preventDefault();
+
+          try { context.focusItem?.(); } catch {}
+          try { context.selectItem?.(); } catch {}
+
+          lastFocusedId = item.index;
+          lastSelectedIds = [item.index];
+
+          showCtxMenu(e.clientX, e.clientY, item.index);
+        };
+
+        const className =
+          "file-tree-item" +
+          (context.isSelected ? " is-selected" : "") +
+          (context.isFocused ? " is-focused" : "");
+
+        return window.React.createElement(
+          "li",
+          { ...context.itemContainerWithChildrenProps, style: { margin: 0 } },
+          window.React.createElement(
+            Tag,
+            {
+              ...context.itemContainerWithoutChildrenProps,
+              ...context.interactiveElementProps,
+              onContextMenu: onCtx,
+              className,
+              style: {
+                border: 0,
+                background: "transparent",
+                padding: "4px 6px",
+                borderRadius: "4px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                width: "100%",
+                textAlign: "left",
+              },
+            },
+            arrow,
+            title
+          ),
+          children
+        );
+      },
+    },
+    window.React.createElement(Tree, {
+      treeId: "tree",
+      rootItem: "root",
+      treeLabel: "Files",
+    })
+  )
+);
+
+// mở file mặc định
+pendingTreeFocusId = window.__pendingOpenFileId || "main_ino";
+openFileInMonaco(window.__pendingOpenFileId || "main_ino");
+

@@ -47,7 +47,8 @@ export class LeanbotCompiler {
       return compileResult;
     } catch (err) {
       const message = err.message || String(err);
-      if (this.onCompileError) this.onCompileError(message);
+      if (this.onCompileProgress) this.onCompileProgress(1, 1);
+      if (this.onCompileError)    this.onCompileError(message);
       throw err;
     } finally {
       clearInterval(progressTimer);
@@ -62,7 +63,7 @@ export class LeanbotCompiler {
       return this.#prevResponse;
     }
 
-    const res = await fetch(`https://${compileServer}/v3/compile`, {
+    const res = await fetch(`https://${compileServer}/v3/compile_`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
