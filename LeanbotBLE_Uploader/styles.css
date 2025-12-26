@@ -173,10 +173,16 @@ button:hover{ background-color:#f1f1f1; }
   background: #fafafa;
 }
 
+#fileTreeToolbar{
+  display:flex;
+  flex-direction:row;
+  gap:8px;
+  background: #f0f0f0;
+}
+
 #fileTreeToolbar .lb-icon-btn{
-  justify-content:flex-start;
-  text-align:left;
-  width:100%;
+  width:auto;
+  flex:1;
 }
 
 /* ========== TREE CONTEXT MENU ========== */
@@ -479,7 +485,7 @@ button:hover{ background-color:#f1f1f1; }
 
 progress{
   width:100%;
-  height:35px;
+  height:28px;
   display:block;
   appearance:none;
   -webkit-appearance:none;
