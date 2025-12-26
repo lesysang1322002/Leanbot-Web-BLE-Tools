@@ -63,7 +63,7 @@ export class LeanbotCompiler {
       return this.#prevResponse;
     }
 
-    const res = await fetch(`https://${compileServer}/v3/compile_`, {
+    const res = await fetch(`https://${compileServer}/v3/compile`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
