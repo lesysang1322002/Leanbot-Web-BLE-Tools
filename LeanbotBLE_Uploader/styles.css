@@ -161,7 +161,7 @@ button:hover{ background-color:#f1f1f1; }
 
 #editorRow{
   display:grid;
-  grid-template-columns:280px 1fr;
+  grid-template-columns:260px 1fr;
   flex:1 1 0;
   min-height:0;
 }
@@ -183,6 +183,26 @@ button:hover{ background-color:#f1f1f1; }
 #fileTreeToolbar .lb-icon-btn{
   width:auto;
   flex:1;
+}
+
+.file-tree-item {
+padding-left: 0;
+}
+
+.react-complex-tree-item {
+padding-left: 0;
+}
+
+.react-complex-tree-item[aria-level="2"] {
+padding-left: 16px;
+}
+
+.react-complex-tree-item[aria-level="3"] {
+padding-left: 32px;
+}
+
+.react-complex-tree-item[aria-level="4"] {
+padding-left: 48px;
 }
 
 /* ========== TREE CONTEXT MENU ========== */

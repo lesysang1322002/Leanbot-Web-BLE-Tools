@@ -7,10 +7,18 @@ const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
 window.HASH          = parseInt(params.get("HASH"));
+window.SERVER        = params.get("SERVER") || "ide-server-qa.leanbot.space";
+window.MODE          = params.get("MODE");
+
+if (window.MODE === "xyz123") {
+  window.SERVER = "ide-server-qa.leanbot.space.bad-domain";
+  console.log("[TEST MODE] Force SERVER =", window.SERVER);
+}
 
 console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
 console.log(`HASH = ${window.HASH}`);
+console.log(`SERVER = ${window.SERVER}`);
 
 /* ============================================================
  *  IMPORTS & INIT
@@ -222,7 +230,7 @@ async function loadFile() {
 // =================== Button Compile =================== //
 const btnCompile = document.getElementById("btnCompile");
 const UploaderCompileLog = document.getElementById("compileLog");
-const ProgramTab     = document.getElementById("programGrid");
+const ProgramTab = document.getElementById("programGrid");
 
 btnCompile.addEventListener("click", async () => {
   await doCompile();
@@ -239,7 +247,7 @@ async function doCompile() {
   ProgramTab.classList.add("hide-upload");
   uiSetTab("program");
   uiResetCompile();
-  return await leanbot.Compiler.compile(sourceCode);
+  return await leanbot.Compiler.compile(sourceCode, window.SERVER);
 }
 
 leanbot.Compiler.onCompileSucess = (compileMessage) => {
@@ -286,7 +294,7 @@ btnUpload.addEventListener("click", async () => {
   uiResetCompile();
   uiResetUpload();
   isCompileAndUpload = true;
-  await leanbot.compileAndUpload(sourceCode, "ide-server-qa.leanbot.space");
+  await leanbot.compileAndUpload(sourceCode, window.SERVER);
 });
 
 // =================== Upload DOM Elements =================== //
@@ -1150,7 +1158,7 @@ reactRoot.render(
         handleDrop(itemsDragged, target);
       },
 
-      renderItem: ({ item, title, arrow, context, children }) => {
+      renderItem: ({ item, title, arrow, context, children, depth }) => {
         rememberItemActions(item.index, context);
 
         if (pendingTreeFocusId === item.index) {
@@ -1162,13 +1170,10 @@ reactRoot.render(
 
         const onCtx = (e) => {
           e.preventDefault();
-
           try { context.focusItem?.(); } catch {}
           try { context.selectItem?.(); } catch {}
-
           lastFocusedId = item.index;
           lastSelectedIds = [item.index];
-
           showCtxMenu(e.clientX, e.clientY, item.index);
         };
 
@@ -1176,6 +1181,8 @@ reactRoot.render(
           "file-tree-item" +
           (context.isSelected ? " is-selected" : "") +
           (context.isFocused ? " is-focused" : "");
+
+        const indent = Math.max(0, (depth || 0)) * 14; // chỉnh 14 -> 16 nếu muốn lùi nhiều hơn
 
         return window.React.createElement(
           "li",
@@ -1191,6 +1198,7 @@ reactRoot.render(
                 border: 0,
                 background: "transparent",
                 padding: "4px 6px",
+                paddingLeft: (6 + indent) + "px",
                 borderRadius: "4px",
                 cursor: "pointer",
                 display: "flex",
@@ -1206,6 +1214,7 @@ reactRoot.render(
           children
         );
       },
+
     },
     window.React.createElement(Tree, {
       treeId: "tree",

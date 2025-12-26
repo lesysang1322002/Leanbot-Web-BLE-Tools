@@ -6,7 +6,7 @@ export class LeanbotCompiler {
   onCompileError = null;
   onCompileProgress = null;
 
-  async compile(sourceCode, compileServer = "ide-server-qa.leanbot.space") {
+  async compile(sourceCode, compileServer) {
     const sketchName = "LeanbotSketch";
 
     const payload = {
