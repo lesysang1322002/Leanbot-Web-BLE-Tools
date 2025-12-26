@@ -11,8 +11,8 @@ window.SERVER        = params.get("SERVER") || "ide-server-qa.leanbot.space";
 window.MODE          = params.get("MODE");
 
 if (window.MODE === "xyz123") {
-  window.SERVER = "ide-server-qa.leanbot.space.bad-domain";
-  console.log("[TEST MODE] Force SERVER =", window.SERVER);
+  window.SERVER = "";
+  console.log("[TEST MODE] Using empty SERVER");
 }
 
 console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
@@ -690,9 +690,6 @@ function rebuildParents() {
   }
 }
 rebuildParents();
-console.log("INIT TREE STATE");
-console.log(JSON.stringify(items, null, 2));
-
 
 const mount = document.getElementById("fileTreeMount");
 const { UncontrolledTreeEnvironment, Tree, StaticTreeDataProvider } = window.ReactComplexTree;
