@@ -415,10 +415,15 @@ body{
 
 #programGrid.hide-upload {
   grid-template-rows: 1fr;
+
 }
 
 #programGrid.hide-upload #programUpload {
   display: none;
+}
+
+#programGrid.hide-upload #progCompile {
+  height: 20%;
 }
 
 .group-box{
@@ -479,7 +484,7 @@ body{
 
 progress{
   width:100%;
-  height:28px;
+  height:100%;
   display:block;
   appearance:none;
   -webkit-appearance:none;
