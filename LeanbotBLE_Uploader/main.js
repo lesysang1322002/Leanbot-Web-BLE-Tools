@@ -697,7 +697,7 @@ const { UncontrolledTreeEnvironment, Tree, StaticTreeDataProvider } = window.Rea
 const dataProvider = new StaticTreeDataProvider(items, (item, data) => ({ ...item, data }));
 const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
 
-// autosave nội dung từ Monaco về fileContents
+// Autosave nội dung từ Monaco về fileContents
 function hookMonacoAutosaveOnce() {
   if (window.__monacoAutosaveHooked) return;
   if (!window.arduinoEditor) return;
@@ -743,7 +743,7 @@ function uniqueId(base) {
   return id;
 }
 
-// lấy folder đích để thêm file, folder
+// Lấy folder đích để thêm file, folder
 function getTargetFolderId() {
   const focus = items[lastFocusedId] ? lastFocusedId : "root";
   if (items[focus]?.isFolder) return focus;
@@ -754,7 +754,7 @@ function getTargetFolderId() {
   return "root";
 }
 
-// nhận file local đã đọc từ loadFile() và tạo file mới trong tree
+// Nhận file local đã đọc từ loadFile() và tạo file mới trong tree
 window.importLocalFileToTree = (loaded) => {
   if (!loaded) return;
 
@@ -855,7 +855,7 @@ function focusTreeItemNow(id) {
   return true;
 }
 
-// thêm file, folder
+// Thêm file, folder
 function createItem(isFolder, defaultName) {
   const parentId = getTargetFolderId();
   const name = defaultName;
@@ -1072,7 +1072,7 @@ function deleteItemById(id) {
   // focus lại
   pendingTreeFocusId = items[removedParent] ? removedParent : "root";
 
-  // nếu đang mở file bị xóa, mở file an toàn
+  // nếu đang mở file bị xóa, mở lại main_ino
   if (window.currentFileId && !items[window.currentFileId]) {
     window.currentFileId = "main_ino";
     if (items.main_ino) openFileInMonaco("main_ino");
