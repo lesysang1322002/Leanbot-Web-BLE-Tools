@@ -18,8 +18,7 @@ export class LeanbotBLE {
       // Nếu deviceName rỗng → quét tất cả thiết bị có service UUID tương ứng
       if (!deviceName || deviceName.trim() === "") {
         this.#device = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [LeanbotBLE.SERVICE_UUID_ESP], namePrefix: 'Leanbot  '}],
-          optionalServices: [LeanbotBLE.SERVICE_UUID],
+          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
         });
       } 
       // Nếu có deviceName → chỉ quét thiết bị có tên trùng khớp
