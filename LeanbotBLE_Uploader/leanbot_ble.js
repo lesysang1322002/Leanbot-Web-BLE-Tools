@@ -170,6 +170,10 @@ export class LeanbotBLE {
     if (compileResult.hex && compileResult.hex.trim() !== "") {
       await this.Uploader.upload(this.#base64ToText(compileResult.hex));
     }
+    else {
+      if (this.JDYUploader.intervalGetSync) clearInterval(this.JDYUploader.intervalGetSync); // xóa interval get sync nếu có
+      this.JDYUploader.isUploading = false;
+    }
   }
 
   constructor() {
@@ -717,7 +721,7 @@ class JDYUploader {
 
   #startTime = null;
 
-  #intervalGetSync = null;
+  intervalGetSync = null;
   #isGetSyncOK = false;
   #isCompileOK = false;
 
@@ -742,7 +746,7 @@ class JDYUploader {
   /* ------------------- UPLOAD HEX ------------------- */
   async upload(hexText) {
     this.#isCompileOK = true; // Đã compile xong
-    if (this.#intervalGetSync) clearInterval(this.#intervalGetSync); // xóa interval get sync nếu có
+    if (this.intervalGetSync) clearInterval(this.intervalGetSync); // xóa interval get sync nếu có
 
     this.#startTime = Date.now();
     this.#BLEPackets = convertHexToBlePackets(hexText, { returnStep2: true });
@@ -760,7 +764,7 @@ class JDYUploader {
 
     this.#isGetSyncOK = false;
     this.#isCompileOK = false;
-    clearInterval(this.#intervalGetSync);
+    clearInterval(this.intervalGetSync);
 
     console.log("[UPLOAD] Disconnecting...");
     const resultDisc = await this.#leanbot.disconnect();
@@ -785,7 +789,7 @@ class JDYUploader {
       await this.#getSync();
     } else {
       // Nếu chưa compile xong thì cứ 500ms get sync 1 lần
-      this.#intervalGetSync = setInterval(() => this.#getSync(), 500);
+      this.intervalGetSync = setInterval(() => this.#getSync(), 500);
     }
   }
 

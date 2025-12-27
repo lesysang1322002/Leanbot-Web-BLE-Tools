@@ -1042,8 +1042,8 @@ function showCtxMenu(x, y, itemId) {
 }
 
 addEventListener("click", hideCtxMenu);
-addEventListener("scroll", hideCtxMenu, true);
-addEventListener("keydown", (e) => { if (e.key === "Escape") hideCtxMenu(); });
+// addEventListener("scroll", hideCtxMenu, true);
+// addEventListener("keydown", (e) => { if (e.key === "Escape") hideCtxMenu(); });
 
 ctxMenu?.addEventListener("click", (e) => e.stopPropagation());
 
