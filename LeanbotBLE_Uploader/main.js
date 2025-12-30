@@ -6,7 +6,6 @@
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
-window.HASH          = parseInt(params.get("HASH"));
 window.SERVER        = params.get("SERVER") || "ide-server-qa.leanbot.space";
 window.MODE          = params.get("MODE");
 
@@ -17,7 +16,6 @@ if (window.MODE === "xyz123") {
 
 console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
-console.log(`HASH = ${window.HASH}`);
 console.log(`SERVER = ${window.SERVER}`);
 
 /* ============================================================
@@ -253,6 +251,9 @@ async function doCompile() {
 leanbot.Compiler.onCompileSucess = (compileMessage) => {
   UploaderCompileLog.value = compileMessage;
   UploaderCompileTitle.className = "green";
+
+  saveWorkspaceFilesToLocalStorage(); // Lưu workspace khi compile thành công
+
   if (!isCompileAndUpload) return;
   uploadStart = performance.now(); // reset upload start time
 };
@@ -640,16 +641,32 @@ require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0
 window.__isMonacoReady ||= false;
 window.__pendingOpenFileId = window.__pendingOpenFileId ?? null;
 
+function createUUID() {
+  return crypto.randomUUID();
+}
+
+const MAIN_FILE_ID = createUUID();
+
 // Tạo dữ liệu tree
 const items = {
-  root:      { index: "root",     isFolder: true,  children: ["src"],      data: "Workspace" },
-  src:       { index: "src",      isFolder: true,  children: ["main_ino"], data: "src" },
-  main_ino:  { index: "main_ino", isFolder: false, children: [],           data: "BasicLeanbotMotion.ino" },
+  root: {
+    index: "root",
+    isFolder: true,
+    children: [MAIN_FILE_ID],
+    data: "Workspace"
+  },
+  [MAIN_FILE_ID]: {
+    index: MAIN_FILE_ID,
+    isFolder: false,
+    children: [],
+    data: "BasicLeanbotMotion.ino"
+  },
 };
+
 
 // nội dung file, key theo id file (item.index)
 const fileContents = {
-  main_ino:
+  [MAIN_FILE_ID]:
 `/*Basic Leanbot Motion
 
   Wait for TB1A+TB1B touch signal, then go straight for 100 mm, then stop.
@@ -677,8 +694,9 @@ void loop() {
 };
 
 // track focus, selection để tạo file, folder, move đúng vị trí
-let lastFocusedId = "main_ino";
-let lastSelectedIds = ["main_ino"];
+let lastFocusedId = MAIN_FILE_ID;
+let lastSelectedIds = [MAIN_FILE_ID];
+window.currentFileId = MAIN_FILE_ID;
 
 // gắn parent cho mỗi node, để move nhanh
 function rebuildParents() {
@@ -709,6 +727,7 @@ const dataProvider = new StaticTreeDataProvider(items, (item, data) => ({ ...ite
 const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
 
 // Autosave nội dung từ Monaco về fileContents
+const AutoSaveDelayMs = 1000;
 let saveTimer = null;
 
 function hookMonacoAutosaveOnce() {
@@ -724,7 +743,7 @@ function hookMonacoAutosaveOnce() {
     fileContents[id] = window.arduinoEditor.getValue();
 
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveWorkspaceToLocalStorage, 500); // save after 500ms of inactivity
+    saveTimer = setTimeout(saveWorkspaceFilesToLocalStorage, AutoSaveDelayMs); // save after 1000ms of inactivity
   });
 }
 
@@ -740,8 +759,7 @@ function openFileInMonaco(fileId) {
   window.currentFileId = fileId;
   window.arduinoEditor.setValue(content);
 
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveWorkspaceToLocalStorage, 200);
+  saveWorkspaceTreeToLocalStorage();
 }
 
 // id generator
@@ -784,8 +802,7 @@ window.importLocalFileToTree = (loaded) => {
 
   const parentId = getTargetFolderId();
 
-  // id theo tên file, chống trùng
-  const id = uniqueId(slugifyId(fileName));
+  const id = createUUID();
 
   items[id] = {
     index: id,
@@ -804,7 +821,7 @@ window.importLocalFileToTree = (loaded) => {
 
   pendingTreeFocusId = id;
   openFileInMonaco(id);
-  saveWorkspaceToLocalStorage();
+  saveWorkspaceTreeToLocalStorage();
 };
 
 const fileTreePanel = document.getElementById("fileTreePanel");
@@ -877,12 +894,52 @@ function focusTreeItemNow(id) {
   return true;
 }
 
+let pendingTreeRenameId = null;
+
+function nameExistsInFolder(parentId, name) {
+  const p = items[parentId];
+  if (!p || !Array.isArray(p.children)) return false;
+
+  const target = String(name || "").trim().toLowerCase();
+  for (const cid of p.children) {
+    const it = items[cid];
+    if (!it) continue;
+    const n = String(it.data || "").trim().toLowerCase();
+    if (n === target) return true;
+  }
+  return false;
+}
+
+// "New_File.ino" -> "New_File (1).ino", "New_Folder" -> "New_Folder (1)"
+function makeUniqueDisplayName(parentId, desiredName) {
+  let name = String(desiredName || "").trim();
+  if (name === "") name = "New_Item";
+
+  if (!nameExistsInFolder(parentId, name)) return name;
+
+  const m = name.match(/^(.*?)(\.[a-z0-9]+)$/i);
+  const base = m ? m[1] : name;
+  const ext  = m ? m[2] : "";
+
+  let i = 1;
+  while (true) {
+    const candidate = `${base} (${i})${ext}`;
+    if (!nameExistsInFolder(parentId, candidate)) return candidate;
+    i++;
+  }
+}
+
 // Thêm file, folder
 function createItem(isFolder, defaultName) {
   const parentId = getTargetFolderId();
-  const name = defaultName;
 
-  const id = uniqueId(slugifyId(name));
+  let name = String(defaultName || "").trim();
+  if (!isFolder) name = ensureInoExtension(name);
+
+  name = makeUniqueDisplayName(parentId, name);
+
+
+  const id = createUUID();
 
   items[id] = { index: id, isFolder, children: [], data: name, parent: parentId };
   items[parentId].children ||= [];
@@ -892,54 +949,45 @@ function createItem(isFolder, defaultName) {
 
   emitChanged([parentId, id]);
 
+  pendingTreeRenameId = id;
+
   if (!isFolder) {
     pendingTreeFocusId = id;   // để tree highlight đúng item mới
     openFileInMonaco(id);      // mở luôn trong Monaco
   } else {
     pendingTreeFocusId = id;   // tạo folder xong cũng focus để dễ thao tác tiếp
   }
-  saveWorkspaceToLocalStorage();
+  saveWorkspaceTreeToLocalStorage();
 }
 
 document.getElementById("btnNewFile")?.addEventListener("click", () => createItem(false, "New_File.ino"));
 document.getElementById("btnNewFolder")?.addEventListener("click", () => createItem(true, "New_Folder"));
 
-// rename file bằng F2
-function renameFileId(oldId, newDisplayName) {
-  const oldItem = items[oldId];
-  if (!oldItem) return;
+function ensureInoExtension(name) {
+  const n = String(name || "").trim();
+  if (n === "") return "New_File.ino";
 
-  // folder: chỉ đổi data
-  if (oldItem.isFolder) {
-    oldItem.data = newDisplayName;
-    emitChanged([oldId]);
-    pendingTreeFocusId = oldId;
-    saveWorkspaceToLocalStorage();
-    return;
+  // nếu đã có .ino thì giữ nguyên
+  if (n.toLowerCase().endsWith(".ino")) return n;
+
+  // không có đuôi → tự thêm .ino
+  return n + ".ino";
+}
+
+// rename file bằng F2
+function renameFileId(id, newDisplayName) {
+  const item = items[id];
+  if (!item) return;
+
+  if (!item.isFolder) {
+    newDisplayName = ensureInoExtension(newDisplayName);
   }
 
-  const newId = uniqueId(slugifyId(newDisplayName));
-  const parentId = oldItem.parent || "root";
+  item.data = newDisplayName;
+  emitChanged([id]);
 
-  items[newId] = { ...oldItem, index: newId, data: newDisplayName, parent: parentId };
-
-  const arr = items[parentId]?.children || [];
-  const pos = arr.indexOf(oldId);
-  if (pos >= 0) arr[pos] = newId;
-
-  fileContents[newId] = fileContents[oldId] ?? "";
-  delete fileContents[oldId];
-
-  if (window.currentFileId === oldId) window.currentFileId = newId;
-  if (lastFocusedId === oldId) lastFocusedId = newId;
-
-  delete items[oldId];
-
-  emitChanged([parentId, oldId, newId]);
-
-  pendingTreeFocusId = newId;
-  openFileInMonaco(newId);
-  saveWorkspaceToLocalStorage();
+  pendingTreeFocusId = id;
+  saveWorkspaceTreeToLocalStorage();
 }
 
 // drag drop, reorder, move folder
@@ -1047,37 +1095,52 @@ function handleDrop(itemsDragged, target) {
 
   rebuildParents();
   emitChanged(Array.from(changed));
-  saveWorkspaceToLocalStorage();
+  saveWorkspaceTreeToLocalStorage();
 }
 
 // ==================== Lưu / Load workspace từ LocalStorage ==================== //
-const LS_KEY = "leanbot_workspace";
+const LS_KEY_TREE  = "leanbot_workspace_tree";
+const LS_KEY_FILES = "leanbot_workspace_files";
 
-function saveWorkspaceToLocalStorage() {
+function saveWorkspaceTreeToLocalStorage() {
   const data = {
-    items,                              // tree structure
-    fileContents,                       // nội dung file
-    currentFileId: window.currentFileId // file đang mở trong Monaco
+    items,
+    currentFileId: window.currentFileId
   };
 
-  localStorage.setItem(LS_KEY, JSON.stringify(data));
-  console.log("[LS] Workspace saved");
+  localStorage.setItem(LS_KEY_TREE, JSON.stringify(data));
+}
+
+function saveWorkspaceFilesToLocalStorage() {
+  const data = {
+    fileContents,
+  };
+
+  localStorage.setItem(LS_KEY_FILES, JSON.stringify(data));
 }
 
 function loadWorkspaceFromLocalStorage() {
-  const raw = localStorage.getItem(LS_KEY);
-  if (!raw) return;
-
   try {
-    const data = JSON.parse(raw);
+    const rawTree  = localStorage.getItem(LS_KEY_TREE);
+    const rawFiles = localStorage.getItem(LS_KEY_FILES);
 
-    Object.keys(items).forEach(k => delete items[k]);
-    Object.assign(items, data.items || {});
+    if (rawTree) {
+      const data = JSON.parse(rawTree);
 
-    Object.keys(fileContents).forEach(k => delete fileContents[k]);
-    Object.assign(fileContents, data.fileContents || {});
+      Object.keys(items).forEach(k => delete items[k]);
+      Object.assign(items, data.items || {});
 
-    window.currentFileId = data.currentFileId || "main_ino";
+      window.currentFileId = data.currentFileId || window.currentFileId || MAIN_FILE_ID;
+    }
+
+    if (rawFiles) {
+      const data = JSON.parse(rawFiles);
+
+      Object.keys(fileContents).forEach(k => delete fileContents[k]);
+      Object.assign(fileContents, data.fileContents || {});
+
+      window.currentFileId = data.currentFileId || window.currentFileId || MAIN_FILE_ID;
+    }
 
     rebuildParents();
     console.log("[LS] Workspace restored");
@@ -1087,12 +1150,12 @@ function loadWorkspaceFromLocalStorage() {
 }
 
 loadWorkspaceFromLocalStorage();
-window.__pendingOpenFileId = window.currentFileId || "main_ino";
+window.__pendingOpenFileId = window.currentFileId || MAIN_FILE_ID;
 
 // initial viewState
 const initialOpenId = (window.currentFileId && items[window.currentFileId])
   ? window.currentFileId
-  : "main_ino";
+  : MAIN_FILE_ID;
 
 const ancestorFolders = getAncestorFolders(initialOpenId);
 
@@ -1161,10 +1224,10 @@ function deleteItemById(id) {
   // focus lại
   pendingTreeFocusId = items[removedParent] ? removedParent : "root";
 
-  // nếu đang mở file bị xóa, mở lại main_ino
+  // nếu đang mở file bị xóa, mở lại file chính
   if (window.currentFileId && !items[window.currentFileId]) {
-    window.currentFileId = "main_ino";
-    if (items.main_ino) openFileInMonaco("main_ino");
+    window.currentFileId = MAIN_FILE_ID;
+    if (items[MAIN_FILE_ID]) openFileInMonaco(MAIN_FILE_ID);
   }
 
   if (!items[lastFocusedId]) lastFocusedId = pendingTreeFocusId;
@@ -1172,7 +1235,7 @@ function deleteItemById(id) {
 
   rebuildParents();
   emitChanged([removedParent, "root"]);
-  saveWorkspaceToLocalStorage();
+  saveWorkspaceTreeToLocalStorage();
 }
 
 
@@ -1248,7 +1311,16 @@ reactRoot.render(
           setTimeout(() => focusTreeItemNow(item.index), 0);
         }
 
-        const Tag = context.isRenaming ? "div" : "button";
+        if (pendingTreeRenameId === item.index) {
+          pendingTreeRenameId = null;
+          setTimeout(() => {
+          try { context.focusItem?.(); } catch {}
+          try { context.selectItem?.(); } catch {}
+          try { context.startRenamingItem?.(); } catch {}
+          }, 0);
+        }
+
+        const Tag = "button";
 
         const onCtx = (e) => {
           e.preventDefault();
@@ -1266,6 +1338,56 @@ reactRoot.render(
 
         const indent = Math.max(0, (depth || 0)) * 14; // thụt lề
 
+        let titleNode = title;
+
+        if (context.isRenaming) {
+          titleNode = window.React.createElement(
+            "span",
+            {
+              ref: (el) => {
+                if (!el) return;
+
+                const inp = el.querySelector("input,textarea");
+                if (!inp) return;
+
+                // chỉ xử lý 1 lần cho input này
+                if (inp.dataset.inoSelDone === "1") return;
+                inp.dataset.inoSelDone = "1";
+
+                const applySelection = () => {
+                  inp.focus();
+
+                  const val0 = inp.value ?? "";
+                  const val = String(val0).trim();           // bỏ khoảng trắng thừa
+                  const lower = val.toLowerCase();
+
+                  if (lower.endsWith(".ino")) {
+                    const end = Math.max(0, val.length - 4);
+                    try {
+                      // nếu trim làm đổi độ dài, cập nhật value để selection đúng
+                      if (inp.value !== val) inp.value = val;
+                      inp.setSelectionRange(0, end);
+                    } catch (e) {
+                      try { inp.select(); } catch (e2) {}
+                    }
+                  } else {
+                    try { inp.select(); } catch (e) {}
+                  }
+                };
+
+                // chạy sau khi input render xong
+                requestAnimationFrame(() => {
+                  applySelection();
+
+                  // chạy lại sau đó để tránh bị thư viện ghi đè selection
+                  setTimeout(applySelection, 30);
+                });
+              }
+            },
+            title
+          );
+        }
+
         return window.React.createElement(
           "li",
           { ...context.itemContainerWithChildrenProps, style: { margin: 0 } },
@@ -1274,6 +1396,7 @@ reactRoot.render(
             {
               ...context.itemContainerWithoutChildrenProps,
               ...context.interactiveElementProps,
+              disabled: context.isRenaming,
               onContextMenu: onCtx,
               className,
               style: {
@@ -1291,7 +1414,7 @@ reactRoot.render(
               },
             },
             arrow,
-            title
+            titleNode
           ),
           children
         );

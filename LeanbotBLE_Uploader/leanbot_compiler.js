@@ -1,3 +1,5 @@
+import { hash32FromString } from "./leanbot_ble.js";
+
 export class LeanbotCompiler {
   #prevHash = "";
   #prevResponse = null;
@@ -56,7 +58,7 @@ export class LeanbotCompiler {
   }
 
   async #requestCompile(payload, compileServer) {
-    const payloadHash = SparkMD5.hash( JSON.stringify({ payload, compileServer }) );
+    const payloadHash = hash32FromString( JSON.stringify({ payload, compileServer }) );
 
     if (payloadHash === this.#prevHash) {
       await new Promise((resolve) => setTimeout(resolve, 500)); // simulate network delay
@@ -71,8 +73,18 @@ export class LeanbotCompiler {
 
     if (!res.ok) throw new Error(`Compile HTTP ${res.status}`);
 
-    this.#prevResponse = await res.json(); // { hex: base64, log: "..." }
-    this.#prevHash = payloadHash;
-    return this.#prevResponse;
+    const result = await res.json(); // { hex, log }
+    
+    // CHỈ cache khi compile thành công
+    if (result.hex && result.hex.trim() !== "") {
+      this.#prevHash = payloadHash;
+      this.#prevResponse = result;
+    } else {
+      // compile error → reset cache
+      this.#prevHash = "";
+      this.#prevResponse = null;
+    }
+
+    return result;
   }
 }

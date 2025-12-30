@@ -144,7 +144,7 @@ export class LeanbotBLE {
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
-    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval, window.HASH);
+    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval);
 
     /** ---------- CONNECT CALLBACK ---------- */
     console.log("Callback onConnect: Enabled");
@@ -407,11 +407,8 @@ class Uploader {
     this.totalPackets = this.#packets.length - 1;
 
     // Tính toán hash cho từng gói
-    const hashType = window.HASH || 2; // 1 = MD5, 2 = HASH32
     this.#packetHashes = [];
-
-    if (hashType === 1) this.#computePacketHashesMD5();
-    if (hashType === 2) this.#computePacketHashesHash32();
+    this.#computePacketHashesHash32();
 
     const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
     const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
@@ -436,19 +433,6 @@ class Uploader {
     // console.log("Waiting for Receive feedback...");
   }
 
-  // Kiểu 1: MD5 tích lũy
-  #computePacketHashesMD5() {
-    const md5 = new SparkMD5.ArrayBuffer();
-    md5.reset();   
-    for (let i = 0; i < this.#packets.length; i++) {
-      md5.append(this.#packets[i].buffer);
-      const state = md5.getState();
-      this.#packetHashes[i] = md5.end().toUpperCase().substring(0, 8);
-      md5.setState(state); // to resume an incremental md5
-    }
-  }
-
-  // Kiểu 2: hash32 mới
   #computePacketHashesHash32() {
     let hash32 = 0 >>> 0; // reset hash32
     for (let i = 0; i < this.#packets.length; i++) {
@@ -488,11 +472,6 @@ class Uploader {
 
     if (BLE_Interval) {
       const cmd = `SET BLE_INTERVAL ${BLE_Interval}`;
-      await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
-    }
-
-    if (HASH) {
-      const cmd = `SET HASH ${HASH}`;
       await this.#ControlPipe_sendToLeanbot(new TextEncoder().encode(cmd));
     }
   }
@@ -1318,19 +1297,13 @@ function updateHashWithBytes(hash32, data) {
   return hash32;
 }
 
-// ======================================================
-// 🔹 HEX FORMATTING UTILITIES
-// ======================================================
-function logFormatHexBlock(data) {
-  console.log("const uint8_t hexdata[] = {");
-  let lines = [];
-  for (let i = 0; i < data.length; i += 16) {
-    const slice = data.slice(i, i + 16);
-    const hexLine = Array.from(slice)
-      .map(b => "0x" + b.toString(16).padStart(2, "0"))
-      .join(", ");
-    lines.push("  " + hexLine + ",");
-  }
-  console.log(lines.join("\n"));
-  console.log("};");
+function hash32FromString(str) {
+  const bytes = new TextEncoder().encode(str);
+  let hash = 0;
+  hash = updateHashWithBytes(hash, bytes);
+  return hash;
 }
+
+export {
+  hash32FromString
+};
