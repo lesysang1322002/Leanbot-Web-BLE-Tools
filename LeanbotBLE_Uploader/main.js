@@ -1,8 +1,7 @@
 // main.js
-/* ============================================================
- *  URL PARAMETERS
- *  - ?BLE_MaxLength=...&BLE_Interval=...&SERVER=...&MODE=...
- * ============================================================ */
+// ============================================================
+// URL PARAMETERS + GLOBAL CONFIG
+// ============================================================
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
@@ -18,13 +17,15 @@ console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${window.BLE_Interval}`);
 console.log(`SERVER = ${window.SERVER}`);
 
-/* ============================================================
- *  IMPORTS & INIT
- * ============================================================ */
+// ============================================================
+// IMPORTS + INIT LEANBOT
+// ============================================================
 import { LeanbotBLE } from "./leanbot_ble.js";
 const leanbot = new LeanbotBLE();
 
-// ================== Leanbot Connection =================== //
+// ============================================================
+// LEANBOT CONNECTION
+// ============================================================
 const leanbotStatus = document.getElementById("leanbotStatus");
 const btnConnect    = document.getElementById("btnConnect");
 const btnReconnect  = document.getElementById("btnReconnect");
@@ -71,8 +72,13 @@ async function reconnectLeanbot() {
   console.log("Reconnect result:", result.message);
 }
 
-// =================== Serial Monitor =================== //
+// ============================================================
+// SERIAL MONITOR
+// ============================================================
 const serialLog           = document.getElementById("serialLog");
+const inputCommand        = document.getElementById("serialInput");
+const btnSend             = document.getElementById("btnSend");
+const checkboxNewline     = document.getElementById("addNewline");
 const checkboxAutoScroll  = document.getElementById("autoScroll");
 const checkboxTimestamp   = document.getElementById("showTimestamp");
 const btnClear            = document.getElementById("btnClear");
@@ -80,6 +86,7 @@ const btnCopy             = document.getElementById("btnCopy");
 
 btnClear.onclick = () => clearSerialLog();
 btnCopy.onclick  = () => copySerialLog();
+btnSend.onclick  = () => send();
 
 function formatTimestamp(ts) {
   const hours        = String(ts.getHours()).padStart(2,'0');
@@ -108,58 +115,31 @@ function copySerialLog() {
     .catch(err => console.error("Copy failed:", err));
 }
 
-// ================== Send Command ==================
-const inputCommand    = document.getElementById("serialInput");
-const btnSend         = document.getElementById("btnSend");
-const checkboxNewline = document.getElementById("addNewline");
-
-btnSend.onclick = () => send();
-
 async function send() {
   const newline = checkboxNewline.checked ? "\n" : "";
   await leanbot.Serial.send(inputCommand.value + newline);
   inputCommand.value = "";
 }
 
-// =================== Button Load File =================== //
-const btnLoadFile = document.getElementById("btnLoadFile");
-const fileInput   = document.getElementById("FileInput");
-
-btnLoadFile.addEventListener("click", async () => {
-  fileInput.click();                // mở hộp chọn file
-  const loaded = await loadFile();  // { fileName, ext, text }
-  if (!loaded) return;
-
-  // chuyển cho FILE TREE tạo file mới + mở trong Monaco
-  window.importLocalFileToTree?.(loaded);
-});
-
-// Hàm load file và trả về đối tượng { fileName, ext, text }
-async function loadFile() {
-  return new Promise((resolve) => {
-    fileInput.value = "";
-
-    fileInput.onchange = async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return resolve(null);
-
-      const fileName = file.name;
-      const ext = fileName.split(".").pop().toLowerCase();
-      const text = await file.text();
-
-      resolve({ fileName, ext, text }); // Trả về đối tượng file đã load
-    };
-  });
-}
+// ============================================================
+// COMPILE + UPLOAD CORE
+// ============================================================
 
 // =================== Button Compile =================== //
 const btnCompile = document.getElementById("btnCompile");
-const UploaderCompileLog = document.getElementById("compileLog");
 const ProgramTab = document.getElementById("programGrid");
+const UploaderCompileLog   = document.getElementById("compileLog");
+const UploaderCompileTitle = document.getElementById("compileTitle");
+const UploaderCompileProg  = document.getElementById("progCompile");
 
 btnCompile.addEventListener("click", async () => {
   await doCompile();
 });
+
+// Lấy nội dung code từ Monaco Editor
+function getSourceCode() {
+  return window.arduinoEditor?.getValue() || "";
+}
 
 async function doCompile() {
   const sourceCode = getSourceCode();
@@ -189,6 +169,7 @@ leanbot.Compiler.onCompileError = (compileMessage) => {
   UploaderCompileLog.value = compileMessage;
   UploaderCompileProg.className = "red";
   UploaderCompileTitle.className = "red";
+
   if (!isCompileAndUpload) return;
   ProgramTab.classList.add("hide-upload"); // Ẩn upload khi compile lỗi
 };
@@ -226,9 +207,6 @@ btnUpload.addEventListener("click", async () => {
 
 // =================== Upload DOM Elements =================== //
 const UploaderTitleUpload  = document.getElementById("uploadTitle");
-const UploaderCompileTitle = document.getElementById("compileTitle");
-
-const UploaderCompileProg  = document.getElementById("progCompile");
 const UploaderTransfer     = document.getElementById("progTransfer");
 const UploaderWrite        = document.getElementById("progWrite");
 const UploaderVerify       = document.getElementById("progVerify");
@@ -326,12 +304,9 @@ leanbot.Uploader.onError = (err) => {
   UploaderTitleUpload.className = "red";
 };
 
-// Lấy nội dung code từ Monaco Editor
-function getSourceCode() {
-  return window.arduinoEditor?.getValue() || "";
-}
-
-// =================== SERIAL =================== //
+// ============================================================
+// SERIAL SECTION TABS
+// ============================================================
 const workspace      = document.getElementById("workspace");
 const serialSection  = document.getElementById("serialSection");
 const btnSerial      = document.getElementById("btnSerial");
@@ -380,8 +355,9 @@ tabs.forEach(tab => {
   });
 });
 
-// =================== Monaco Editor for Arduino =================== //
-
+// ============================================================
+// MONACO EDITOR (ARDUINO)
+// ============================================================
 require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs" } });
 
     require(["vs/editor/editor.main"], function () {
@@ -551,9 +527,11 @@ require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0
       });
     });
 
+// ============================================================
+//  FILE TREE + WORKSPACE
+// ============================================================
 
-//==================== FILE TREE =================== //
-
+// Templates ino
 const inoTemplates = {
   basicMotion: "",
   default: ""
@@ -582,9 +560,9 @@ function createUUID() {
   return crypto.randomUUID();
 }
 
+// Tạo dữ liệu tree
 const MAIN_FILE_ID = createUUID();
 
-// Tạo dữ liệu tree
 const items = {
   root: {
     index: "root",
@@ -610,7 +588,7 @@ let lastFocusedId    = MAIN_FILE_ID;
 let lastSelectedIds  = [MAIN_FILE_ID];
 window.currentFileId = MAIN_FILE_ID;
 
-// gắn parent cho mỗi node, để move nhanh
+// Gắn parent cho mỗi node, để move nhanh
 function rebuildParents() {
   for (const id in items) items[id].parent = null;
   for (const id in items) {
@@ -632,14 +610,12 @@ function getAncestorFolders(id) {
   return out;
 }
 
-const mount = document.getElementById("fileTreeMount");
 const { UncontrolledTreeEnvironment, Tree, StaticTreeDataProvider } = window.ReactComplexTree;
-
 const dataProvider = new StaticTreeDataProvider(items, (item, data) => ({ ...item, data }));
 const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
 
 // Autosave nội dung từ Monaco về fileContents
-const AutoSaveDelayMs = 1000;
+const AutoSaveDelayMs = 10000; // 10 giây
 let saveTimer = null;
 
 function hookMonacoAutosaveOnce() {
@@ -685,6 +661,37 @@ function getTargetFolderId() {
   return "root";
 }
 
+// Import local file into tree
+const btnLoadFile = document.getElementById("btnLoadFile");
+const fileInput   = document.getElementById("FileInput");
+
+btnLoadFile.addEventListener("click", async () => {
+  fileInput.click();                // mở hộp chọn file
+  const loaded = await loadFile();  // { fileName, ext, text }
+  if (!loaded) return;
+
+  // chuyển cho FILE TREE tạo file mới + mở trong Monaco
+  window.importLocalFileToTree?.(loaded);
+});
+
+// Hàm load file và trả về đối tượng { fileName, ext, text }
+async function loadFile() {
+  return new Promise((resolve) => {
+    fileInput.value = "";
+
+    fileInput.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return resolve(null);
+
+      const fileName = file.name;
+      const ext = fileName.split(".").pop().toLowerCase();
+      const text = await file.text();
+
+      resolve({ fileName, ext, text }); // Trả về đối tượng file đã load
+    };
+  });
+}
+
 // Nhận file local đã đọc từ loadFile() và tạo file mới trong tree
 window.importLocalFileToTree = (loaded) => {
   if (!loaded) return;
@@ -716,6 +723,8 @@ window.importLocalFileToTree = (loaded) => {
   saveWorkspaceTreeToLocalStorage();
 };
 
+
+// Drag & Drop file vào file tree
 const fileTreePanel = document.getElementById("fileTreePanel");
 
 function isValidDropFile(file) {
@@ -881,11 +890,13 @@ function getTimestampName() {
 
 btnNewFile?.addEventListener("click", () => {
   const name = getTimestampName() + ".ino";
+  console.log("Creating new file:", name);
   createItem(false, name);
 });
 
 btnNewFolder?.addEventListener("click", () => {
   const name = getTimestampName();
+  console.log("Creating new folder:", name);
   createItem(true, name);
 });
 
@@ -1022,7 +1033,9 @@ function handleDrop(itemsDragged, target) {
   saveWorkspaceTreeToLocalStorage();
 }
 
-// ==================== Lưu / Load workspace từ LocalStorage ==================== //
+// ============================================================
+//  LOCALSTORAGE (WORKSPACE)
+// ============================================================
 const LS_KEY_TREE  = "leanbot_workspace_tree";
 const LS_KEY_FILES = "leanbot_workspace_files";
 
@@ -1076,7 +1089,9 @@ function loadWorkspaceFromLocalStorage() {
 loadWorkspaceFromLocalStorage();
 window.__pendingOpenFileId = window.currentFileId || MAIN_FILE_ID;
 
-// initial viewState
+// ============================================================
+// TREE VIEWSTATE + CONTEXT MENU
+// ============================================================
 const initialOpenId = (window.currentFileId && items[window.currentFileId])
   ? window.currentFileId
   : MAIN_FILE_ID;
@@ -1162,7 +1177,6 @@ function deleteItemById(id) {
   saveWorkspaceTreeToLocalStorage();
 }
 
-
 ctxDeleteBtn?.addEventListener("click", (e) => {
   e.stopPropagation();
   const id = ctxTargetId;
@@ -1184,7 +1198,10 @@ ctxRenameBtn?.addEventListener("click", (e) => {
   try { ctx.startRenamingItem(); } catch (err) {}
 });
 
-// ==================== RENDER FILE TREE ==================== //
+// ============================================================
+// RENDER FILE TREE
+// ============================================================
+const mount = document.getElementById("fileTreeMount");
 const reactRoot = window.ReactDOM.createRoot(mount);
 
 reactRoot.render(
