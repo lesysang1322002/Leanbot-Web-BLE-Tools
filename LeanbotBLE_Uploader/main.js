@@ -121,8 +121,6 @@ async function send() {
   inputCommand.value = "";
 }
 
-
-
 // =================== Button Load File =================== //
 const btnLoadFile = document.getElementById("btnLoadFile");
 const fileInput   = document.getElementById("FileInput");
@@ -321,6 +319,7 @@ leanbot.Uploader.onVerifyError = () => {
 
 leanbot.Uploader.onSuccess = () => {
   UploaderTitleUpload.className = "green";
+  setTimeout(() => uiSetTab("monitor"), 1000); // Chuyển sang tab monitor sau 1 giây
 };
 
 leanbot.Uploader.onError = (err) => {
@@ -554,7 +553,28 @@ require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0
 
 
 //==================== FILE TREE =================== //
-// trạng thái Monaco
+
+const inoTemplates = {
+  basicMotion: "",
+  default: ""
+};
+
+async function loadText(url) {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Load template failed: ${url} (HTTP ${res.status})`);
+  }
+  return await res.text();
+}
+
+async function initInoTemplates() {
+  inoTemplates.basicMotion = await loadText("./examples/BasicMotion.ino");
+  inoTemplates.default     = await loadText("./examples/Default.ino");
+}
+
+await initInoTemplates();
+
+// Trạng thái Monaco
 window.__isMonacoReady ||= false;
 window.__pendingOpenFileId = window.__pendingOpenFileId ?? null;
 
@@ -576,43 +596,18 @@ const items = {
     index: MAIN_FILE_ID,
     isFolder: false,
     children: [],
-    data: "BasicLeanbotMotion.ino"
+    data: "BasicMotion.ino"
   },
 };
 
-
 // nội dung file, key theo id file (item.index)
 const fileContents = {
-  [MAIN_FILE_ID]:
-`/*Basic Leanbot Motion
-
-  Wait for TB1A+TB1B touch signal, then go straight for 100 mm, then stop.
-
-  More Leanbot examples at  https://git.pythaverse.space/leanbot/Examples
-*/
-
-
-#include <Leanbot.h>                    // use Leanbot library
-
-
-void setup() {
-  Leanbot.begin();                      // initialize Leanbot
-}
-
-
-void loop() {
-  LbMission.begin( TB1A + TB1B );       // start mission when both TB1A and TB1B touched
-
-  LbMotion.runLR( +1000, +1000 );       // go straight forward with speed 1000 steps/s
-  LbMotion.waitDistanceMm( 100 );       // for 100 mm distance
-
-  LbMission.end();                      // stop, finish mission
-}`,
+  [MAIN_FILE_ID]: inoTemplates.basicMotion || ""
 };
 
 // track focus, selection để tạo file, folder, move đúng vị trí
-let lastFocusedId = MAIN_FILE_ID;
-let lastSelectedIds = [MAIN_FILE_ID];
+let lastFocusedId    = MAIN_FILE_ID;
+let lastSelectedIds  = [MAIN_FILE_ID];
 window.currentFileId = MAIN_FILE_ID;
 
 // gắn parent cho mỗi node, để move nhanh
@@ -807,10 +802,10 @@ function nameExistsInFolder(parentId, name) {
   return false;
 }
 
-// "New_File.ino" -> "New_File (1).ino", "New_Folder" -> "New_Folder (1)"
+// "2025.12.31-08.44.ino" -> "2025.12.31-08.44 (1).ino"
 function makeUniqueDisplayName(parentId, desiredName) {
   let name = String(desiredName || "").trim();
-  if (name === "") name = "New_Item";
+  if (name === "") name = getTimestampName() + ".ino";
 
   if (!nameExistsInFolder(parentId, name)) return name;
 
@@ -826,6 +821,17 @@ function makeUniqueDisplayName(parentId, desiredName) {
   }
 }
 
+// Mở folder nếu nó đang collapsed
+function expandFolderChain(folderId) {
+  let id = folderId; 
+
+  while (id && id !== "root") {
+    const ctx = window.__rctItemActions.get(id);
+    try { ctx?.expandItem?.(); } catch (e) {} 
+    id = items[id]?.parent;
+  }
+}
+
 // Thêm file, folder
 function createItem(isFolder, defaultName) {
   const parentId = getTargetFolderId();
@@ -835,16 +841,17 @@ function createItem(isFolder, defaultName) {
 
   name = makeUniqueDisplayName(parentId, name);
 
-
   const id = createUUID();
 
   items[id] = { index: id, isFolder, children: [], data: name, parent: parentId };
   items[parentId].children ||= [];
   items[parentId].children.push(id);
 
-  if (!isFolder) fileContents[id] = "";
+  if (!isFolder) fileContents[id] = inoTemplates.default || "";
 
   emitChanged([parentId, id]);
+
+  setTimeout(() => expandFolderChain(parentId), 0);
 
   pendingTreeRenameId = id;
 
@@ -856,13 +863,35 @@ function createItem(isFolder, defaultName) {
   }
   saveWorkspaceTreeToLocalStorage();
 }
+const btnNewFile = document.getElementById("btnNewFile");
+const btnNewFolder = document.getElementById("btnNewFolder");
 
-document.getElementById("btnNewFile")?.addEventListener("click", () => createItem(false, "New_File.ino"));
-document.getElementById("btnNewFolder")?.addEventListener("click", () => createItem(true, "New_Folder"));
+function getTimestampName() {
+  const d = new Date();
+
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth() + 1).padStart(2, "0");
+  const dd   = String(d.getDate()).padStart(2, "0");
+
+  const hh   = String(d.getHours()).padStart(2, "0");
+  const mi   = String(d.getMinutes()).padStart(2, "0");
+
+  return `${yyyy}.${mm}.${dd}-${hh}.${mi}`;
+}
+
+btnNewFile?.addEventListener("click", () => {
+  const name = getTimestampName() + ".ino";
+  createItem(false, name);
+});
+
+btnNewFolder?.addEventListener("click", () => {
+  const name = getTimestampName();
+  createItem(true, name);
+});
 
 function ensureInoExtension(name) {
   const n = String(name || "").trim();
-  if (n === "") return "New_File.ino";
+  if (n === "") return getTimestampName() + ".ino";
 
   // nếu đã có .ino thì giữ nguyên
   if (n.toLowerCase().endsWith(".ino")) return n;
@@ -912,7 +941,6 @@ function removeFromParent(childId) {
   return removedParent;
 }
 
-
 function insertIntoFolder(folderId, childId, index) {
   const f = items[folderId];
   if (!f || !f.isFolder) return;
@@ -928,7 +956,6 @@ function insertIntoFolder(folderId, childId, index) {
   f.children.splice(idx, 0, childId);
   items[childId].parent = folderId;
 }
-
 
 function isDescendantOf(candidateChild, candidateParent) {
   let p = items[candidateChild]?.parent;
@@ -1293,7 +1320,7 @@ reactRoot.render(
             {
               ...context.itemContainerWithoutChildrenProps,
               ...context.interactiveElementProps,
-              // disabled: context.isRenaming,
+              disabled: context.isRenaming,
               onContextMenu: onCtx,
               className,
               style: {

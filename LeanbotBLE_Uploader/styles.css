@@ -183,6 +183,10 @@ body{
   flex:1;
 }
 
+.file-tree-item[disabled]{
+  color: #000;
+}
+
 /* ========== TREE CONTEXT MENU ========== */
 .ctx-menu{
   position:fixed;
@@ -214,11 +218,11 @@ body{
 }
 
 .file-tree-item.is-selected {
-  background: #dbeafe;       /* xanh nhạt */
+  font-weight: bold;
 }
 
 .file-tree-item.is-focused {
-  outline: 1px solid #93c5fd;
+  outline: 1px solid #050505;
 }
 
 #fileTreePanel.is-drop-hover{
