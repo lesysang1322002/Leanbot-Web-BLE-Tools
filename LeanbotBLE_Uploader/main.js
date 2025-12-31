@@ -1,7 +1,7 @@
 // main.js
 /* ============================================================
  *  URL PARAMETERS
- *  - ?BLE_MaxLength=...&BLE_Interval=...&HASH=...
+ *  - ?BLE_MaxLength=...&BLE_Interval=...&SERVER=...&MODE=...
  * ============================================================ */
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
@@ -22,9 +22,7 @@ console.log(`SERVER = ${window.SERVER}`);
  *  IMPORTS & INIT
  * ============================================================ */
 import { LeanbotBLE } from "./leanbot_ble.js";
-
-// Instances
-const leanbot         = new LeanbotBLE();
+const leanbot = new LeanbotBLE();
 
 // ================== Leanbot Connection =================== //
 const leanbotStatus = document.getElementById("leanbotStatus");
@@ -110,26 +108,6 @@ function copySerialLog() {
     .catch(err => console.error("Copy failed:", err));
 }
 
-// Giới hạn log chỉ còn 30 dòng gần nhất khi upload và khôi phục sau khi upload xong
-let fullSerialBackup = null;
-
-function trimSerialLogTo30() {
-  const lines = serialLog.value.split("\n");
-  if (lines.length <= 30) return;
-
-  if (fullSerialBackup === null) fullSerialBackup = serialLog.value;
-
-  const last30 = lines.slice(-30);
-  serialLog.value = last30.join("\n");
-}
-
-function restoreFullSerialLog() {
-  if (fullSerialBackup === null) return;
-
-  serialLog.value = fullSerialBackup;
-  fullSerialBackup = null;
-}
-
 // ================== Send Command ==================
 const inputCommand    = document.getElementById("serialInput");
 const btnSend         = document.getElementById("btnSend");
@@ -143,52 +121,6 @@ async function send() {
   inputCommand.value = "";
 }
 
-// =================== FILE SELECTION MODAL =================== //
-const modal          = document.getElementById("fileModal");
-const closeModal     = document.getElementById("closeModal");
-const fileNameLabel  = document.getElementById("fileName");
-
-let fileLoaded = ""; // lưu nội dung file đã đọc
-
-closeModal.addEventListener("click", () => {
-  modal.classList.add("hidden");
-});
-
-// Load file từ URL và trả về { fileName, ext, text }
-async function loadFromUrl(fileUrl) {
-  const fileName = (fileUrl.split("/").pop() || "unknown").split("?")[0].split("#")[0];
-  const ext = (fileName.split(".").pop() || "").toLowerCase();
-
-  const res = await fetch(fileUrl, { cache: "no-store" }); // tránh cache nếu có
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-  const text = await res.text();
-
-  return { fileName, ext, text };
-}
-
-document.querySelectorAll(".fileOption").forEach((btn) => {
-  btn.addEventListener("click", async (e) => {
-    const fileUrl = btn.dataset.file; // ổn định hơn e.target.getAttribute(...)
-    if (!fileUrl) return;
-
-    modal.classList.add("hidden");
-
-    console.log(`[FETCH] URL: ${fileUrl}`);
-
-    try {
-      const res = await fetch(fileUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.leanbotStatus}`);
-      const text = await res.text();
-      window.arduinoEditor?.setValue(text); // Hiển thị nội dung file lên editor
-
-      console.log(`Loaded HEX file: ${fileName}`);
-    } catch (err) {
-      console.log(`Failed to fetch HEX file: ${err}`);
-      alert("Error loading file. Please check your internet or URL.");
-    }
-  });
-});
 
 
 // =================== Button Load File =================== //
@@ -204,7 +136,6 @@ btnLoadFile.addEventListener("click", async () => {
   window.importLocalFileToTree?.(loaded);
 });
 
-
 // Hàm load file và trả về đối tượng { fileName, ext, text }
 async function loadFile() {
   return new Promise((resolve) => {
@@ -217,8 +148,6 @@ async function loadFile() {
       const fileName = file.name;
       const ext = fileName.split(".").pop().toLowerCase();
       const text = await file.text();
-
-      fileNameLabel.textContent = fileName; // Cập nhật tên file trên UI
 
       resolve({ fileName, ext, text }); // Trả về đối tượng file đã load
     };
@@ -273,7 +202,6 @@ leanbot.Compiler.onCompileProgress = (elapsedTime, estimatedTotal) => {
 
 // =================== Button Upload =================== //
 const btnUpload = document.getElementById("btnUpload");
-
 let isCompileAndUpload = false;
 
 btnUpload.addEventListener("click", async () => {
@@ -306,7 +234,7 @@ const UploaderCompileProg  = document.getElementById("progCompile");
 const UploaderTransfer     = document.getElementById("progTransfer");
 const UploaderWrite        = document.getElementById("progWrite");
 const UploaderVerify       = document.getElementById("progVerify");
-const UploaderLogUpload          = document.getElementById("uploadLog");
+const UploaderLogUpload    = document.getElementById("uploadLog");
 
 const UploaderTimeCompile  = document.getElementById("compileTime");
 const UploaderRSSI         = document.getElementById("uploadRSSI");
@@ -334,17 +262,6 @@ function uiResetUpload() {
   UploaderTitleUpload.className   = "yellow";
   UploaderTimeUpload.textContent  = "0.0 sec";
   UploaderRSSI.textContent        = "";
-}
-
-async function SimulateCompiler() {
-  UploaderCompileTitle.className = "yellow";
-  const total = 3;
-  for (let i = 1; i <= total; i++) {
-    await new Promise(r => setTimeout(r, 100));
-    uiUpdateTime(compileStart, UploaderTimeCompile);
-    uiUpdateProgress(UploaderCompileProg, i, total);
-  }
-  UploaderCompileTitle.className = "green";
 }
 
 // =================== Uploader UI Updates =================== //
@@ -416,13 +333,13 @@ function getSourceCode() {
 }
 
 // =================== SERIAL =================== //
-const workspace     = document.getElementById("workspace");
-const serialSection = document.getElementById("serialSection");
-const btnSerial     = document.getElementById("btnSerial");
+const workspace      = document.getElementById("workspace");
+const serialSection  = document.getElementById("serialSection");
+const btnSerial      = document.getElementById("btnSerial");
 
-const programPanel  = document.getElementById("programPanel");
-const monitorPanel  = document.getElementById("monitorPanel");
-const tabs          = document.querySelectorAll("#serialTabs .serial-tab");
+const programPanel   = document.getElementById("programPanel");
+const monitorPanel   = document.getElementById("monitorPanel");
+const tabs           = document.querySelectorAll("#serialTabs .serial-tab");
 const btnCloseSerial = document.getElementById("btnCloseSerial");
 
 function openSerial() {
@@ -558,7 +475,7 @@ require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0
 
 
       window.arduinoEditor.updateOptions({
-        scrollBeyondLastLine: false,       // Dòng cuối luôn nằm sát đáy editor
+        scrollBeyondLastLine: false,      // Dòng cuối luôn nằm sát đáy editor
 
         quickSuggestions: true,           // Tự động hiện gợi ý khi đang gõ
         suggestOnTriggerCharacters: true, // Gợi ý khi gõ các ký tự kích hoạt (., (, <)
@@ -760,26 +677,6 @@ function openFileInMonaco(fileId) {
   window.arduinoEditor.setValue(content);
 
   saveWorkspaceTreeToLocalStorage();
-}
-
-// id generator
-function slugifyId(name) {
-  const base = String(name || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^a-z0-9_\.]/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
-
-  return base || "item";
-}
-
-function uniqueId(base) {
-  let id = base;
-  let i = 1;
-  while (items[id]) id = base + "_" + i++;
-  return id;
 }
 
 // Lấy folder đích để thêm file, folder
@@ -1396,7 +1293,7 @@ reactRoot.render(
             {
               ...context.itemContainerWithoutChildrenProps,
               ...context.interactiveElementProps,
-              disabled: context.isRenaming,
+              // disabled: context.isRenaming,
               onContextMenu: onCtx,
               className,
               style: {

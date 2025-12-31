@@ -46,9 +46,6 @@
 
     <div class="lb-top-right">
 
-      <span id="fileName" hidden>No file</span>
-      <input type="file" id="FileInput" accept=".ino" hidden> 
-
       <button id="btnCompile" class="lb-icon-btn" >
         <img class="lb-icon-img" src="./img/icons/compile.png" />
         <span>COMPILE</span>
@@ -75,6 +72,7 @@
         <div id="fileTreeToolbar">   <!-- toolbar cho file tree -->
           <button class="lb-icon-btn" id="btnNewFile"  >＋ File</button>
           <button class="lb-icon-btn" id="btnLoadFile" >Load File</button>
+          <input type="file" id="FileInput" accept=".ino" hidden> <!-- input file ẩn -->
           <button class="lb-icon-btn" id="btnNewFolder">＋ Folder</button>
         </div>
 
@@ -234,30 +232,6 @@
       </button>
     </div>
   </footer>
-
-  <!-- FILE SELECTION MODAL -->
-  <div id="fileModal" class="hidden">
-    <div class="modal-content">
-      <h3>Select File Demo</h3>
-      <button class="fileOption"
-        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/LbGripper.ino">
-        LbGripper
-      </button>
-      <button class="fileOption"
-        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/LbIRLine.ino">
-        LbIRLine
-      </button>
-      <button class="fileOption"
-        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/LbTouch.ino">
-        LbTouch
-      </button>
-      <button class="fileOption"
-        data-file="https://raw.githubusercontent.com/lesysang1322002/Leanbot-Web-BLE-Tools/main/firmware/LbRGB.ino">
-        LbRGB
-      </button>
-      <button id="closeModal">Cancel</button>
-    </div>
-  </div>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
