@@ -844,6 +844,7 @@ function expandFolderChain(folderId) {
 // Thêm file, folder
 function createItem(isFolder, defaultName) {
   const parentId = getTargetFolderId();
+  console.log("[CREATE] target parentId =", parentId);
 
   let name = String(defaultName || "").trim();
   if (!isFolder) name = ensureInoExtension(name);
@@ -853,23 +854,37 @@ function createItem(isFolder, defaultName) {
   const id = createUUID();
 
   items[id] = { index: id, isFolder, children: [], data: name, parent: parentId };
+  console.log("[CREATE] item.parent =", items[id].parent);
   items[parentId].children ||= [];
   items[parentId].children.push(id);
+  console.log(
+    "[CHECK] parent contains child =",
+    items[parentId].children.includes(id)
+  );
 
   if (!isFolder) fileContents[id] = inoTemplates.default || "";
 
   emitChanged([parentId, id]);
 
-  setTimeout(() => expandFolderChain(parentId), 0);
+  setTimeout(() => {
+    expandFolderChain(parentId);
+
+    if (isFolder) {
+      try {
+        window.arduinoEditor?.setValue("");
+        const ctx = window.__rctItemActions.get(id);
+        ctx?.expandItem?.();
+        console.log("[TREE] auto expand new folder =", id);
+      } catch (e) {
+        console.log("[TREE] expand new folder failed =", id, e);
+      }
+    }
+  }, 0);
 
   pendingTreeRenameId = id;
+  pendingTreeFocusId  = id;
 
-  if (!isFolder) {
-    pendingTreeFocusId = id;   // để tree highlight đúng item mới
-    openFileInMonaco(id);      // mở luôn trong Monaco
-  } else {
-    pendingTreeFocusId = id;   // tạo folder xong cũng focus để dễ thao tác tiếp
-  }
+  if (!isFolder) openFileInMonaco(id);
   saveWorkspaceTreeToLocalStorage();
 }
 const btnNewFile = document.getElementById("btnNewFile");
@@ -1031,6 +1046,7 @@ function handleDrop(itemsDragged, target) {
   rebuildParents();
   emitChanged(Array.from(changed));
   saveWorkspaceTreeToLocalStorage();
+  saveWorkspaceFilesToLocalStorage();
 }
 
 // ============================================================
