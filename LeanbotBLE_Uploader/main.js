@@ -584,7 +584,7 @@ const fileContents = {
 };
 
 // track focus, selection để tạo file, folder, move đúng vị trí
-let lastFocusedId    = MAIN_FILE_ID;
+let lastFocusedId    = MAIN_FILE_ID; 
 let lastSelectedIds  = [MAIN_FILE_ID];
 window.currentFileId = MAIN_FILE_ID;
 
@@ -696,7 +696,7 @@ async function loadFile() {
 window.importLocalFileToTree = (loaded) => {
   if (!loaded) return;
 
-  const fileName = String(loaded.fileName || "New_File.ino");
+  const fileName = String(loaded.fileName || getTimestampName() + ".ino");
   const text = String(loaded.text ?? "");
 
   const parentId = getTargetFolderId();
@@ -866,16 +866,17 @@ function createItem(isFolder, defaultName) {
 
   emitChanged([parentId, id]);
 
+  // Mở chain folder cha để nhìn thấy item mới
+  // Nếu tạo folder, mở luôn chính folder đó
   setTimeout(() => {
     expandFolderChain(parentId);
 
     if (isFolder) {
       try {
-        window.currentFileId = null;
-        window.arduinoEditor?.setValue("");
+        window.currentFileId = null;        // clear current file
+        window.arduinoEditor?.setValue(""); // clear editor for new folder
         const ctx = window.__rctItemActions.get(id);
         ctx?.expandItem?.();
-        console.log("[TREE] auto expand new folder =", id);
       } catch (e) {
         console.log("[TREE] expand new folder failed =", id, e);
       }
@@ -1196,6 +1197,31 @@ function deleteSubtree(id) {
   delete items[id];
 }
 
+function deleteItemWithConfirm(itemId) {
+  const it = items[itemId];
+  if (!it) return;
+
+  const name = it.data || itemId;
+  const childCount = it.isFolder ? (it.children?.length || 0) : 0;
+
+  let message;
+
+  if (it.isFolder) {
+    message = childCount > 0
+      ? `Delete folder "${name}" and its ${childCount} items?`
+      : `Delete folder "${name}"?`;
+  } else {
+    message = `Delete file "${name}"?`;
+  }
+
+  const ok = window.confirm(message);
+  console.log("[DELETE] confirm =", ok, "id =", itemId);
+
+  if (!ok) return;
+
+  deleteItemById(itemId);
+}
+
 function deleteItemById(id) {
   if (!id || !items[id] || id === "root") return;
 
@@ -1225,7 +1251,7 @@ ctxDeleteBtn?.addEventListener("click", (e) => {
   e.stopPropagation();
   const id = ctxTargetId;
   hideCtxMenu();
-  deleteItemById(id);
+  deleteItemWithConfirm(id);
 });
 
 // Rename ngay khi bấm rename trong context menu
