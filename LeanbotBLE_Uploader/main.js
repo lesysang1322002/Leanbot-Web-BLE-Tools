@@ -647,7 +647,7 @@ function openFileInMonaco(fileId) {
   window.currentFileId = fileId;
   window.arduinoEditor.setValue(content);
 
-  saveWorkspaceTreeToLocalStorage();
+  saveWorkspaceFilesToLocalStorage();
 }
 
 // Lấy folder đích để thêm file, folder
@@ -871,6 +871,7 @@ function createItem(isFolder, defaultName) {
 
     if (isFolder) {
       try {
+        window.currentFileId = null;
         window.arduinoEditor?.setValue("");
         const ctx = window.__rctItemActions.get(id);
         ctx?.expandItem?.();
@@ -1046,7 +1047,34 @@ function handleDrop(itemsDragged, target) {
   rebuildParents();
   emitChanged(Array.from(changed));
   saveWorkspaceTreeToLocalStorage();
-  saveWorkspaceFilesToLocalStorage();
+
+  setTimeout(() => {
+    expandFolderChain(destFolderId);
+
+    if (draggedIds.length === 1) {
+      const movedId = draggedIds[0];
+      const movedItem = items[movedId];
+      if (!movedItem) return;
+
+      pendingTreeFocusId = movedId;
+
+      // Nếu là folder: mở luôn folder đó
+      if (movedItem.isFolder) {
+        try {
+          const ctx = window.__rctItemActions.get(movedId);
+          ctx?.expandItem?.();
+          console.log("[MOVE] expanded moved folder =", movedId);
+        } catch (e) {
+          console.log("[MOVE] expand moved folder failed =", movedId, e);
+        }
+        return;
+      }
+
+      // Nếu là file: mở file, đồng thời folder cha đã được expand ở trên
+      console.log("[MOVE] open moved file =", movedId, "parent =", movedItem.parent);
+      openFileInMonaco(movedId);
+    }
+  }, 0);
 }
 
 // ============================================================
