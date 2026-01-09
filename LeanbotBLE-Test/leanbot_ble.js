@@ -806,8 +806,20 @@ function convertHexToBlePackets(hexText) {
 // 🔹 HASH FUNCTION (32-bit)
 // ======================================================
 
-// Hằng số P1
-const P1 = 0xDE1AD64D;
+/**
+ * 
+ * @param {*} x: key Hash (uint32)
+ * @returns hash32 (uint32)
+ */
+
+function hash_prospector(x) {
+    x ^= x >>> 16;
+    x = Math.imul(x, 0x21f0aaad);
+    x ^= x >>> 15;
+    x = Math.imul(x, 0xd35a2d97);
+    x ^= x >>> 15;
+    return x;
+}
 
 /**
  * @param {number} hash - hash hiện tại
@@ -816,13 +828,10 @@ const P1 = 0xDE1AD64D;
  */
 function updateHash(hash, data) {
   hash ^= data;
-  hash ^= hash >>> 15;
-  hash = Math.imul(hash, P1);
-  hash ^= hash >>> 15;
-  hash = Math.imul(hash, P1);
-  hash ^= hash >>> 15;
+  hash = hash_prospector(hash)
   return hash >>> 0; // đảm bảo trả về uint32
 }
+
 
 /**
  * @param {number} hash32 - hash hiện tại (uint32)
