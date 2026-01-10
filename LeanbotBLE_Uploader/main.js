@@ -88,6 +88,13 @@ btnClear.onclick = () => clearSerialLog();
 btnCopy.onclick  = () => copySerialLog();
 btnSend.onclick  = () => send();
 
+inputCommand.addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault(); // prevents form submit or newline
+    send();                 // send line
+  }
+});
+
 function formatTimestamp(ts) {
   const hours        = String(ts.getHours()).padStart(2,'0');
   const minutes      = String(ts.getMinutes()).padStart(2,'0');
@@ -901,8 +908,9 @@ function getTimestampName() {
 
   const hh   = String(d.getHours()).padStart(2, "0");
   const mi   = String(d.getMinutes()).padStart(2, "0");
+  const sec  = String(d.getSeconds()).padStart(2, "0");
 
-  return `${yyyy}.${mm}.${dd}-${hh}.${mi}`;
+  return `${yyyy}.${mm}.${dd}-${hh}.${mi}.${sec}`;
 }
 
 btnNewFile?.addEventListener("click", () => {

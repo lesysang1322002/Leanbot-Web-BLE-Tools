@@ -1296,14 +1296,3 @@ function updateHashWithBytes(hash32, data) {
 
   return hash32;
 }
-
-function hash32FromString(str) {
-  const bytes = new TextEncoder().encode(str);
-  let hash = 0;
-  hash = updateHashWithBytes(hash, bytes);
-  return hash;
-}
-
-export {
-  hash32FromString
-};

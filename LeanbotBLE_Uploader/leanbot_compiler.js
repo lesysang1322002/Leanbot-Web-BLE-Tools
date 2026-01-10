@@ -1,5 +1,3 @@
-import { hash32FromString } from "./leanbot_ble.js";
-
 export class LeanbotCompiler {
   #prevHash = "";
   #prevResponse = null;
@@ -58,7 +56,11 @@ export class LeanbotCompiler {
   }
 
   async #requestCompile(payload, compileServer) {
-    const payloadHash = hash32FromString( JSON.stringify({ payload, compileServer }) );
+    const data = new TextEncoder().encode(JSON.stringify({ payload, compileServer }));
+    const hashBuffer = await window.crypto.subtle.digest("SHA-256", data); // Returns a array buffer
+
+    const hashArray = Array.from(new Uint8Array(hashBuffer)); // convert buffer to byte array
+    const payloadHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join(""); // convert bytes to hex string
 
     if (payloadHash === this.#prevHash) {
       await new Promise((resolve) => setTimeout(resolve, 500)); // simulate network delay
