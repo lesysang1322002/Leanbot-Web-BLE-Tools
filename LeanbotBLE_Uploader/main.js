@@ -43,7 +43,18 @@ else{
   btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
 }
 
-leanbot.onConnect = () => {
+leanbot.onConnect = (connectInteval) => {
+
+	// LbIDEEvent = onConnect
+  const LbIDEEvent = {
+    objectpk: "usb_connect",
+    thongtin: "",
+    noidung: getLeanbotIDWithoutBLE(),
+    server_: "",
+    t_phanhoi: connectInteval
+  };
+  logLbIDEEvent(LbIDEEvent);
+
   leanbotStatus.style.display = "inline-block";
   leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
   leanbotStatus.style.color   = "green";
@@ -51,6 +62,17 @@ leanbot.onConnect = () => {
 }
 
 leanbot.onDisconnect = () => {
+
+	// LbIDEEvent = onDisconnect
+  const LbIDEEvent = {
+    objectpk: "usb_disconnect",
+    thongtin: "",
+    noidung: getLeanbotIDWithoutBLE(),
+    server_: "",
+    t_phanhoi: 0
+  };
+  logLbIDEEvent(LbIDEEvent);
+
   leanbotStatus.style.display = "none";
   btnReconnect.style.display  = "inline-block";
   btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
@@ -163,6 +185,17 @@ async function doCompile() {
 }
 
 leanbot.Compiler.onCompileSucess = (compileMessage) => {
+
+	// LbIDEEvent = onRespond
+  const LbIDEEvent = {
+    objectpk: "compile_res",
+    thongtin: getSourceCode(),
+    noidung: compileMessage,
+    server_: window.SERVER,
+    t_phanhoi: Math.round(performance.now() - compileStart)
+  };
+  logLbIDEEvent(LbIDEEvent);
+
   UploaderCompileLog.value = compileMessage;
   UploaderCompileTitle.className = "green";
 
@@ -173,10 +206,21 @@ leanbot.Compiler.onCompileSucess = (compileMessage) => {
 };
 
 leanbot.Compiler.onCompileError = (compileMessage) => {
+
+	// LbIDEEvent = onRespond (error)
+  const LbIDEEvent = {
+    objectpk: "compile_err",
+    thongtin: getSourceCode(),
+    noidung: compileMessage,
+    server_: window.SERVER,
+    t_phanhoi: Math.round(performance.now() - compileStart)
+  };
+  logLbIDEEvent(LbIDEEvent);
+
   UploaderCompileLog.value = compileMessage;
   UploaderCompileProg.className = "red";
   UploaderCompileTitle.className = "red";
-
+ 
   if (!isCompileAndUpload) return;
   ProgramTab.classList.add("hide-upload"); // Ẩn upload khi compile lỗi
 };
@@ -308,12 +352,12 @@ leanbot.Uploader.onSuccess = () => {
   const LbIDEEvent = {
     objectpk: "upload_done",
     thongtin: "arduino:avr:uno",
-    noidung: leanbot.getLeanbotID(),
+    noidung: getLeanbotIDWithoutBLE(),
     server_: "JDY", // hoặc "LbEsp32" nếu backend là ESP32
     t_phanhoi: Math.round(performance.now() - uploadStart)
   };
 
-  console.log(LbIDEEvent);
+  logLbIDEEvent(LbIDEEvent);
 
   UploaderTitleUpload.className = "green";
   setTimeout(() => uiSetTab("monitor"), 1000); // Chuyển sang tab monitor sau 1 giây
@@ -1464,3 +1508,17 @@ reactRoot.render(
 pendingTreeFocusId = initialOpenId;
 openFileInMonaco(initialOpenId);
 
+// ============================================================
+// Leanbot IDE Event(ARDUINO)
+// ============================================================
+
+function logLbIDEEvent(event) {
+  console.log(
+    "LbIDEEvent\n" +
+    `objectpk   : ${event.objectpk}\n` +
+    `thongtin   : ${event.thongtin}\n` +
+    `noidung    : ${event.noidung}\n` +
+    `server_    : ${event.server_}\n` +
+    `t_phanhoi  : ${event.t_phanhoi}`
+  );
+}
