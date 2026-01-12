@@ -119,8 +119,6 @@ export class LeanbotBLE {
 
   async #setupConnection() {
 
-    const connectStartMs = performance.now();
-
     /** ---------- DISCONNECT EVENT ---------- */
     console.log("Callback onDisconnect: Enabled");
     this.#device.addEventListener("gattserverdisconnected", () => {
@@ -154,8 +152,7 @@ export class LeanbotBLE {
 
     console.log("Callback onConnect: Enabled");
 
-    const connectInteval = Math.round(performance.now() - connectStartMs);
-    if (this.onConnect) this.onConnect(connectInteval);
+    if (this.onConnect) this.onConnect();
 
     /** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
     console.log("Saving device to localStorage:", this.#device.name);

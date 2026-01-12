@@ -30,6 +30,8 @@ const leanbotStatus = document.getElementById("leanbotStatus");
 const btnConnect    = document.getElementById("btnConnect");
 const btnReconnect  = document.getElementById("btnReconnect");
 
+let connectStartMs = 0;
+
 function getLeanbotIDWithoutBLE() {
   return leanbot.getLeanbotID().replace(" BLE", "");
 }
@@ -43,7 +45,7 @@ else{
   btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
 }
 
-leanbot.onConnect = (connectInteval) => {
+leanbot.onConnect = () => {
 
 	// LbIDEEvent = onConnect
   const LbIDEEvent = {
@@ -51,7 +53,7 @@ leanbot.onConnect = (connectInteval) => {
     thongtin: "",
     noidung: getLeanbotIDWithoutBLE(),
     server_: "",
-    t_phanhoi: connectInteval
+    t_phanhoi: Math.round(performance.now() - connectStartMs)
   };
   logLbIDEEvent(LbIDEEvent);
 
@@ -84,12 +86,14 @@ btnReconnect.onclick = async () => reconnectLeanbot();
 async function connectLeanbot() {
   console.log("Scanning for Leanbot...");
   leanbot.disconnect(); // Ngắt kết nối nếu đang kết nối
+  connectStartMs = performance.now();
   const result = await leanbot.connect();
   console.log("Connect result:", result.message);
 }
 
 async function reconnectLeanbot() {
   console.log("Reconnecting to Leanbot...");
+  connectStartMs = performance.now();
   const result = await leanbot.reconnect();
   console.log("Reconnect result:", result.message);
 }
@@ -177,10 +181,11 @@ async function doCompile() {
     return null;
   }
 
-  compileStart = performance.now();
   ProgramTab.classList.add("hide-upload");
   uiSetTab("program");
   uiResetCompile();
+
+  compileStart = performance.now();
   return await leanbot.Compiler.compile(sourceCode, window.SERVER);
 }
 
@@ -235,6 +240,7 @@ const btnUpload = document.getElementById("btnUpload");
 let isCompileAndUpload = false;
 
 btnUpload.addEventListener("click", async () => {
+  connectStartMs = performance.now();
   const result = await leanbot.reconnect();
   if (!result.success) {
     alert("Please connect to Leanbot first!");
@@ -247,12 +253,13 @@ btnUpload.addEventListener("click", async () => {
     return null;
   }
 
-  compileStart = performance.now();
   ProgramTab.classList.remove("hide-upload"); // Hiện phần upload
   uiSetTab("program");
   uiResetCompile();
   uiResetUpload();
   isCompileAndUpload = true;
+
+  compileStart = performance.now();
   await leanbot.compileAndUpload(sourceCode, window.SERVER);
 });
 
@@ -1513,11 +1520,34 @@ openFileInMonaco(initialOpenId);
 // ============================================================
 
 function logLbIDEEvent(event) {
+  // normalize text fields (replace \n, \r, or extra spaces)
+  if (event.thongtin) {
+    event.thongtin = event.thongtin
+      .replace(/\r?\n+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  if (event.noidung) {
+    event.noidung = event.noidung
+      .replace(/\r?\n+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   console.log(
     "LbIDEEvent\n" +
     `objectpk   : ${event.objectpk}\n` +
-    `thongtin   : ${event.thongtin}\n` +
-    `noidung    : ${event.noidung}\n` +
+    `thongtin   : ${
+      event.thongtin && event.thongtin.length > 64
+        ? event.thongtin.substring(0, 64) + "..."
+        : event.thongtin
+    }\n` +
+    `noidung    : ${
+      event.noidung && event.noidung.length > 64
+        ? event.noidung.substring(0, 64) + "..."
+        : event.noidung
+    }\n` +
     `server_    : ${event.server_}\n` +
     `t_phanhoi  : ${event.t_phanhoi}`
   );
