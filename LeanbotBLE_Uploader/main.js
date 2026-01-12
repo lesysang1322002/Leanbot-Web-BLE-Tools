@@ -303,6 +303,18 @@ leanbot.Uploader.onVerifyError = () => {
 };
 
 leanbot.Uploader.onSuccess = () => {
+
+  // LbIDEEvent = onUploadDone
+  const LbIDEEvent = {
+    objectpk: "upload_done",
+    thongtin: "arduino:avr:uno",
+    noidung: leanbot.getLeanbotID(),
+    server_: "JDY", // hoặc "LbEsp32" nếu backend là ESP32
+    t_phanhoi: Math.round(performance.now() - uploadStart)
+  };
+
+  console.log(LbIDEEvent);
+
   UploaderTitleUpload.className = "green";
   setTimeout(() => uiSetTab("monitor"), 1000); // Chuyển sang tab monitor sau 1 giây
 };

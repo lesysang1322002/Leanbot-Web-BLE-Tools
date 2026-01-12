@@ -21,11 +21,11 @@ export class LeanbotCompiler {
       libs: [],
     };
 
-    const startMs = Date.now();
+    const startMs = performance.now();
     const predictedTotal = 10;
 
     const emitProgress = () => {
-      const elapsedTime = (Date.now() - startMs) / 1000;
+      const elapsedTime = (performance.now() - startMs) / 1000;
       const estimatedTotal = Math.sqrt(elapsedTime ** 2 + predictedTotal ** 2);
       if (this.onCompileProgress) this.onCompileProgress(elapsedTime, estimatedTotal);
     };
@@ -34,8 +34,19 @@ export class LeanbotCompiler {
 
     try {
       const compileResult = await this.#requestCompile(payload, compileServer);
+      
+      // LbIDEEvent = onRespond
+      const elapsedMs = performance.now() - startMs;
+      const LbIDEEvent = {
+        objectpk: "compile_res",
+        thongtin: sourceCode,
+        noidung: compileResult.log,
+        server_: compileServer,
+        t_phanhoi: Math.round(elapsedMs)
+      };
+      console.log(LbIDEEvent);
 
-      const elapsedTime = (Date.now() - startMs) / 1000;
+      const elapsedTime = elapsedMs / 1000;
       if (this.onCompileProgress) this.onCompileProgress(elapsedTime, elapsedTime);
 
       if (compileResult.hex && compileResult.hex.trim() !== "") {
@@ -47,6 +58,18 @@ export class LeanbotCompiler {
       return compileResult;
     } catch (err) {
       const message = err.message || String(err);
+
+      // LbIDEEvent = onRespond (error)
+      const elapsedMs = performance.now() - startMs;
+      const LbIDEEvent = {
+        objectpk: "compile_res",
+        thongtin: sourceCode,
+        noidung: message,
+        server_: compileServer,
+        t_phanhoi: Math.round(elapsedMs)
+      };
+      console.log(LbIDEEvent);
+
       if (this.onCompileProgress) this.onCompileProgress(1, 1);
       if (this.onCompileError)    this.onCompileError(message);
       throw err;

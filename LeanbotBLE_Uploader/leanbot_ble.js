@@ -125,6 +125,16 @@ export class LeanbotBLE {
 
       this.Uploader.isUploadSessionActive = false;
 
+      // LbIDEEvent = onDisconnect
+      const LbIDEEvent = {
+        objectpk: "usb_disconnect",
+        thongtin: "",
+        noidung: this.getLeanbotID(),
+        server_: "",
+        t_phanhoi: 0
+      };
+      console.log(LbIDEEvent);
+
       if (this.onDisconnect) this.onDisconnect();
       
       if (this.Uploader.isTransferring === false) {
@@ -134,6 +144,9 @@ export class LeanbotBLE {
     });
     
     /** ---------- GATT CONNECTION ---------- */
+
+    const connectStartMs = performance.now();
+
     this.#server = await this.#device.gatt.connect();
     this.#service = await this.#server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
 
@@ -147,7 +160,20 @@ export class LeanbotBLE {
     await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval);
 
     /** ---------- CONNECT CALLBACK ---------- */
+
     console.log("Callback onConnect: Enabled");
+    
+    // LbIDEEvent = onConnect
+    const LbIDEEvent = {
+      objectpk: "usb_connect",
+      thongtin: "",
+      noidung: this.getLeanbotID(),
+      server_: "",
+      t_phanhoi: Math.round(performance.now() - connectStartMs)
+    };
+
+    console.log(LbIDEEvent);
+
     if (this.onConnect) this.onConnect();
 
     /** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
@@ -399,7 +425,7 @@ class Uploader {
     if (!this.isSupported()) {
       if (this.#JDYUploader) return this.#JDYUploader.upload(hexText);
     }
-
+    
     this.isUploadSessionActive = true;
     
     // Chuyển toàn bộ HEX sang gói BLE
