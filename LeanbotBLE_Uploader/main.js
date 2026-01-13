@@ -30,7 +30,9 @@ const leanbotStatus = document.getElementById("leanbotStatus");
 const btnConnect    = document.getElementById("btnConnect");
 const btnReconnect  = document.getElementById("btnReconnect");
 
-let connectStartMs = 0;
+let connectEventStartMs = 0;
+let compileEventStartMs = 0;
+let uploadEventStartMs  = 0;
 
 function getLeanbotIDWithoutBLE() {
   return leanbot.getLeanbotID().replace(" BLE", "");
@@ -53,7 +55,7 @@ leanbot.onConnect = () => {
     thongtin: "",
     noidung: getLeanbotIDWithoutBLE(),
     server_: "",
-    t_phanhoi: Math.round(performance.now() - connectStartMs)
+    t_phanhoi: Math.round(performance.now() - connectEventStartMs)
   };
   logLbIDEEvent(LbIDEEvent);
 
@@ -86,14 +88,14 @@ btnReconnect.onclick = async () => reconnectLeanbot();
 async function connectLeanbot() {
   console.log("Scanning for Leanbot...");
   leanbot.disconnect(); // Ngắt kết nối nếu đang kết nối
-  connectStartMs = performance.now();
+  connectEventStartMs = performance.now();
   const result = await leanbot.connect();
   console.log("Connect result:", result.message);
 }
 
 async function reconnectLeanbot() {
   console.log("Reconnecting to Leanbot...");
-  connectStartMs = performance.now();
+  connectEventStartMs = performance.now();
   const result = await leanbot.reconnect();
   console.log("Reconnect result:", result.message);
 }
@@ -181,11 +183,12 @@ async function doCompile() {
     return null;
   }
 
+  compileStart = performance.now();
   ProgramTab.classList.add("hide-upload");
   uiSetTab("program");
   uiResetCompile();
 
-  compileStart = performance.now();
+  compileEventStartMs = performance.now();
   return await leanbot.Compiler.compile(sourceCode, window.SERVER);
 }
 
@@ -197,7 +200,7 @@ leanbot.Compiler.onCompileSucess = (compileMessage) => {
     thongtin: getSourceCode(),
     noidung: compileMessage,
     server_: window.SERVER,
-    t_phanhoi: Math.round(performance.now() - compileStart)
+    t_phanhoi: Math.round(performance.now() - compileEventStartMs)
   };
   logLbIDEEvent(LbIDEEvent);
 
@@ -208,6 +211,7 @@ leanbot.Compiler.onCompileSucess = (compileMessage) => {
 
   if (!isCompileAndUpload) return;
   uploadStart = performance.now(); // reset upload start time
+  uploadEventStartMs = performance.now();
 };
 
 leanbot.Compiler.onCompileError = (compileMessage) => {
@@ -218,7 +222,7 @@ leanbot.Compiler.onCompileError = (compileMessage) => {
     thongtin: getSourceCode(),
     noidung: compileMessage,
     server_: window.SERVER,
-    t_phanhoi: Math.round(performance.now() - compileStart)
+    t_phanhoi: Math.round(performance.now() - compileEventStartMs)
   };
   logLbIDEEvent(LbIDEEvent);
 
@@ -240,7 +244,7 @@ const btnUpload = document.getElementById("btnUpload");
 let isCompileAndUpload = false;
 
 btnUpload.addEventListener("click", async () => {
-  connectStartMs = performance.now();
+  connectEventStartMs = performance.now();
   const result = await leanbot.reconnect();
   if (!result.success) {
     alert("Please connect to Leanbot first!");
@@ -253,13 +257,14 @@ btnUpload.addEventListener("click", async () => {
     return null;
   }
 
+  compileStart = performance.now();
   ProgramTab.classList.remove("hide-upload"); // Hiện phần upload
   uiSetTab("program");
   uiResetCompile();
   uiResetUpload();
   isCompileAndUpload = true;
 
-  compileStart = performance.now();
+  compileEventStartMs = performance.now();
   await leanbot.compileAndUpload(sourceCode, window.SERVER);
 });
 
@@ -360,8 +365,8 @@ leanbot.Uploader.onSuccess = () => {
     objectpk: "upload_done",
     thongtin: "arduino:avr:uno",
     noidung: getLeanbotIDWithoutBLE(),
-    server_: "JDY", // hoặc "LbEsp32" nếu backend là ESP32
-    t_phanhoi: Math.round(performance.now() - uploadStart)
+    server_: "JDY", // hoặc "LbEsp32"
+    t_phanhoi: Math.round(performance.now() - uploadEventStartMs)
   };
 
   logLbIDEEvent(LbIDEEvent);
@@ -371,6 +376,18 @@ leanbot.Uploader.onSuccess = () => {
 };
 
 leanbot.Uploader.onError = (err) => {
+  
+  // LbIDEEvent = onUploadError
+  const LbIDEEvent = {
+    objectpk: "upload_err",
+    thongtin: "arduino:avr:uno",
+    noidung: err,
+    server_: "JDY", // hoặc "LbEsp32"
+    t_phanhoi: Math.round(performance.now() - uploadEventStartMs)
+  };
+
+  logLbIDEEvent(LbIDEEvent);
+
   UploaderTitleUpload.className = "red";
 };
 
@@ -1520,35 +1537,21 @@ openFileInMonaco(initialOpenId);
 // ============================================================
 
 function logLbIDEEvent(event) {
-  // normalize text fields (replace \n, \r, or extra spaces)
-  if (event.thongtin) {
-    event.thongtin = event.thongtin
-      .replace(/\r?\n+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
+  const normalize = (text) =>
+    text? text.replace(/\r?\n+/g, " ").replace(/\s+/g, " ").trim(): "";
 
-  if (event.noidung) {
-    event.noidung = event.noidung
-      .replace(/\r?\n+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
+  const short = (text, len = 64) =>
+    text.length > len ? text.slice(0, len) : text;
+
+  const thongtin = normalize(event.thongtin);
+  const noidung = normalize(event.noidung);
 
   console.log(
-    "LbIDEEvent\n" +
-    `objectpk   : ${event.objectpk}\n` +
-    `thongtin   : ${
-      event.thongtin && event.thongtin.length > 64
-        ? event.thongtin.substring(0, 64) + "..."
-        : event.thongtin
-    }\n` +
-    `noidung    : ${
-      event.noidung && event.noidung.length > 64
-        ? event.noidung.substring(0, 64) + "..."
-        : event.noidung
-    }\n` +
-    `server_    : ${event.server_}\n` +
-    `t_phanhoi  : ${event.t_phanhoi}`
+    `LbIDEEvent
+    objectpk   : ${event.objectpk}
+    thongtin   : ${short(thongtin)}
+    noidung    : ${short(noidung)}
+    server_    : ${event.server_}
+    t_phanhoi  : ${event.t_phanhoi}`
   );
 }
