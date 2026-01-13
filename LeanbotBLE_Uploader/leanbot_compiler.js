@@ -6,6 +6,9 @@ export class LeanbotCompiler {
   onCompileError = null;
   onCompileProgress = null;
 
+  #compileEventStartMs = null;
+  #totalCompileTime = null;
+
   async compile(sourceCode, compileServer) {
     const sketchName = "LeanbotSketch";
 
@@ -22,6 +25,8 @@ export class LeanbotCompiler {
     };
 
     const startMs = Date.now();
+    this.#compileEventStartMs = performance.now();
+    this.#totalCompileTime = -1;
     const predictedTotal = 10;
 
     const emitProgress = () => {
@@ -36,8 +41,10 @@ export class LeanbotCompiler {
       const compileResult = await this.#requestCompile(payload, compileServer);
 
       const elapsedTime = (Date.now() - startMs) / 1000;
-      if (this.onCompileProgress) this.onCompileProgress(elapsedTime, elapsedTime);
+      this.#totalCompileTime = Math.round(performance.now() - this.#compileEventStartMs);
 
+      if (this.onCompileProgress) this.onCompileProgress(elapsedTime, elapsedTime);
+      
       if (compileResult.hex && compileResult.hex.trim() !== "") {
         if (this.onCompileSucess) this.onCompileSucess(compileResult.log);
       } else {
@@ -47,6 +54,7 @@ export class LeanbotCompiler {
       return compileResult;
     } catch (err) { // compile request failed => no response from server
       const message = err.message || String(err);
+      this.#totalCompileTime = Math.round(performance.now() - this.#compileEventStartMs);
       if (this.onCompileProgress) this.onCompileProgress(1, 1);
       if (this.onCompileError)    this.onCompileError(message);
       throw err;
@@ -88,5 +96,11 @@ export class LeanbotCompiler {
     }
 
     return result;
+  }
+
+  elapsedTimeMs() {
+    if (this.#totalCompileTime === -1) // if compile not done yet
+      return Math.round(performance.now() - this.#compileEventStartMs);
+    return this.#totalCompileTime;
   }
 }
