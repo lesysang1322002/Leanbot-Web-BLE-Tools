@@ -12,11 +12,19 @@ export class LeanbotBLE {
   #server  = null;
   #service = null;
   #chars   = {};
-  #connectEventStartMs = null;
+  #connectingStartMs = null;
 
   // ---------------- BLE CORE ----------------
+
+  #returnBleResult(success, message) {
+    if (!success) {
+      if(this.onConnectError) this.onConnectError(message);
+    }
+    return { success, message };
+  };
+
   async connect(deviceName = null) {
-    this.#connectEventStartMs = performance.now();
+    this.#connectingStartMs = performance.now();
     try {
       // Nếu deviceName rỗng → quét tất cả thiết bị có service UUID tương ứng
       if (!deviceName || deviceName.trim() === "") {
@@ -34,46 +42,30 @@ export class LeanbotBLE {
         });
       }
       // Thiết lập kết nối BLE
-      await this.#setupConnection();
-      return {  
-        success: true,
-        message: `Connected to ${this.#device.name}`
-      };
+      return this.#returnBleResult(true, `Connected to ${this.#device.name}`);
     } catch (error) {
-      return {
-        success: false,
-        message: `Connection failed: ${error.message || "Unknown error"}`
-      };
+      return this.#returnBleResult(false, `Connection failed: ${error.message || "Unknown error"}`);
     }
   }
 
   async reconnect() {
-    this.#connectEventStartMs = performance.now();
+    this.#connectingStartMs = performance.now();
     try {
       if (this.isConnected()) {
         // Nếu đang kết nối rồi thì không cần làm gì
-        return {
-          success: true,
-          message: `Already connected to ${this.#device.name}`
-        };
+        return this.#returnBleResult(true, `Already connected to ${this.#device.name}`);
       }
 
       if (this.#device) {
         // Nếu đã ngắt kết nối thì kết nối lại
-        await this.#setupConnection();
-        return {
-          success: true,
-          message: `Reconnected to ${this.#device.name}`
-        };
+        await this.#setupConnection("ble_reconnect");
+        return this.#returnBleResult(true, `Reconnected to ${this.#device.name}`);
       }
 
       // Gọi lại Connect nếu không có thiết bị trong phiên làm việc hiện tại
       return await this.connect(this.getLeanbotID());
     } catch (error) {
-      return {
-        success: false,
-        message: `Reconnect failed: ${error.message || "Unknown error"}`
-      };
+      return this.#returnBleResult(false, `Reconnect failed: ${error.message || "Unknown error"}`); 
     }
   }
 
@@ -81,31 +73,19 @@ export class LeanbotBLE {
     try {
       // Không có thiết bị nào được lưu
       if (!this.#device) {
-        return {
-          success: false,
-          message: "No device found to disconnect. Please connect a device first."
-        };
+        return this.#returnBleResult(false, "No device found to disconnect. Please connect a device first.");
       }
 
       // Thiết bị tồn tại nhưng chưa kết nối
       if (!this.#device.gatt.connected) {
-        return {
-          success: false,
-          message: "Device is not currently connected."
-        };
+        return this.#returnBleResult(false, "Device is not currently connected.");
       }
 
       // Ngắt kết nối
       this.#device.gatt.disconnect();
-      return {
-        success: true,
-        message: `Disconnected from ${this.#device.name}`
-      };
+      return this.#returnBleResult(true, `Disconnected from ${this.#device.name}`);
     } catch (error) {
-      return {
-        success: false,
-        message: `Disconnect failed: ${error.message || "Unknown error"}`
-      };
+      return this.#returnBleResult(false, `Disconnect failed: ${error.message || "Unknown error"}`);  
     }
   }
 
@@ -127,15 +107,15 @@ export class LeanbotBLE {
 
     if (this.onDisconnect) this.onDisconnect();
       
-    if (this.Uploader.isTransferring === false) {
-      if(this.Uploader.onTransferError) this.Uploader.onTransferError("Device disconnected while uploading.");
+    if (this.Uploader.isTransferring === true) {
+      this.Uploader.emitTransferError("Device disconnected while uploading.");
     }  
   };
 
-  async #setupConnection() {
+  async #setupConnection(mode) {
     /** ---------- DISCONNECT EVENT ---------- */
     console.log("Callback onDisconnect: Enabled");
-    
+
     this.#device.removeEventListener("gattserverdisconnected", this.#onGattDisconnected);
 
     this.#device.addEventListener("gattserverdisconnected", this.#onGattDisconnected);
@@ -158,7 +138,7 @@ export class LeanbotBLE {
 
     console.log("Callback onConnect: Enabled");
 
-    if (this.onConnect) this.onConnect();
+    if (this.onConnect) this.onConnect(mode);
 
     /** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
     console.log("Saving device to localStorage:", this.#device.name);
@@ -189,6 +169,7 @@ export class LeanbotBLE {
   constructor() {
     this.onConnect = null;
     this.onDisconnect = null;
+    this.onConnectError = null;
 
     this.Serial      = new Serial(this);
     this.Uploader    = new Uploader(this);
@@ -199,9 +180,9 @@ export class LeanbotBLE {
     this.Uploader.setJDYUploader(this.JDYUploader);
   }
 
-  elapsedTimeMs() {
-    if (this.#connectEventStartMs === null) return 0;
-    return Math.round(performance.now() - this.#connectEventStartMs);
+  connectedTimeMs() {
+    if (this.#connectingStartMs === null) return 0;
+    return Math.round(performance.now() - this.#connectingStartMs);
   }
 }
 
@@ -404,7 +385,8 @@ class Uploader {
 
   isUploadSessionActive = null;
 
-  #uploadEventStartMs = null;
+  #uploadStartMs = null;
+  #uploadEndMs = null;
 
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
@@ -414,7 +396,8 @@ class Uploader {
   /** Upload HEX */
   async upload(hexText) {
 
-    this.#uploadEventStartMs = performance.now();
+    this.#uploadStartMs = performance.now();
+    this.#uploadEndMs = -1;
 
     if (!this.isSupported()) {
       if (this.#JDYUploader) return this.#JDYUploader.upload(hexText);
@@ -449,6 +432,7 @@ class Uploader {
     }
     
     this.#ControlPipe_busy = false;
+    this.#uploadEndMs = performance.now();
 
     // console.log("Waiting for Receive feedback...");
   }
@@ -542,13 +526,13 @@ class Uploader {
           this.isUploadSessionActive = false;
           const err = `Transfer Error: Hash mismatch. ESP32: ${recvHash}, WEB: ${expected}`;
           // console.error(err);
-          if (this.onTransferError) this.onTransferError(err);
+          this.emitTransferError(err);
           return; // stop transfer
         }
       }
        
-      this.isTransferring = false;
-      if (progress === this.totalPackets) this.isTransferring = true;
+      this.isTransferring = true;
+      if (progress === this.totalPackets) this.isTransferring = false;
 
       if (onTransferInternal) await this.#onTransferInternal(progress);
       if (this.onTransfer) this.onTransfer(progress + 1, this.totalPackets);
@@ -634,7 +618,7 @@ class Uploader {
         const err = `Uploader: Transfer Error.`;
         // console.log(err);
         this.isUploadSessionActive = false;
-        if (this.onTransferError) this.onTransferError(err); 
+        this.emitTransferError(err); 
       }
     }, this.#timeoutDuration);
   }
@@ -690,7 +674,7 @@ class Uploader {
 
       this.isUploadSessionActive = false;
 
-      if (this.onTransferError) this.onTransferError("Write Error:", err);
+      this.emitTransferError("Write Error:", err);
     }
   }
 
@@ -700,9 +684,19 @@ class Uploader {
     this.#ControlPipe_busy = true;
   }
 
+  emitTransferError(err) { // call both transfer error and general error
+    if (this.onTransferError) this.onTransferError();
+    if (this.onError) this.onError(err);
+  }
+
   elapsedTimeMs() {
-    if (this.#uploadEventStartMs === null) return 0;
-    return Math.round(performance.now() - this.#uploadEventStartMs);
+    if (!this.isSupported()) {
+      if (this.#JDYUploader) return this.#JDYUploader.elapsedTimeMs();
+    }
+
+    if (this.#uploadEndMs === -1) // if upload not done yet
+      return performance.now() - this.#uploadStartMs;
+    return this.#uploadEndMs - this.#uploadStartMs;
   }
 
 }
@@ -726,7 +720,8 @@ class JDYUploader {
   #BLEPackets  = [];
   #pageBuffer  = [];
 
-  #startTime = null;
+  #uploadStartMs = null;
+  #uploadEndMs = null;
 
   intervalGetSync = null;
   #isGetSyncOK = false;
@@ -755,12 +750,15 @@ class JDYUploader {
     this.#isCompileOK = true; // Đã compile xong
     if (this.intervalGetSync) clearInterval(this.intervalGetSync); // xóa interval get sync nếu có
 
-    this.#startTime = Date.now();
+    this.#uploadStartMs = performance.now();
+    this.#uploadEndMs = -1;
     this.#BLEPackets = convertHexToBlePackets(hexText, { returnStep2: true });
 
     while (!this.#isGetSyncOK) await new Promise(resolve => setTimeout(resolve, 5));
 
     await this.#uploadCode();
+
+    this.#uploadEndMs = performance.now();
   }
 
   async prepareUpload() {
@@ -1116,9 +1114,15 @@ class JDYUploader {
   #emitUploadMessage(message) {
     if (this.#uploader) {
       this.#uploader.onMessageInternal(message, false);
-      const timeStamp = ((Date.now() - this.#startTime) / 1000).toFixed(3);
+      const timeStamp = ((performance.now() - this.#uploadStartMs) / 1000).toFixed(3);
       this.#uploader.onMessage(`[${timeStamp}] ${message}`);
     }
+  }
+
+  elapsedTimeMs() {
+    if (this.#uploadEndMs === -1) // if upload not done yet
+      return performance.now() - this.#uploadStartMs;
+    return this.#uploadEndMs - this.#uploadStartMs;
   }
 }
 

@@ -6,8 +6,8 @@ export class LeanbotCompiler {
   onCompileError = null;
   onCompileProgress = null;
 
-  #compileEventStartMs = null;
-  #totalCompileTime = null;
+  #compileStartMs = null;
+  #compileEndMs = null;
 
   async compile(sourceCode, compileServer) {
     const sketchName = "LeanbotSketch";
@@ -24,13 +24,12 @@ export class LeanbotCompiler {
       libs: [],
     };
 
-    const startMs = Date.now();
-    this.#compileEventStartMs = performance.now();
-    this.#totalCompileTime = -1;
+    this.#compileStartMs = performance.now();
+    this.#compileEndMs = -1;
     const predictedTotal = 10;
 
     const emitProgress = () => {
-      const elapsedTime = (Date.now() - startMs) / 1000;
+      const elapsedTime = (performance.now() - this.#compileStartMs) / 1000;
       const estimatedTotal = Math.sqrt(elapsedTime ** 2 + predictedTotal ** 2);
       if (this.onCompileProgress) this.onCompileProgress(elapsedTime, estimatedTotal);
     };
@@ -40,8 +39,8 @@ export class LeanbotCompiler {
     try {
       const compileResult = await this.#requestCompile(payload, compileServer);
 
-      const elapsedTime = (Date.now() - startMs) / 1000;
-      this.#totalCompileTime = Math.round(performance.now() - this.#compileEventStartMs);
+      this.#compileEndMs = performance.now();
+      const elapsedTime = (this.#compileEndMs - this.#compileStartMs) / 1000;
 
       if (this.onCompileProgress) this.onCompileProgress(elapsedTime, elapsedTime);
       
@@ -54,7 +53,7 @@ export class LeanbotCompiler {
       return compileResult;
     } catch (err) { // compile request failed => no response from server
       const message = err.message || String(err);
-      this.#totalCompileTime = Math.round(performance.now() - this.#compileEventStartMs);
+      this.#compileEndMs = performance.now();
       if (this.onCompileProgress) this.onCompileProgress(1, 1);
       if (this.onCompileError)    this.onCompileError(message);
       throw err;
@@ -99,8 +98,8 @@ export class LeanbotCompiler {
   }
 
   elapsedTimeMs() {
-    if (this.#totalCompileTime === -1) // if compile not done yet
-      return Math.round(performance.now() - this.#compileEventStartMs);
-    return this.#totalCompileTime;
+    if (this.#compileEndMs === -1) // if compile not done yet
+      return performance.now() - this.#compileStartMs;
+    return this.#compileEndMs - this.#compileStartMs;
   }
 }

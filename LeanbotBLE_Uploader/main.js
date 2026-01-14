@@ -43,15 +43,15 @@ else{
   btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
 }
 
-leanbot.onConnect = () => {
+leanbot.onConnect = (mode) => {
 
 	// LbIDEEvent = onConnect
   const LbIDEEvent = {
-    objectpk: "ble_connect",
+    objectpk: mode,
     thongtin: "",
     noidung: getLeanbotIDWithoutBLE(),
     server_: "",
-    t_phanhoi: leanbot.elapsedTimeMs()
+    t_phanhoi: Math.round(leanbot.connectedTimeMs())
   };
   logLbIDEEvent(LbIDEEvent);
 
@@ -77,6 +77,18 @@ leanbot.onDisconnect = () => {
   btnReconnect.style.display  = "inline-block";
   btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
 };
+
+leanbot.onConnectError = (error_message) => { 
+	// LbIDEEvent = onDisconnect
+  const LbIDEEvent = {
+    objectpk: "ble_err",
+    thongtin: "",
+    noidung: error_message,
+    server_: "",
+    t_phanhoi: 0
+  };
+  logLbIDEEvent(LbIDEEvent);
+}
 
 btnConnect.onclick   = async () => connectLeanbot();
 btnReconnect.onclick = async () => reconnectLeanbot();
@@ -193,7 +205,7 @@ leanbot.Compiler.onCompileSucess = (compileMessage) => {
     thongtin: getSourceCode(),
     noidung: compileMessage,
     server_: window.SERVER,
-    t_phanhoi: leanbot.Compiler.elapsedTimeMs()
+    t_phanhoi: Math.round(leanbot.Compiler.elapsedTimeMs())
   };
   logLbIDEEvent(LbIDEEvent);
 
@@ -214,7 +226,7 @@ leanbot.Compiler.onCompileError = (compileMessage) => {
     thongtin: getSourceCode(),
     noidung: compileMessage,
     server_: window.SERVER,
-    t_phanhoi: leanbot.Compiler.elapsedTimeMs()
+    t_phanhoi: Math.round(leanbot.Compiler.elapsedTimeMs())
   };
   logLbIDEEvent(LbIDEEvent);
 
@@ -327,10 +339,7 @@ leanbot.Uploader.onTransfer = (progress, totalBlocks) => {
   uiUpdateProgress(UploaderTransfer, progress, totalBlocks);
 };
 
-leanbot.Uploader.onTransferError = (err) => {
-  
-  if(leanbot.Uploader.onError) leanbot.Uploader.onError(err);
-
+leanbot.Uploader.onTransferError = () => {
   UploaderTransfer.className = "red";
   UploaderTitleUpload.className = "red";
 };
@@ -358,8 +367,8 @@ leanbot.Uploader.onSuccess = () => {
     objectpk: "upload_done",
     thongtin: "arduino:avr:uno",
     noidung: getLeanbotIDWithoutBLE(),
-    server_: "JDY", // hoặc "LbEsp32"
-    t_phanhoi: leanbot.Uploader.elapsedTimeMs()
+    server_: leanbot.Uploader.isSupported()?"LbEsp32":"JDY",
+    t_phanhoi: Math.round(leanbot.Uploader.elapsedTimeMs())
   };
 
   logLbIDEEvent(LbIDEEvent);
@@ -375,8 +384,8 @@ leanbot.Uploader.onError = (err) => {
     objectpk: "upload_err",
     thongtin: "arduino:avr:uno",
     noidung: err,
-    server_: "JDY", // hoặc "LbEsp32"
-    t_phanhoi: leanbot.Uploader.elapsedTimeMs()
+    server_: leanbot.Uploader.isSupported()?"LbEsp32":"JDY",
+    t_phanhoi: Math.round(leanbot.Uploader.elapsedTimeMs())
   };
 
   logLbIDEEvent(LbIDEEvent);
