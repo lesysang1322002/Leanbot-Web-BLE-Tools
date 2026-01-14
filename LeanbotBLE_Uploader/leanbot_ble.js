@@ -42,6 +42,7 @@ export class LeanbotBLE {
         });
       }
       // Thiết lập kết nối BLE
+      await this.#setupConnection("ble_connect");
       return this.#returnBleResult(true, `Connected to ${this.#device.name}`);
     } catch (error) {
       return this.#returnBleResult(false, `Connection failed: ${error.message || "Unknown error"}`);
