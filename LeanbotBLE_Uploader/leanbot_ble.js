@@ -120,22 +120,26 @@ export class LeanbotBLE {
     return lastDevice ? JSON.parse(lastDevice) : "No Leanbot";
   }
 
+  #onGattDisconnected = () => {
+    //console.log("Device disconnected", this.#device.name);
+
+    this.Uploader.isUploadSessionActive = false;
+
+    if (this.onDisconnect) this.onDisconnect();
+      
+    if (this.Uploader.isTransferring === false) {
+      if(this.Uploader.onTransferError) this.Uploader.onTransferError("Device disconnected while uploading.");
+    }  
+  };
+
   async #setupConnection() {
     /** ---------- DISCONNECT EVENT ---------- */
     console.log("Callback onDisconnect: Enabled");
-    this.#device.addEventListener("gattserverdisconnected", () => {
-      //console.log("Device disconnected", this.#device.name);
-
-      this.Uploader.isUploadSessionActive = false;
-
-      if (this.onDisconnect) this.onDisconnect();
-      
-      if (this.Uploader.isTransferring === false) {
-        if(this.Uploader.onTransferError) this.Uploader.onTransferError("Device disconnected while uploading.");
-      }
-      
-    });
     
+    this.#device.removeEventListener("gattserverdisconnected", this.#onGattDisconnected);
+
+    this.#device.addEventListener("gattserverdisconnected", this.#onGattDisconnected);
+
     /** ---------- GATT CONNECTION ---------- */
     
     this.#server = await this.#device.gatt.connect();
