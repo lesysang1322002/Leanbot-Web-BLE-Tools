@@ -59,6 +59,7 @@ leanbot.onConnect = (mode) => {
   leanbotStatus.textContent   = getLeanbotIDWithoutBLE();
   leanbotStatus.style.color   = "green";
   btnReconnect.style.display  = "none";
+  uiResetUpload();
 }
 
 leanbot.onDisconnect = () => {
