@@ -6,8 +6,8 @@ export class LeanbotCompiler {
   onCompileError = null;
   onCompileProgress = null;
 
-  #compileStartMs = null;
-  #compileEndMs = null;
+  #compileStartMs = 0;
+  #compileEndMs = 0;
 
   async compile(sourceCode, compileServer) {
     const sketchName = "LeanbotSketch";
@@ -25,11 +25,11 @@ export class LeanbotCompiler {
     };
 
     this.#compileStartMs = performance.now();
-    this.#compileEndMs = -1;
-    const predictedTotal = 10;
+    this.#compileEndMs = 0;
+    const predictedTotal = 10000; //10000 ms = 10s
 
     const emitProgress = () => {
-      const elapsedTime = (performance.now() - this.#compileStartMs) / 1000;
+      const elapsedTime = (performance.now() - this.#compileStartMs);
       const estimatedTotal = Math.sqrt(elapsedTime ** 2 + predictedTotal ** 2);
       if (this.onCompileProgress) this.onCompileProgress(elapsedTime, estimatedTotal);
     };
@@ -40,7 +40,7 @@ export class LeanbotCompiler {
       const compileResult = await this.#requestCompile(payload, compileServer);
 
       this.#compileEndMs = performance.now();
-      const elapsedTime = (this.#compileEndMs - this.#compileStartMs) / 1000;
+      const elapsedTime = (this.#compileEndMs - this.#compileStartMs);
 
       if (this.onCompileProgress) this.onCompileProgress(elapsedTime, elapsedTime);
       
@@ -56,7 +56,8 @@ export class LeanbotCompiler {
       this.#compileEndMs = performance.now();
       if (this.onCompileProgress) this.onCompileProgress(1, 1);
       if (this.onCompileError)    this.onCompileError(message);
-      throw err;
+      console.log("Catch Compile Error:", message);
+      // throw err;
     } finally {
       clearInterval(progressTimer);
     }
@@ -98,7 +99,7 @@ export class LeanbotCompiler {
   }
 
   elapsedTimeMs() {
-    if (this.#compileEndMs === -1) // if compile not done yet
+    if (this.#compileEndMs === 0) // if compile not done yet
       return performance.now() - this.#compileStartMs;
     return this.#compileEndMs - this.#compileStartMs;
   }

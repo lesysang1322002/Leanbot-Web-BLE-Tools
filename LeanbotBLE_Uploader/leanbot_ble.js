@@ -12,7 +12,8 @@ export class LeanbotBLE {
   #server  = null;
   #service = null;
   #chars   = {};
-  #connectingStartMs = null;
+  #connectingStartMs = 0;
+  #connectingEndMs   = 0;
 
   // ---------------- BLE CORE ----------------
 
@@ -25,6 +26,7 @@ export class LeanbotBLE {
 
   async connect(deviceName = null) {
     this.#connectingStartMs = performance.now();
+    this.#connectingEndMs = 0;
     try {
       // Nếu deviceName rỗng → quét tất cả thiết bị có service UUID tương ứng
       if (!deviceName || deviceName.trim() === "") {
@@ -42,7 +44,7 @@ export class LeanbotBLE {
         });
       }
       // Thiết lập kết nối BLE
-      await this.#setupConnection("ble_connect");
+      await this.#setupConnection();
       return this.#returnBleResult(true, `Connected to ${this.#device.name}`);
     } catch (error) {
       return this.#returnBleResult(false, `Connection failed: ${error.message || "Unknown error"}`);
@@ -51,6 +53,7 @@ export class LeanbotBLE {
 
   async reconnect() {
     this.#connectingStartMs = performance.now();
+    this.#connectingEndMs = 0;
     try {
       if (this.isConnected()) {
         // Nếu đang kết nối rồi thì không cần làm gì
@@ -59,7 +62,7 @@ export class LeanbotBLE {
 
       if (this.#device) {
         // Nếu đã ngắt kết nối thì kết nối lại
-        await this.#setupConnection("ble_reconnect");
+        await this.#setupConnection();
         return this.#returnBleResult(true, `Reconnected to ${this.#device.name}`);
       }
 
@@ -110,11 +113,11 @@ export class LeanbotBLE {
       
     if (this.Uploader.isTransferring === true) {
       this.Uploader.emitTransferError("Device disconnected while uploading.");
-      this.Uploader.stop();
+      this.Uploader.abortAll();
     }  
   };
 
-  async #setupConnection(mode) {
+  async #setupConnection() {
     /** ---------- DISCONNECT EVENT ---------- */
     console.log("Callback onDisconnect: Enabled");
 
@@ -140,7 +143,8 @@ export class LeanbotBLE {
 
     console.log("Callback onConnect: Enabled");
 
-    if (this.onConnect) this.onConnect(mode);
+    this.#connectingEndMs = performance.now();
+    if (this.onConnect) this.onConnect();
 
     /** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
     console.log("Saving device to localStorage:", this.#device.name);
@@ -153,22 +157,16 @@ export class LeanbotBLE {
   }
   
   async compileAndUpload(SourceCode, compileServer) {
-    if (!this.Uploader.isSupported()){
-      this.JDYUploader.prepareUpload(); 
-    }
+
+    this.Uploader.prepareUpload();
 
     const compileResult = await this.Compiler.compile(SourceCode, compileServer);
 
     if (compileResult.hex && compileResult.hex.trim() !== "") {
-      try{
-        await this.Uploader.upload(this.#base64ToText(compileResult.hex));
-      }
-      catch(e){
-        console.log("Catch Upload Error:", e);
-      }
+      await this.Uploader.upload(this.#base64ToText(compileResult.hex));
     }
     else {
-      this.Uploader.stop();
+      this.Uploader.abortAll();
     }
   }
 
@@ -186,9 +184,11 @@ export class LeanbotBLE {
     this.Uploader.setJDYUploader(this.JDYUploader);
   }
 
-  connectedTimeMs() {
-    if (this.#connectingStartMs === null) return 0;
-    return Math.round(performance.now() - this.#connectingStartMs);
+  connectingTimeMs() {
+    if (this.#connectingEndMs === 0){
+      return performance.now() - this.#connectingStartMs;
+    }
+    return this.#connectingEndMs - this.#connectingStartMs;
   }
 }
 
@@ -391,56 +391,68 @@ class Uploader {
 
   isUploadSessionActive = null;
 
-  #uploadStartMs = null;
-  #uploadEndMs = null;
+  #uploadStartMs = 0;
+  #uploadEndMs = 0;
 
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
     return !!this.#DataPipe_char && !!this.#ControlPipe_char;
   }
 
+  /** Prepare for upload (abstract for JDYUploader)*/
+  async prepareUpload() {
+    if (!this.isSupported()){
+      this.#JDYUploader.prepareUpload(); 
+    }
+  }
+
   /** Upload HEX */
   async upload(hexText) {
+    try{
+      this.#uploadStartMs = performance.now();
+      this.#uploadEndMs = 0;
 
-    this.#uploadStartMs = performance.now();
-    this.#uploadEndMs = -1;
+      if (!this.isSupported() && this.#JDYUploader) {
+        await this.#JDYUploader.upload(hexText);
+        return;
+      }
 
-    if (!this.isSupported()) {
-      if (this.#JDYUploader) return this.#JDYUploader.upload(hexText);
-    }
-
-    this.isUploadSessionActive = true;
+      this.isUploadSessionActive = true;
     
-    // Chuyển toàn bộ HEX sang gói BLE
-    this.#packets = convertHexToBlePackets(hexText);
-    this.totalPackets = this.#packets.length - 1;
+      // Chuyển toàn bộ HEX sang gói BLE
+      this.#packets = convertHexToBlePackets(hexText);
+      this.totalPackets = this.#packets.length - 1;
 
-    // Tính toán hash cho từng gói
-    this.#packetHashes = [];
-    this.#computePacketHashesHash32();
+      // Tính toán hash cho từng gói
+      this.#packetHashes = [];
+      this.#computePacketHashesHash32();
 
-    const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
-    const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
-    this.totalBytesData = Math.ceil(dataBytes / 128) * 128; // Làm tròn lên bội số của 128 bytes
+      const totalBytes = this.#packets.reduce((a, p) => a + p.length, 0);
+      const dataBytes = totalBytes - this.#packets.length - 1; // trừ đi header (1 byte) và EOF block (1 byte)
+      this.totalBytesData = Math.ceil(dataBytes / 128) * 128; // Làm tròn lên bội số của 128 bytes
 
-    // Reset trạng thái upload
-    this.#nextToSend = 0;
-    this.#lastReceived = -1;
-    this.#ControlPipe_rxQueue = [];
-    this.#ControlPipe_busy = true;
-    this.#PacketBufferSize = this.#MaxPacketBufferSize;
+      // Reset trạng thái upload
+      this.#nextToSend = 0;
+      this.#lastReceived = -1;
+      this.#ControlPipe_rxQueue = [];
+      this.#ControlPipe_busy = true;
+      this.#PacketBufferSize = this.#MaxPacketBufferSize;
 
-    console.log('[START] Initializing upload......');
-    for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
-      await this.#DataPipe_sendToLeanbot(this.#packets[i]);
-      console.log(`Uploader: Sending packet #${i}`);
-      this.#nextToSend++;
-    }
+      console.log('[START] Initializing upload......');
+      for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
+        await this.#DataPipe_sendToLeanbot(this.#packets[i]);
+        console.log(`Uploader: Sending packet #${i}`);
+        this.#nextToSend++;
+      }
     
-    this.#ControlPipe_busy = false;
-    this.#uploadEndMs = performance.now();
+      this.#ControlPipe_busy = false;
+      this.#uploadEndMs = performance.now();
 
-    // console.log("Waiting for Receive feedback...");
+      // console.log("Waiting for Receive feedback...");
+    }
+    catch(e){
+      console.log("Catch Upload Error:", e);
+    }
   }
 
   #computePacketHashesHash32() {
@@ -700,25 +712,21 @@ class Uploader {
       if (this.#JDYUploader) return this.#JDYUploader.elapsedTimeMs();
     }
 
-    if (this.#uploadEndMs === -1) // if upload not done yet
+    if (this.#uploadEndMs === 0) // if upload not done yet
       return performance.now() - this.#uploadStartMs;
     return this.#uploadEndMs - this.#uploadStartMs;
   }
 
-  stop(){
+  abortAll(){
     this.isUploadSessionActive = false;
     this.isTransferring = false;
 
     if (!this.isSupported()) {
-      if (this.#JDYUploader) this.#JDYUploader.stop();
+      if (this.#JDYUploader) this.#JDYUploader.abortAll();
       return;
     }
 
-    if(this.#isSending){
-      this.#isSending = false;
-      return;
-    }
-
+    this.#isSending = false;
     this.cancel();
   }
 
@@ -743,8 +751,8 @@ class JDYUploader {
   #BLEPackets  = [];
   #pageBuffer  = [];
 
-  #uploadStartMs = null;
-  #uploadEndMs = null;
+  #uploadStartMs = 0;
+  #uploadEndMs = 0;
 
   intervalGetSync = null;
   #isGetSyncOK = false;
@@ -774,7 +782,7 @@ class JDYUploader {
     if (this.intervalGetSync) clearInterval(this.intervalGetSync); // xóa interval get sync nếu có
 
     this.#uploadStartMs = performance.now();
-    this.#uploadEndMs = -1;
+    this.#uploadEndMs = 0;
     this.#BLEPackets = convertHexToBlePackets(hexText, { returnStep2: true });
 
     while (!this.#isGetSyncOK) await new Promise(resolve => setTimeout(resolve, 5));
@@ -1137,42 +1145,28 @@ class JDYUploader {
   #emitUploadMessage(message) {
     if (this.#uploader) {
       this.#uploader.onMessageInternal(message, false);
-      const timeStamp = ((performance.now() - this.#uploadStartMs) / 1000).toFixed(3);
-      this.#uploader.onMessage(`[${timeStamp}] ${message}`);
+      // const timeStamp = ((performance.now() - this.#uploadStartMs) / 1000).toFixed(3);
+      // this.#uploader.onMessage(`[${timeStamp}] ${message}`);
+      const timeStamp = performance.now() - this.#uploadStartMs
+      this.#uploader.onMessage({timeStamp, message});
     }
   }
 
   elapsedTimeMs() {
-    if (this.#uploadEndMs === -1) // if upload not done yet
+    if (this.#uploadEndMs === 0) // if upload not done yet
       return performance.now() - this.#uploadStartMs;
     return this.#uploadEndMs - this.#uploadStartMs;
   }
 
-  stop(){
+  abortAll(){
 
     if (this.intervalGetSync) clearInterval(this.intervalGetSync); // xóa interval get sync nếu có
     this.isUploading = false;
-
-    if (this.#isSyncing) {
-      this.#isSyncing = false;
-      this.#isGetSyncOK = false;
-      return;
-    }
-
-    if(this.#isLoadingAddress){
-      this.#isLoadingAddress = false;
-      return;
-    }
-
-    if(this.#isReadingPage){
-      this.#isReadingPage = false;
-      return;
-    }
-    
-    if(this.#isWritingPage){
-      this.#isWritingPage = false;
-      return;
-    }
+    this.#isSyncing        = false;
+    this.#isGetSyncOK      = false;
+    this.#isLoadingAddress = false;
+    this.#isReadingPage    = false;
+    this.#isWritingPage    = false;
   }
 }
 

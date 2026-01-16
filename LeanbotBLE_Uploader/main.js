@@ -29,6 +29,8 @@ const leanbot = new LeanbotBLE();
 const leanbotStatus = document.getElementById("leanbotStatus");
 const btnConnect    = document.getElementById("btnConnect");
 const btnReconnect  = document.getElementById("btnReconnect");
+let isFirstConnect = true;  
+let ConnectType = "";
 
 function getLeanbotIDWithoutBLE() {
   return leanbot.getLeanbotID().replace(" BLE", "");
@@ -43,15 +45,17 @@ else{
   btnReconnect.textContent    = "RECONNECT " + getLeanbotIDWithoutBLE();
 }
 
-leanbot.onConnect = (mode) => {
+leanbot.onConnect = () => {
+
+  if (isFirstConnect && ConnectType === 'ble_connect') isFirstConnect = false;
 
 	// LbIDEEvent = onConnect
   const LbIDEEvent = {
-    objectpk: mode,
+    objectpk: ConnectType,
     thongtin: "",
     noidung: getLeanbotIDWithoutBLE(),
     server_: "",
-    t_phanhoi: Math.round(leanbot.connectedTimeMs())
+    t_phanhoi: Math.round(leanbot.connectingTimeMs())
   };
   logLbIDEEvent(LbIDEEvent);
 
@@ -95,6 +99,7 @@ btnConnect.onclick   = async () => connectLeanbot();
 btnReconnect.onclick = async () => reconnectLeanbot();
 
 async function connectLeanbot() {
+  ConnectType = 'ble_connect';
   console.log("Scanning for Leanbot...");
   leanbot.disconnect(); // Ngắt kết nối nếu đang kết nối
   const result = await leanbot.connect();
@@ -102,6 +107,7 @@ async function connectLeanbot() {
 }
 
 async function reconnectLeanbot() {
+  ConnectType = isFirstConnect ? 'ble_connect' : 'ble_reconnect';
   console.log("Reconnecting to Leanbot...");
   const result = await leanbot.reconnect();
   console.log("Reconnect result:", result.message);
@@ -241,7 +247,7 @@ leanbot.Compiler.onCompileError = (compileMessage) => {
 
 leanbot.Compiler.onCompileProgress = (elapsedTime, estimatedTotal) => {
   uiUpdateTime(compileStart, UploaderTimeCompile);
-  uiUpdateProgress(UploaderCompileProg, elapsedTime, estimatedTotal); 
+  uiUpdateProgress(UploaderCompileProg, elapsedTime/1000, estimatedTotal/1000); // ms = > s 
 };
 
 // =================== Button Upload =================== //
@@ -325,8 +331,10 @@ function uiUpdateProgress(element, progress, total) {
 }
 
 // =================== Uploader Event Handlers =================== //
-leanbot.Uploader.onMessage = (msg) => {
+leanbot.Uploader.onMessage = ({ timeStamp, message }) => {
   uiUpdateTime(uploadStart, UploaderTimeUpload);
+
+  const msg = `[${(timeStamp / 1000).toFixed(3)}] ${message}`;
 
   UploaderLogUpload.value += "\n" + msg;
   UploaderLogUpload.scrollTop = UploaderLogUpload.scrollHeight;
