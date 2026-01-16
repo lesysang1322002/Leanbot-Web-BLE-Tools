@@ -14,17 +14,6 @@ export class LeanbotBLE {
   #chars   = {};
   #connectingStartMs = null;
 
-  // ===== ABORT SUPPORT =====
-  currentAbortController = null;
-
-  setAbortController(controller) {
-    this.currentAbortController = controller;
-  }
-
-  clearAbortController() {
-    this.currentAbortController = null;
-  }
-
   // ---------------- BLE CORE ----------------
 
   #returnBleResult(success, message) {
@@ -115,21 +104,14 @@ export class LeanbotBLE {
   #onGattDisconnected = () => {
     //console.log("Device disconnected", this.#device.name);
 
-    // this.Uploader.isUploadSessionActive = false;
+    this.Uploader.isUploadSessionActive = false;
+
     if (this.onDisconnect) this.onDisconnect();
       
     if (this.Uploader.isTransferring === true) {
-
       this.Uploader.emitTransferError("Device disconnected while uploading.");
-
-      this.currentAbortController.abort("Device disconnected while uploading."); // Abort ASAP
-      this.clearAbortController();
-      this.Uploader.clearAbortSignal();
+      this.Uploader.stop();
     }  
-
-    // Reset uploader state
-    this.Uploader.reset();
-    this.JDYUploader.reset();
   };
 
   async #setupConnection(mode) {
@@ -178,29 +160,15 @@ export class LeanbotBLE {
     const compileResult = await this.Compiler.compile(SourceCode, compileServer);
 
     if (compileResult.hex && compileResult.hex.trim() !== "") {
-
-      // create ONE controller for this upload
-      const abortController = new AbortController();
-
-      // give it to BOTH
-      this.setAbortController(abortController);
-      this.Uploader.setAbortSignal(abortController.signal);
-      
-      try {
+      try{
         await this.Uploader.upload(this.#base64ToText(compileResult.hex));
-      } 
-      catch (e){
-        console.log("Catch:", e);
       }
-      finally {
-        // cleanup
-        this.clearAbortController();
-        this.Uploader.clearAbortSignal();
+      catch(e){
+        console.log("Catch Upload Error:", e);
       }
     }
     else {
-      if (this.JDYUploader.intervalGetSync) clearInterval(this.JDYUploader.intervalGetSync); // xóa interval get sync nếu có
-      this.JDYUploader.isUploading = false;
+      this.Uploader.stop();
     }
   }
 
@@ -426,26 +394,6 @@ class Uploader {
   #uploadStartMs = null;
   #uploadEndMs = null;
 
-  // ===== ABORT SUPPORT ===== //
-  
-  #abortSignal = null;
-
-  setAbortSignal(signal) {
-    if (!this.isSupported()) {
-      this.#JDYUploader.setAbortSignal(signal);
-      return;
-    }
-    this.#abortSignal = signal;
-  }
-
-  clearAbortSignal() {
-    if (!this.isSupported()) {
-      this.#JDYUploader.clearAbortSignal();
-      return;
-    }
-    this.#abortSignal = null;
-  }
-
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
     return !!this.#DataPipe_char && !!this.#ControlPipe_char;
@@ -484,8 +432,6 @@ class Uploader {
 
     console.log('[START] Initializing upload......');
     for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
-      this.#abortSignal?.throwIfAborted();
-
       await this.#DataPipe_sendToLeanbot(this.#packets[i]);
       console.log(`Uploader: Sending packet #${i}`);
       this.#nextToSend++;
@@ -654,8 +600,7 @@ class Uploader {
   async #sendPacket(index) {
     if (index >= this.#packets.length) return;
 
-    // while (this.#isSending) await new Promise(resolve => setTimeout(resolve, 5));
-    while (this.#isSending) await abortablePromise(5, this.#abortSignal);
+    while (this.#isSending) await new Promise(resolve => setTimeout(resolve, 5));
 
     this.#isSending = true;
     await this.#DataPipe_sendToLeanbot(this.#packets[index]);
@@ -750,22 +695,6 @@ class Uploader {
     if (this.onError) this.onError(err);
   }
 
-  reset() {
-    this.isTransferring = false;
-    this.isUploadSessionActive = false;
-
-    this.#ControlPipe_rxQueue = [];
-    this.#ControlPipe_busy = false;
-    this.#nextToSend = 0;
-    this.#lastReceived = -1;
-    this.#PacketBufferSize = this.#MaxPacketBufferSize;
-
-    if (this.#timeoutTimer) {
-      clearInterval(this.#timeoutTimer);
-      this.#timeoutTimer = null;
-    }
-  }
-
   elapsedTimeMs() {
     if (!this.isSupported()) {
       if (this.#JDYUploader) return this.#JDYUploader.elapsedTimeMs();
@@ -774,6 +703,23 @@ class Uploader {
     if (this.#uploadEndMs === -1) // if upload not done yet
       return performance.now() - this.#uploadStartMs;
     return this.#uploadEndMs - this.#uploadStartMs;
+  }
+
+  stop(){
+    this.isUploadSessionActive = false;
+    this.isTransferring = false;
+
+    if (!this.isSupported()) {
+      if (this.#JDYUploader) this.#JDYUploader.stop();
+      return;
+    }
+
+    if(this.#isSending){
+      this.#isSending = false;
+      return;
+    }
+
+    this.cancel();
   }
 
 }
@@ -810,18 +756,6 @@ class JDYUploader {
         && bytes[1] === this.#responseACK[1];
   }
 
-  // ===== ABORT SUPPORT ===== //
-  
-  #abortSignal = null;
-
-  setAbortSignal(signal) {
-    this.#abortSignal = signal;
-  }
-
-  clearAbortSignal() {
-    this.#abortSignal = null;
-  }
-
   /* ------------------- CONSTRUCTOR ------------------- */
   constructor(ble, serial, uploader) {
     this.#leanbot = ble;     // dùng được hàm của LeanbotBLE
@@ -843,8 +777,7 @@ class JDYUploader {
     this.#uploadEndMs = -1;
     this.#BLEPackets = convertHexToBlePackets(hexText, { returnStep2: true });
 
-    // while (!this.#isGetSyncOK) await new Promise(resolve => setTimeout(resolve, 5));
-    while (!this.#isGetSyncOK) await abortablePromise(5, this.#abortSignal);
+    while (!this.#isGetSyncOK) await new Promise(resolve => setTimeout(resolve, 5));
 
     await this.#uploadCode();
 
@@ -865,8 +798,7 @@ class JDYUploader {
     const resultDisc = await this.#leanbot.disconnect();
     console.log("[UPLOAD] Disconnect result:", resultDisc?.message);
 
-    // await new Promise(resolve => setTimeout(resolve, 3500));
-    await abortablePromise(3500, this.#abortSignal);
+    await new Promise(resolve => setTimeout(resolve, 3500));
 
     console.log("[UPLOAD] Reconnecting...");
     let resultReco;
@@ -874,8 +806,7 @@ class JDYUploader {
       try {
         resultReco = await this.#leanbot.reconnect();
       } catch {}
-      // await new Promise(r => setTimeout(r, 50));
-      await abortablePromise(50, this.#abortSignal);
+      await new Promise(r => setTimeout(r, 50));
     }
     console.log("[UPLOAD] Reconnect success.");
     this.isUploading = true;
@@ -949,8 +880,7 @@ class JDYUploader {
     await this.#serial.SerialPipe_sendToLeanbot(cmd, false);
     this.#isLoadingAddress = true;
 
-    // while (this.#isLoadingAddress) await new Promise(resolve => setTimeout(resolve, 5));
-    while (this.#isLoadingAddress) await abortablePromise(5, this.#abortSignal);
+    while (this.#isLoadingAddress) await new Promise(resolve => setTimeout(resolve, 5));
   }
 
   async #handleLoadAddressAck(bytes) {
@@ -980,8 +910,7 @@ class JDYUploader {
     this.#isCollectingPage = false;
     this.#pageBuffer = [];
 
-    // while (this.#isReadingPage) await new Promise(resolve => setTimeout(resolve, 5));
-    while (this.#isReadingPage) await abortablePromise(5, this.#abortSignal);
+    while (this.#isReadingPage) await new Promise(resolve => setTimeout(resolve, 5));
   }
 
   async #handleReadFlashAck(chunk) {
@@ -1024,8 +953,7 @@ class JDYUploader {
 
     this.#isWritingPage = true;
 
-    // while (this.#isWritingPage) await new Promise(resolve => setTimeout(resolve, 5));
-    while (this.#isWritingPage) await abortablePromise(5, this.#abortSignal);
+    while (this.#isWritingPage) await new Promise(resolve => setTimeout(resolve, 5));
 
     this.#emitUploadMessage(`Write ${(pageIndex + 1) * this.#pageSize} bytes`);
   }
@@ -1118,8 +1046,7 @@ class JDYUploader {
     await this.#readFlash(pageIndex);
 
     // chờ cho đến khi #handleReadFlashAck xử lý xong
-    // while (this.#isReadingPage) await new Promise(resolve => setTimeout(resolve, 5));
-    while (this.#isReadingPage) await abortablePromise(5, this.#abortSignal);
+    while (this.#isReadingPage) await new Promise(resolve => setTimeout(resolve, 5));
 
     return this.#pageBuffer;
   }
@@ -1215,28 +1142,37 @@ class JDYUploader {
     }
   }
 
-  reset() {
-    this.isUploading = false;
-
-    this.#isSyncing = false;
-    this.#isLoadingAddress = false;
-    this.#isReadingPage = false;
-    this.#isWritingPage = false;
-    this.#isCollectingPage = false;
-
-    this.#isGetSyncOK = false;
-    this.#isCompileOK = false;
-
-    if (this.intervalGetSync) {
-      clearInterval(this.intervalGetSync);
-      this.intervalGetSync = null;
-    }
-  }
-
   elapsedTimeMs() {
     if (this.#uploadEndMs === -1) // if upload not done yet
       return performance.now() - this.#uploadStartMs;
     return this.#uploadEndMs - this.#uploadStartMs;
+  }
+
+  stop(){
+
+    if (this.intervalGetSync) clearInterval(this.intervalGetSync); // xóa interval get sync nếu có
+    this.isUploading = false;
+
+    if (this.#isSyncing) {
+      this.#isSyncing = false;
+      this.#isGetSyncOK = false;
+      return;
+    }
+
+    if(this.#isLoadingAddress){
+      this.#isLoadingAddress = false;
+      return;
+    }
+
+    if(this.#isReadingPage){
+      this.#isReadingPage = false;
+      return;
+    }
+    
+    if(this.#isWritingPage){
+      this.#isWritingPage = false;
+      return;
+    }
   }
 }
 
@@ -1441,26 +1377,4 @@ function updateHashWithBytes(hash32, data) {
   }
 
   return hash32;
-}
-
-/** Non-blocking promise with abort support */
-
-function abortablePromise(ms, signal) {
-  if (!signal) {
-    return new Promise(r => setTimeout(r, ms));
-  }
-
-  return new Promise((resolve, reject) => {
-
-    signal.throwIfAborted();
-
-    const id = setTimeout(resolve, ms);
-
-    signal.addEventListener("abort",() => {
-        clearTimeout(id);
-        reject(signal.reason);
-      },
-      { once: true }
-    );
-  });
 }
