@@ -992,13 +992,15 @@ class JDYUploader {
       await this.#writeFlash(page.pageIndex, page.bytes);
     }
     const t2 = performance.now();
-    console.log(`[UPLOAD] Completed in ${((t2 - t1) / 1000).toFixed(2)} s`);
+    // console.log(`[UPLOAD] Completed in ${((t2 - t1) / 1000).toFixed(2)} s`);
+    console.log(`[UPLOAD] Completed in ${sec3FromMs(t2 - t1)} s`);
 
     // Verify
     const t3 = performance.now();
     const verifyOk = await this.verifyUploadedCode();
     const t4 = performance.now();
-    console.log(`[UPLOAD] Verification completed in ${((t4 - t3) / 1000).toFixed(2)} s`);
+    // console.log(`[UPLOAD] Verification completed in ${((t4 - t3) / 1000).toFixed(2)} s`);
+    console.log(`[UPLOAD] Verification completed in ${sec3FromMs(t4 - t3)} s`);
     console.log("[UPLOAD] Verify result:", verifyOk ? "OK" : "FAILED");
 
     // Thông báo success / fail cho UI cũ
@@ -1371,4 +1373,12 @@ function updateHashWithBytes(hash32, data) {
   }
 
   return hash32;
+}
+
+// ======================================================
+// 🔹 Console log timeStamp
+// ======================================================
+
+function sec3FromMs(ms) {
+  return (ms / 1000).toFixed(3);
 }

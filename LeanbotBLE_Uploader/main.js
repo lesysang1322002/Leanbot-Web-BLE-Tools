@@ -28,8 +28,7 @@ const leanbot = new LeanbotBLE();
 // ============================================================
 const leanbotStatus = document.getElementById("leanbotStatus");
 const btnConnect    = document.getElementById("btnConnect");
-const btnReconnect  = document.getElementById("btnReconnect");
-let isFirstConnect = true;  
+const btnReconnect  = document.getElementById("btnReconnect"); 
 let ConnectType = "";
 
 function getLeanbotIDWithoutBLE() {
@@ -46,8 +45,6 @@ else{
 }
 
 leanbot.onConnect = () => {
-
-  if (isFirstConnect && ConnectType === 'ble_connect') isFirstConnect = false;
 
 	// LbIDEEvent = onConnect
   const LbIDEEvent = {
@@ -107,7 +104,7 @@ async function connectLeanbot() {
 }
 
 async function reconnectLeanbot() {
-  ConnectType = isFirstConnect ? 'ble_connect' : 'ble_reconnect';
+  ConnectType = 'ble_reconnect';
   console.log("Reconnecting to Leanbot...");
   const result = await leanbot.reconnect();
   console.log("Reconnect result:", result.message);
@@ -247,7 +244,7 @@ leanbot.Compiler.onCompileError = (compileMessage) => {
 
 leanbot.Compiler.onCompileProgress = (elapsedTime, estimatedTotal) => {
   uiUpdateTime(compileStart, UploaderTimeCompile);
-  uiUpdateProgress(UploaderCompileProg, elapsedTime/1000, estimatedTotal/1000); // ms = > s 
+  uiUpdateProgress(UploaderCompileProg, elapsedTime, estimatedTotal); // ms = > s 
 };
 
 // =================== Button Upload =================== //
@@ -644,8 +641,8 @@ async function loadText(url) {
 }
 
 async function initInoTemplates() {
-  inoTemplates.basicMotion = await loadText("./examples/BasicMotion.ino");
-  inoTemplates.default     = await loadText("./examples/Default.ino");
+  inoTemplates.basicMotion = await loadText("./TemplateSourceCode/BasicMotion.ino");
+  inoTemplates.default     = await loadText("./TemplateSourceCode/Default.ino");
 }
 
 await initInoTemplates();
