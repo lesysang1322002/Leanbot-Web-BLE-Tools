@@ -23,6 +23,9 @@ console.log(`SERVER = ${window.SERVER}`);
 import { LeanbotBLE } from "./leanbot_ble.js";
 const leanbot = new LeanbotBLE();
 
+import { InoEditor } from "./leanbot_editor.js";
+const inoEditor = new InoEditor();
+
 // ============================================================
 // LEANBOT CONNECTION
 // ============================================================
@@ -181,13 +184,8 @@ btnCompile.addEventListener("click", async () => {
   await doCompile();
 });
 
-// Lấy nội dung code từ Monaco Editor
-function getSourceCode() {
-  return window.arduinoEditor?.getValue() || "";
-}
-
 async function doCompile() {
-  const sourceCode = getSourceCode();
+  const sourceCode = inoEditor.getText();
   if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to compile!");
     return null;
@@ -206,7 +204,7 @@ leanbot.Compiler.onCompileSucess = (compileMessage) => {
 	// LbIDEEvent = onRespond
   const LbIDEEvent = {
     objectpk: "compile_res",
-    thongtin: getSourceCode(),
+    thongtin: inoEditor.getText(),
     noidung: compileMessage,
     server_: window.SERVER,
     t_phanhoi: Math.round(leanbot.Compiler.elapsedTimeMs())
@@ -227,7 +225,7 @@ leanbot.Compiler.onCompileError = (compileMessage) => {
 	// LbIDEEvent = onRespond (error)
   const LbIDEEvent = {
     objectpk: "compile_err",
-    thongtin: getSourceCode(),
+    thongtin: inoEditor.getText(),
     noidung: compileMessage,
     server_: window.SERVER,
     t_phanhoi: Math.round(leanbot.Compiler.elapsedTimeMs())
@@ -258,7 +256,7 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
 
-  const sourceCode = getSourceCode();
+  const sourceCode = inoEditor.getText();
   if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to compile!");
     return null;
@@ -453,174 +451,24 @@ tabs.forEach(tab => {
 // ============================================================
 // MONACO EDITOR (ARDUINO)
 // ============================================================
-require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs" } });
 
-    require(["vs/editor/editor.main"], function () {
-      // Arduino keywords thêm vào highlight
-      monaco.languages.register({ id: "arduino" });
-      monaco.languages.setMonarchTokensProvider("arduino", {
-        tokenizer: {
-          root: [
-            // multi-line comment start /* ... */
-            [/\/\*/, "comment", "@comment"],
+await inoEditor.init(document.getElementById("codeEditor"));
 
-            // single-line comment
-            [/\/\/.*$/, "comment"],
+if (window.__pendingOpenFileId) {
+  const id = window.__pendingOpenFileId;
+  window.__pendingOpenFileId = null;
+  openFileInMonaco(id);
+}
 
-            // strings
-            [/"/, { token: "string.quote", bracket: "@open", next: "@string" }],
+inoEditor.onChange = () =>  {
+  const id = window.currentFileId;
+  if (!id) return;
 
-            // keywords/types
-            [/\b(void|int|char|float|double|bool|byte|long|short|unsigned|signed|const)\b/, "keyword"],
-            [/\b(setup|loop|Serial|pinMode|digitalWrite|digitalRead|analogRead|analogWrite|delay|millis|micros)\b/, "type.identifier"],
-            [/\b(begin|println|print|available|read|write)\b/, "identifier"],
+  fileContents[id] = inoEditor.getText();
 
-            // numbers
-            [/\b\d+(\.\d+)?\b/, "number"],
-          ],
-
-          // comment state: ăn mọi thứ đến khi gặp */
-          comment: [
-            [/[^\*]+/, "comment"],
-            [/\*\//, "comment", "@pop"],
-            [/\*/, "comment"],
-          ],
-
-          string: [
-            [/[^\\"]+/, "string"],
-            [/\\./, "string.escape"],
-            [/"/, { token: "string.quote", bracket: "@close", next: "@pop" }],
-          ],
-        },
-      });
-
-      // Light theme cho Arduino
-      monaco.editor.defineTheme("arduinoLight", {
-        base: "vs",          // theme sáng
-        inherit: true,
-        rules: [
-          { token: "comment", foreground: "008000" },      // xanh lá comment
-          { token: "keyword", foreground: "0000FF" },      // xanh dương
-          { token: "number", foreground: "098658" },       // xanh lá số
-          { token: "string", foreground: "A31515" },       // đỏ nâu
-          { token: "type.identifier", foreground: "267F99" }, // xanh da trời
-          { token: "identifier", foreground: "001080" },   // xanh đậm
-        ],
-        colors: {
-          "editor.background": "#FFFFFF", // trắng
-          "editorLineNumber.foreground": "#999999", // xám line number
-          "editorLineNumber.activeForeground": "#000000", // đen line number active
-          "editorCursor.foreground": "#000000", // đen con trỏ
-          "editor.selectionBackground": "#ADD6FF", // xanh dương chọn
-          "editor.inactiveSelectionBackground": "#E5EBF1", // xám nhạt chọn
-        }
-      });
-
-      // set theme
-      monaco.editor.setTheme("arduinoLight");
-
-      // Create editor
-      window.arduinoEditor = monaco.editor.create(document.getElementById("codeEditor"), {
-      value: '',
-      language: "arduino",
-      automaticLayout: true,   
-      lineNumbers: "on",      
-      fontSize: 13,           
-      tabSize: 2,
-      insertSpaces: true,
-      wordWrap: "off",
-      minimap: { enabled: true },
-      smoothScrolling: true,
-      cursorSmoothCaretAnimation: "on",
-      bracketPairColorization: { enabled: true },
-      });
-
-      window.__isMonacoReady = true;
-
-      if (window.__pendingOpenFileId) {
-        const id = window.__pendingOpenFileId;
-        window.__pendingOpenFileId = null;
-        openFileInMonaco(id);
-      }
-
-
-      window.arduinoEditor.updateOptions({
-        scrollBeyondLastLine: false,      // Dòng cuối luôn nằm sát đáy editor
-
-        quickSuggestions: true,           // Tự động hiện gợi ý khi đang gõ
-        suggestOnTriggerCharacters: true, // Gợi ý khi gõ các ký tự kích hoạt (., (, <)
-        tabCompletion: "on",              // Tab để chấp nhận gợi ý
-        acceptSuggestionOnEnter: "on",    // Enter để chấp nhận gợi 
-        snippetSuggestions: "top",        // Ưu tiên gợi ý snippet lên đầu
-        wordBasedSuggestions: "off",      // Tắt gợi ý dựa trên từ trong văn bản
-      });
-
-      const { languages } = monaco;
-
-      const SUGGESTIONS = [
-        {
-          label: "setup",
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: "void setup() {\n\t$0\n}\n",
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: "Arduino setup()",
-        },
-        {
-          label: "loop",
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: "void loop() {\n\t$0\n}\n",
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: "Arduino loop()",
-        },
-        {
-          label: "Serial.println",
-          kind: monaco.languages.CompletionItemKind.Function,
-          insertText: "Serial.println(${1:\"text\"});",
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: "Print line",
-        },
-        {
-          label: "delay",
-          kind: monaco.languages.CompletionItemKind.Function,
-          insertText: "delay(${1:500});",
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: "Delay ms",
-        },
-
-        // Leanbot (ví dụ)
-        {
-          label: "Leanbot.begin",
-          kind: monaco.languages.CompletionItemKind.Function,
-          insertText: "Leanbot.begin();",
-          detail: "Init Leanbot",
-        },
-        {
-          label: "LbMission.begin",
-          kind: monaco.languages.CompletionItemKind.Function,
-          insertText: "LbMission.begin(${1:TB1A} + ${2:TB1B});",
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: "Start mission",
-        },
-      ];
-
-      languages.registerCompletionItemProvider("arduino", { // cung cấp gợi ý
-        triggerCharacters: [".", "(", "<"],                 // ký tự kích hoạt gợi ý        
-        provideCompletionItems: (model, position) => {
-          // Lấy word hiện tại để filter gợi ý theo cái user đang gõ
-          const word = model.getWordUntilPosition(position); 
-          const range = new monaco.Range(
-            position.lineNumber, 
-            word.startColumn,
-            position.lineNumber,
-            word.endColumn
-          );
-
-          return {
-            suggestions: SUGGESTIONS.map((s) => ({ ...s, range })),
-          };
-        },
-      });
-    });
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveWorkspaceFilesToLocalStorage, AutoSaveDelayMs); // save after 1000ms of inactivity
+}
 
 // ============================================================
 //  FILE TREE + WORKSPACE
@@ -648,7 +496,6 @@ async function initInoTemplates() {
 await initInoTemplates();
 
 // Trạng thái Monaco
-window.__isMonacoReady ||= false;
 window.__pendingOpenFileId = window.__pendingOpenFileId ?? null;
 
 function createUUID() {
@@ -713,34 +560,15 @@ const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
 const AutoSaveDelayMs = 10000; // 10 giây
 let saveTimer = null;
 
-function hookMonacoAutosaveOnce() {
-  if (window.__monacoAutosaveHooked) return;
-  if (!window.arduinoEditor) return;
-
-  window.__monacoAutosaveHooked = true;
-
-  window.arduinoEditor.onDidChangeModelContent(() => {
-    const id = window.currentFileId;
-    if (!id) return;
-
-    fileContents[id] = window.arduinoEditor.getValue();
-
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveWorkspaceFilesToLocalStorage, AutoSaveDelayMs); // save after 1000ms of inactivity
-  });
-}
-
 function openFileInMonaco(fileId) {
-  if (!window.__isMonacoReady || !window.arduinoEditor) {
+  if (!inoEditor.__isMonacoReady|| !inoEditor) {
     window.__pendingOpenFileId = fileId;
     return;
   }
 
-  hookMonacoAutosaveOnce();
-
   const content = fileContents[fileId] ?? "";
   window.currentFileId = fileId;
-  window.arduinoEditor.setValue(content);
+  inoEditor.setText(content);
 
   saveWorkspaceFilesToLocalStorage();
 }
@@ -969,7 +797,7 @@ function createItem(isFolder, defaultName) {
     if (isFolder) {
       try {
         window.currentFileId = null;        // clear current file
-        window.arduinoEditor?.setValue(""); // clear editor for new folder
+        inoEditor.setText(""); // clear editor for new folder
         const ctx = window.__rctItemActions.get(id);
         ctx?.expandItem?.();
       } catch (e) {
