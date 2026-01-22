@@ -4,11 +4,11 @@ export class InoEditor {
   __isMonacoReady = false;
 
   /**Callback */
-  onChange = null;
+  onChangeContent = null;
 
   /* ================= PUBLIC API ================= */
 
-  async init(domNode) {
+  async attach(domNode) {
     await new Promise((resolve) => {
       require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs" } });
       require(["vs/editor/editor.main"], resolve);
@@ -24,21 +24,25 @@ export class InoEditor {
   }
 
   // Lấy nội dung code từ Monaco Editor
-  getText() {
+  getContent() {
     if (!this.__isMonacoReady)return "";
     return this.editor?.getValue() || "";
   }
 
 
-  setText(text) {
+  setContent(contentString) {
     if (!this.__isMonacoReady || !this.editor) {
       this.__pendingOpenFileId = fileId;
       return;
     }
 
     this.#hookMonacoAutosaveOnce();
-    this.editor?.setValue(String(text ?? ""));
+    this.editor?.setValue(String(contentString ?? ""));
   }
+
+  getCppCode() { // Dùng khi compile, có thể khác với Content (khi là BlocklyEditor)
+    return this.getContent(); // Just a placeholder for future implementation
+  };
 
   /* ================= INTERNAL ================= */
 

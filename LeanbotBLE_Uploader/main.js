@@ -23,7 +23,7 @@ console.log(`SERVER = ${window.SERVER}`);
 import { LeanbotBLE } from "./leanbot_ble.js";
 const leanbot = new LeanbotBLE();
 
-import { InoEditor } from "./leanbot_editor.js";
+import { InoEditor } from "./InoEditor.js";
 const inoEditor = new InoEditor();
 
 // ============================================================
@@ -184,8 +184,11 @@ btnCompile.addEventListener("click", async () => {
   await doCompile();
 });
 
+let currentCompileCode = null; // Use to capture snapshot of the source code being compiled
+
 async function doCompile() {
-  const sourceCode = inoEditor.getText();
+  const sourceCode = inoEditor.getCppCode();
+  currentCompileCode = sourceCode;
   if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to compile!");
     return null;
@@ -200,11 +203,11 @@ async function doCompile() {
 }
 
 leanbot.Compiler.onCompileSucess = (compileMessage) => {
-
+  const CompileCode = currentCompileCode;
 	// LbIDEEvent = onRespond
   const LbIDEEvent = {
     objectpk: "compile_res",
-    thongtin: inoEditor.getText(),
+    thongtin: CompileCode,
     noidung: compileMessage,
     server_: window.SERVER,
     t_phanhoi: Math.round(leanbot.Compiler.elapsedTimeMs())
@@ -221,11 +224,12 @@ leanbot.Compiler.onCompileSucess = (compileMessage) => {
 };
 
 leanbot.Compiler.onCompileError = (compileMessage) => {
+  const CompileCode = currentCompileCode;
 
 	// LbIDEEvent = onRespond (error)
   const LbIDEEvent = {
     objectpk: "compile_err",
-    thongtin: inoEditor.getText(),
+    thongtin: CompileCode,
     noidung: compileMessage,
     server_: window.SERVER,
     t_phanhoi: Math.round(leanbot.Compiler.elapsedTimeMs())
@@ -256,7 +260,7 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
 
-  const sourceCode = inoEditor.getText();
+  const sourceCode = inoEditor.getContent();
   if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to compile!");
     return null;
@@ -452,7 +456,7 @@ tabs.forEach(tab => {
 // MONACO EDITOR (ARDUINO)
 // ============================================================
 
-await inoEditor.init(document.getElementById("codeEditor"));
+await inoEditor.attach(document.getElementById("codeEditor"));
 
 if (window.__pendingOpenFileId) {
   const id = window.__pendingOpenFileId;
@@ -460,18 +464,22 @@ if (window.__pendingOpenFileId) {
   openFileInMonaco(id);
 }
 
-inoEditor.onChange = () =>  {
+// Autosave nội dung từ Monaco về fileContents
+const AutoSaveDelayMs = 10000; // 10 giây
+let saveTimer = null;
+
+inoEditor.onChangeContent = () =>  {
   const id = window.currentFileId;
   if (!id) return;
 
-  fileContents[id] = inoEditor.getText();
+  fileContents[id] = inoEditor.getContent();
 
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveWorkspaceFilesToLocalStorage, AutoSaveDelayMs); // save after 1000ms of inactivity
+  saveTimer = setTimeout(saveWorkspaceFilesToLocalStorage, AutoSaveDelayMs); // save after 10000ms of inactivity
 }
 
 // ============================================================
-//  FILE TREE + WORKSPACE
+//  FILE TREE Root Data
 // ============================================================
 
 // Templates ino
@@ -503,32 +511,121 @@ function createUUID() {
 }
 
 // Tạo dữ liệu tree
-const MAIN_FILE_ID = createUUID();
-
 const items = {
   root: {
     index: "root",
     isFolder: true,
-    children: [MAIN_FILE_ID],
-    data: "Workspace"
-  },
-  [MAIN_FILE_ID]: {
-    index: MAIN_FILE_ID,
-    isFolder: false,
     children: [],
-    data: "BasicMotion.ino"
+    data: "Workspace"
   },
 };
 
 // nội dung file, key theo id file (item.index)
-const fileContents = {
-  [MAIN_FILE_ID]: inoTemplates.basicMotion || ""
-};
+const fileContents = {};
+
+// ============================================================
+//  LOCALSTORAGE (WORKSPACE)
+// ============================================================
+
+const LS_KEY_TREE  = "leanbot_workspace_tree";
+const LS_KEY_FILES = "leanbot_workspace_files";
+
+function saveWorkspaceTreeToLocalStorage() {
+  const data = {
+    items,
+    currentFileId: window.currentFileId
+  };
+
+  localStorage.setItem(LS_KEY_TREE, JSON.stringify(data));
+}
+
+function saveWorkspaceFilesToLocalStorage() {
+  const data = {
+    fileContents,
+    currentFileId: window.currentFileId
+  };
+
+  localStorage.setItem(LS_KEY_FILES, JSON.stringify(data));
+}
+
+function hasAnyInoFile() { // Check if there is any .ino file in the workspace
+  for (const id in items) {
+    const it = items[id];
+    if (!it || it.isFolder) continue;
+
+    const name = String(it.data || "").trim().toLowerCase();
+    if (name.endsWith(".ino")) return true;
+  }
+  return false;
+}
+
+function loadWorkspaceFromLocalStorage() {
+  try {
+    const rawTree  = localStorage.getItem(LS_KEY_TREE);
+    const rawFiles = localStorage.getItem(LS_KEY_FILES);
+
+    if(rawTree === null && rawFiles === null) { // no workspace found
+      console.log("[LS] No workspace found in localStorage");
+      return;
+    }
+
+    if (rawTree) {
+      const data = JSON.parse(rawTree);
+
+      Object.keys(items).forEach(k => delete items[k]);
+      Object.assign(items, data.items || {});
+
+      window.currentFileId = data.currentFileId || window.currentFileId;
+    }
+
+    if (rawFiles) {
+      const data = JSON.parse(rawFiles);
+
+      Object.keys(fileContents).forEach(k => delete fileContents[k]);
+      Object.assign(fileContents, data.fileContents || {});
+
+      window.currentFileId = data.currentFileId || window.currentFileId;
+    }
+    console.log("[LS] Workspace restored");
+  } catch (e) {
+    console.log("[LS] Restore failed", e);
+  }
+  finally {
+    if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.ino directly at root
+      console.log("[LS] No .ino file found, creating default BasicMotion.ino");
+      const id = createUUID();
+      items[id] = {
+        index: id,
+        isFolder: false,
+        children: [],
+        data: "BasicMotion.ino",
+        parent: "root",
+      };
+      
+      items.root.children ||= [];
+      if (!items.root.children.includes(id)) {
+        items.root.children.push(id);
+      }
+
+      fileContents[id] = inoTemplates.basicMotion || "";
+      window.currentFileId = id;
+    }
+    rebuildParents();
+    saveWorkspaceTreeToLocalStorage();
+    saveWorkspaceFilesToLocalStorage();
+  }
+}
+
+loadWorkspaceFromLocalStorage();
+window.__pendingOpenFileId = window.currentFileId || null;
+
+// ============================================================
+//  FILE TREE + WORKSPACE management
+// ============================================================
 
 // track focus, selection để tạo file, folder, move đúng vị trí
-let lastFocusedId    = MAIN_FILE_ID; 
-let lastSelectedIds  = [MAIN_FILE_ID];
-window.currentFileId = MAIN_FILE_ID;
+let lastFocusedId    = window.currentFileId; 
+let lastSelectedIds  = [window.currentFileId];
 
 // Gắn parent cho mỗi node, để move nhanh
 function rebuildParents() {
@@ -542,6 +639,9 @@ function rebuildParents() {
 rebuildParents();
 
 function getAncestorFolders(id) {
+
+  if (!id || !items[id]) return []; // incase id is null or invalid
+
   const out = [];
   let p = items[id]?.parent;
 
@@ -556,11 +656,9 @@ const { UncontrolledTreeEnvironment, Tree, StaticTreeDataProvider } = window.Rea
 const dataProvider = new StaticTreeDataProvider(items, (item, data) => ({ ...item, data }));
 const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
 
-// Autosave nội dung từ Monaco về fileContents
-const AutoSaveDelayMs = 10000; // 10 giây
-let saveTimer = null;
+function openFileInMonaco(fileId) { 
+  if (!fileId || !items[fileId] || items[fileId].isFolder) return; // avoid id fileid invalid
 
-function openFileInMonaco(fileId) {
   if (!inoEditor.__isMonacoReady|| !inoEditor) {
     window.__pendingOpenFileId = fileId;
     return;
@@ -568,7 +666,7 @@ function openFileInMonaco(fileId) {
 
   const content = fileContents[fileId] ?? "";
   window.currentFileId = fileId;
-  inoEditor.setText(content);
+  inoEditor.setContent(content);
 
   saveWorkspaceFilesToLocalStorage();
 }
@@ -718,6 +816,20 @@ function focusTreeItemNow(id) {
   return true;
 }
 
+function requestTreeFocus(id) {
+  if (!id || !items[id]) return;
+
+  // Ensure visibility
+  const parent = items[id].parent;
+  if (parent) expandFolderChain(parent);
+
+  // Request focus (deferred)
+  pendingTreeFocusId = id;
+
+  // Force tree to re-render so renderItem can consume the request
+  emitChanged([parent || "root", id]);
+}
+
 let pendingTreeRenameId = null;
 
 function nameExistsInFolder(parentId, name) {
@@ -797,7 +909,7 @@ function createItem(isFolder, defaultName) {
     if (isFolder) {
       try {
         window.currentFileId = null;        // clear current file
-        inoEditor.setText(""); // clear editor for new folder
+        inoEditor.setContent(""); // clear editor for new folder
         const ctx = window.__rctItemActions.get(id);
         ctx?.expandItem?.();
       } catch (e) {
@@ -812,6 +924,7 @@ function createItem(isFolder, defaultName) {
   if (!isFolder) openFileInMonaco(id);
   saveWorkspaceTreeToLocalStorage();
 }
+
 const btnNewFile = document.getElementById("btnNewFile");
 const btnNewFolder = document.getElementById("btnNewFolder");
 
@@ -856,6 +969,8 @@ function ensureInoExtension(name) {
 function renameFileId(id, newDisplayName) {
   const item = items[id];
   if (!item) return;
+
+  if (item.index === "root") return; // NEVER rename root
 
   if (!item.isFolder) {
     newDisplayName = ensureInoExtension(newDisplayName);
@@ -1003,75 +1118,19 @@ function handleDrop(itemsDragged, target) {
 }
 
 // ============================================================
-//  LOCALSTORAGE (WORKSPACE)
-// ============================================================
-const LS_KEY_TREE  = "leanbot_workspace_tree";
-const LS_KEY_FILES = "leanbot_workspace_files";
-
-function saveWorkspaceTreeToLocalStorage() {
-  const data = {
-    items,
-    currentFileId: window.currentFileId
-  };
-
-  localStorage.setItem(LS_KEY_TREE, JSON.stringify(data));
-}
-
-function saveWorkspaceFilesToLocalStorage() {
-  const data = {
-    fileContents,
-  };
-
-  localStorage.setItem(LS_KEY_FILES, JSON.stringify(data));
-}
-
-function loadWorkspaceFromLocalStorage() {
-  try {
-    const rawTree  = localStorage.getItem(LS_KEY_TREE);
-    const rawFiles = localStorage.getItem(LS_KEY_FILES);
-
-    if (rawTree) {
-      const data = JSON.parse(rawTree);
-
-      Object.keys(items).forEach(k => delete items[k]);
-      Object.assign(items, data.items || {});
-
-      window.currentFileId = data.currentFileId || window.currentFileId || MAIN_FILE_ID;
-    }
-
-    if (rawFiles) {
-      const data = JSON.parse(rawFiles);
-
-      Object.keys(fileContents).forEach(k => delete fileContents[k]);
-      Object.assign(fileContents, data.fileContents || {});
-
-      window.currentFileId = data.currentFileId || window.currentFileId || MAIN_FILE_ID;
-    }
-
-    rebuildParents();
-    console.log("[LS] Workspace restored");
-  } catch (e) {
-    console.log("[LS] Restore failed", e);
-  }
-}
-
-loadWorkspaceFromLocalStorage();
-window.__pendingOpenFileId = window.currentFileId || MAIN_FILE_ID;
-
-// ============================================================
 // TREE VIEWSTATE + CONTEXT MENU
 // ============================================================
 const initialOpenId = (window.currentFileId && items[window.currentFileId])
   ? window.currentFileId
-  : MAIN_FILE_ID;
+  : null;
 
 const ancestorFolders = getAncestorFolders(initialOpenId);
 
 const viewState = {
   tree: {
     expandedItems: ["root", ...ancestorFolders],
-    selectedItems: [initialOpenId],
-    focusedItem: initialOpenId,
+    selectedItems: initialOpenId ? [initialOpenId] : [],
+    focusedItem: initialOpenId || undefined,
   },
 };
 
@@ -1146,6 +1205,15 @@ function deleteItemWithConfirm(itemId) {
   deleteItemById(itemId);
 }
 
+function pickNextOpenFile() {
+  const files = Object.values(items)
+    .filter(it => it && !it.isFolder);
+
+  if (files.length === 0) return null;
+
+  return files[0].index;
+}
+
 function deleteItemById(id) {
   if (!id || !items[id] || id === "root") return;
 
@@ -1157,10 +1225,17 @@ function deleteItemById(id) {
   // focus lại
   pendingTreeFocusId = items[removedParent] ? removedParent : "root";
 
-  // nếu đang mở file bị xóa, mở lại file chính
+  // nếu đang mở file bị xóa, mở file đầu tiên trong items
   if (window.currentFileId && !items[window.currentFileId]) {
-    window.currentFileId = MAIN_FILE_ID;
-    if (items[MAIN_FILE_ID]) openFileInMonaco(MAIN_FILE_ID);
+    const next = pickNextOpenFile();
+    window.currentFileId = next;
+    if (next) {
+      requestTreeFocus(next);
+      openFileInMonaco(next);
+    } else { // Nếu không còn file nào, clear editor
+      window.currentFileId = null;
+      inoEditor.setContent("");
+   }
   }
 
   if (!items[lastFocusedId]) lastFocusedId = pendingTreeFocusId;
@@ -1366,7 +1441,9 @@ reactRoot.render(
 
 // Initial focus file
 pendingTreeFocusId = initialOpenId;
-openFileInMonaco(initialOpenId);
+if (initialOpenId) {
+  openFileInMonaco(initialOpenId);
+}
 
 // ============================================================
 // Leanbot IDE Event(ARDUINO)
