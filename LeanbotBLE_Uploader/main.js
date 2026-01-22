@@ -669,6 +669,7 @@ function openFileInMonaco(fileId) {
   inoEditor.setContent(content);
 
   saveWorkspaceFilesToLocalStorage();
+  setReadOnly(false); // exit read-only mode when open file 
 }
 
 // Lấy folder đích để thêm file, folder
@@ -876,6 +877,41 @@ function expandFolderChain(folderId) {
   }
 }
 
+function setReadOnly(readOnly) {
+  if (!inoEditor.editor) return;
+  inoEditor.editor.updateOptions({ readOnly: readOnly });
+}
+
+function getFolderContent(folderId, prefix = "") {
+  const folderNode = items[folderId];
+  if (!folderNode || !folderNode.isFolder) return "";
+
+  let lines = [];
+
+  lines.push(`${prefix}${folderNode.data}/`);
+
+  const children = (folderNode.children || [])
+    .map(id => items[id])
+    .filter(Boolean);
+
+  children.forEach((child, index) => {
+    const isLast = index === children.length - 1;
+    const connector = isLast ? "└─ " : "├─ ";
+    const nextPrefix = prefix + (isLast ? "   " : "│  ");
+
+    if (child.isFolder) {
+      lines.push(`${prefix}${connector}${child.data}/`);
+      lines.push(getFolderContent(child.index, nextPrefix));
+    } else {
+      lines.push(`${prefix}${connector}${child.data}`);
+    }
+  });
+
+  window.currentFileId = folderId;
+  inoEditor.setContent(lines.join("\n"));
+  setReadOnly(true); // set read-only mode if  select/view folder content
+}
+
 // Thêm file, folder
 function createItem(isFolder, defaultName) {
   const parentId = getTargetFolderId();
@@ -908,8 +944,7 @@ function createItem(isFolder, defaultName) {
 
     if (isFolder) {
       try {
-        window.currentFileId = null;        // clear current file
-        inoEditor.setContent(""); // clear editor for new folder
+        getFolderContent(id); // in folder structure to console
         const ctx = window.__rctItemActions.get(id);
         ctx?.expandItem?.();
       } catch (e) {
@@ -1235,6 +1270,7 @@ function deleteItemById(id) {
     } else { // Nếu không còn file nào, clear editor
       window.currentFileId = null;
       inoEditor.setContent("");
+      setReadOnly(true); // set read-only mode if  all files are deleted
    }
   }
 
@@ -1293,15 +1329,28 @@ reactRoot.render(
       },
 
       onSelectItems: (ids) => {
+        console.log("onSelectItems:", ids, "\nlength =", Array.isArray(ids) ? ids.length : 0);
         lastSelectedIds = Array.isArray(ids) ? ids.slice() : [];
         if (lastSelectedIds.length > 0) lastFocusedId = lastSelectedIds[lastSelectedIds.length - 1];
       },
 
       onPrimaryAction: (item) => {
         if (!item || item.isFolder) return;
-
+        // console.log("onPrimaryAction:", item.index);
         pendingTreeFocusId = item.index;
         openFileInMonaco(item.index);
+      },
+
+      onCollapseItem: (item) => {
+        if (!item || !item.isFolder) return;
+        // console.log("onCollapseItem:", item.index);
+        getFolderContent(item.index);
+      },
+
+      onExpandItem: (item) => {
+        if (!item || !item.isFolder) return;
+        // console.log("onExpandItem:", item.index);
+        getFolderContent(item.index);
       },
 
       onRenameItem: (item, name) => {

@@ -2,6 +2,7 @@ export class InoEditor {
 
   editor = null;
   __isMonacoReady = false;
+  __pendingContent = null;
 
   /**Callback */
   onChangeContent = null;
@@ -21,23 +22,30 @@ export class InoEditor {
     this.#registerCompletion();
 
     this.__isMonacoReady = true;
+
+    this.#hookMonacoAutosaveOnce();
+
+    if (this.__pendingContent !== null) {
+      this.editor.setValue(this.__pendingContent);
+      this.__pendingContent = null;
+    }
   }
 
   // Lấy nội dung code từ Monaco Editor
   getContent() {
-    if (!this.__isMonacoReady)return "";
+    if (!this.__isMonacoReady || !this.editor) {
+      return;
+    }
     return this.editor?.getValue() || "";
   }
 
 
   setContent(contentString) {
     if (!this.__isMonacoReady || !this.editor) {
-      this.__pendingOpenFileId = fileId;
+      this.__pendingContent = String(contentString ?? "");
       return;
     }
-
-    this.#hookMonacoAutosaveOnce();
-    this.editor?.setValue(String(contentString ?? ""));
+    this.editor.setValue(String(contentString ?? ""));
   }
 
   getCppCode() { // Dùng khi compile, có thể khác với Content (khi là BlocklyEditor)
@@ -123,7 +131,7 @@ export class InoEditor {
         tabSize: 2,
         insertSpaces: true,
         wordWrap: "off",
-        minimap: { enabled: true },
+        minimap: { enabled: false },
         smoothScrolling: true,
         cursorSmoothCaretAnimation: "on",
         bracketPairColorization: { enabled: true },
