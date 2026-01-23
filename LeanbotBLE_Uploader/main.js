@@ -1329,7 +1329,7 @@ reactRoot.render(
       },
 
       onSelectItems: (ids) => {
-        console.log("onSelectItems:", ids, "\nlength =", Array.isArray(ids) ? ids.length : 0);
+        // console.log("onSelectItems:", ids, "\nlength =", Array.isArray(ids) ? ids.length : 0);
         lastSelectedIds = Array.isArray(ids) ? ids.slice() : [];
         if (lastSelectedIds.length > 0) lastFocusedId = lastSelectedIds[lastSelectedIds.length - 1];
       },

@@ -199,9 +199,8 @@ export class InoEditor {
   }
 
   #hookMonacoAutosaveOnce() {
-    if (this.__monacoAutosaveHooked || !this.editor) return;
-    this.__monacoAutosaveHooked = true;
-
+    if (!this.editor) return;
+    
     this.editor.onDidChangeModelContent(() => {
       if (this.onChangeContent) this.onChangeContent(this.editor.getValue()); // callback everytime editor changes
     });
