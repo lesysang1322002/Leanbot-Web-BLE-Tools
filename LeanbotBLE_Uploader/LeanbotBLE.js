@@ -1,7 +1,7 @@
 // leanbot_ble.js
 // SDK Leanbot BLE - Quản lý kết nối và giao tiếp BLE với Leanbot
 
-import { LeanbotCompiler } from "./leanbot_compiler.js";
+import { LeanbotCompiler } from "./LeanbotCompiler.js";
 
 export class LeanbotBLE {
   // ===== SERVICE UUID CHUNG =====

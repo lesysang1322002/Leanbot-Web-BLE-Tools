@@ -23,7 +23,9 @@ export class InoEditor {
 
     this.__isMonacoReady = true;
 
-    this.#hookMonacoAutosaveOnce();
+    this.editor.onDidChangeModelContent(() => {
+      if (this.onChangeContent) this.onChangeContent(); // callback everytime editor changes
+    });
 
     if (this.__pendingContent !== null) {
       this.editor.setValue(this.__pendingContent);
@@ -51,6 +53,11 @@ export class InoEditor {
   getCppCode() { // Dùng khi compile, có thể khác với Content (khi là BlocklyEditor)
     return this.getContent(); // Just a placeholder for future implementation
   };
+
+  setReadOnly(readOnly) {
+    if (!this.editor) return;
+    this.editor.updateOptions({ readOnly: readOnly });
+  }
 
   /* ================= INTERNAL ================= */
 
@@ -195,14 +202,6 @@ export class InoEditor {
           suggestions: SUGGESTIONS.map(s => ({ ...s, range })),
         };
       },
-    });
-  }
-
-  #hookMonacoAutosaveOnce() {
-    if (!this.editor) return;
-    
-    this.editor.onDidChangeModelContent(() => {
-      if (this.onChangeContent) this.onChangeContent(this.editor.getValue()); // callback everytime editor changes
     });
   }
 }
