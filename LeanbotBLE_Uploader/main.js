@@ -260,7 +260,7 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
 
-  const sourceCode = inoEditor.getContent();
+  const sourceCode = inoEditor.getCppCode();
   if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to compile!");
     return null;
