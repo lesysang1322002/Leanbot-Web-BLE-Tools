@@ -41,23 +41,23 @@ export class InoEditor {
     return this.editor?.getValue() || "";
   }
 
-
   setContent(contentString) {
     if (!this.__isMonacoReady || !this.editor) {
       this.__pendingContent = String(contentString ?? "");
       return;
     }
+    this.#unlockReadOnlyEditor(); // if prior read-only, unlock it before setting new content
     this.editor.setValue(String(contentString ?? ""));
   }
+
+  setContentReadOnly(contentString) { // force set content and read-only mode, any setContent after will unlock it
+    this.setContent(contentString);
+    this.#setReadOnly(true);
+  } 
 
   getCppCode() { // Dùng khi compile, có thể khác với Content (khi là BlocklyEditor)
     return this.getContent(); // Just a placeholder for future implementation
   };
-
-  setReadOnly(readOnly) {
-    if (!this.editor) return;
-    this.editor.updateOptions({ readOnly: readOnly });
-  }
 
   /* ================= INTERNAL ================= */
 
@@ -204,4 +204,17 @@ export class InoEditor {
       },
     });
   }
+
+  #unlockReadOnlyEditor() { // unlock read-only state if prior set
+    if (!this.editor) return;
+    const isReadOnly = this.editor.getOption(monaco.editor.EditorOption.readOnly);
+    if (!isReadOnly) return;
+    this.#setReadOnly(false);
+  }
+
+  #setReadOnly(readOnly) { // force set read-only state
+    if (!this.editor) return;
+    this.editor.updateOptions({ readOnly: readOnly });
+  }
+
 }

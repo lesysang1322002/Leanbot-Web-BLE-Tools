@@ -680,7 +680,6 @@ function openFileInMonaco(fileId) {
   inoEditor.setContent(content);
 
   saveWorkspaceFilesToLocalStorage();
-  inoEditor.setReadOnly(false); // exit read-only mode when open file 
 }
 
 // Lấy folder đích để thêm file, folder
@@ -888,45 +887,40 @@ function expandFolderChain(folderId) {
   }
 }
 
-function getFolderContent(folderId, childIndex = 0, prefix = "", lines = null) {
-  if (!isFolder(folderId)) return;
+function getFolderContent(id, prefix = "") {
 
-  const isRoot = lines === null;
-  if (isRoot) lines = [];
+  const folderNode = items[id];
 
-  const folder = items[folderId];
-  const children = folder.children || [];
+  if (!folderNode) return ""; // items not exist
 
-  // Root header
-  if (isRoot && childIndex === 0) {
-    lines.push(prefix + folder.data + "/");
+  let content = `${prefix}${folderNode.data}`;
+
+  if (!isFolder(id)) return content; // not a folder => just return name
+
+  let lines = [];
+  
+  lines.push(content + "/"); // folder name
+
+  const children = (folderNode.children || [])
+    .map(id => items[id])
+    .filter(Boolean);
+
+  // Folder empty => return "folder empty"
+  if (children.length === 0) {
+    lines.push(`${prefix}   Folder empty`);
+    return lines.join("\n");
   }
 
-  // Stop
-  if (childIndex >= children.length) {
-    if (isRoot) {
-      lines.push("\t" + "Folder Empty");
-    }
-    window.currentFileId = folderId;
-    inoEditor.setContent(lines.join("\n"));
-    inoEditor.setReadOnly(true);
-    return;
-  }
+  // Folder not empty => list children
+  children.forEach((child, index) => {
+    const isLast = index === children.length - 1;
+    const connector = isLast ? "└─ " : "├─ ";
+    const nextPrefix = prefix + (isLast ? "   " : "");
 
-  const cid = children[childIndex];
-  const child = items[cid];
-  if (!child) {
-    return getFolderContent(folderId, childIndex + 1, prefix, lines);
-  }
+    lines.push(prefix + connector + getFolderContent(child.index, nextPrefix).trimStart());
+  });
 
-  const isLast = childIndex === children.length - 1;
-  const connector = isLast ? "└─ " : "├─ ";
-
-  // Render ONLY this level
-  lines.push(prefix + connector + child.data + (child.isFolder ? "/" : ""));
-
-  // Tail recursion: next sibling
-  return getFolderContent(folderId, childIndex + 1, prefix, lines);
+  return lines.join("\n");
 }
 
 // Thêm file, folder
@@ -961,7 +955,9 @@ function createItem(isFolder, defaultName) {
 
     if (isFolder) {
       try {
-        getFolderContent(id); // in folder structure to console
+        const folderContent = getFolderContent(id); // in folder structure to console
+        window.currentFileId = id;
+        inoEditor.setContentReadOnly(folderContent);
         const ctx = window.__rctItemActions.get(id);
         ctx?.expandItem?.();
       } catch (e) {
@@ -1302,11 +1298,13 @@ function deleteItemById(id) {
   if (nextFocus) {
     requestTreeFocus(nextFocus);
     if(!isFolder(nextFocus))openFileInMonaco(nextFocus); // Nếu là file, mở trong editor
-    else getFolderContent(nextFocus); // nếu là folder, hiển thị cấu trúc folder trong editor
+    else {
+        const folderContent = getFolderContent(nextFocus); // in folder structure to console
+        inoEditor.setContentReadOnly(folderContent);  
+    }
   } 
   else { // Nếu không còn file nào, clear editor
-    inoEditor.setContent("\\");
-    inoEditor.setReadOnly(true); // set read-only mode if  all files are deleted
+    inoEditor.setContentReadOnly("\\");
   }
 
   if (!items[lastFocusedId]) lastFocusedId = pendingTreeFocusId;
@@ -1373,7 +1371,9 @@ reactRoot.render(
       onPrimaryAction: (item) => {
         console.log("onPrimaryAction:", item.index);
         if (isFolder(item.index)){ // if folder, show content in editor
-          getFolderContent(item.index);
+          const folderContent = getFolderContent(item.index); // in folder structure to console
+          window.currentFileId = item.index;
+          inoEditor.setContentReadOnly(folderContent);
           return;
         }
         // if file, open in monaco
