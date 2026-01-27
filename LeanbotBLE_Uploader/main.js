@@ -1528,10 +1528,16 @@ if (initialOpenId) {
 
 function logLbIDEEvent(event) {
 
-  const shorten = (text, len = 64) =>{
-    const normalized = text.replace(/\r?\n+/g, " ").replace(/\s+/g, " ").trim()
-    return normalized.length > len ? normalized.slice(0, len) : normalized;
-  }
+  const shorten = (text, len = 64) => {
+    const normalized = String(text ?? "")
+      .replace(/\r?\n+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return normalized.length > len
+      ? normalized.slice(0, len)
+      : normalized;
+  };
 
   console.log(
     `LbIDEEvent

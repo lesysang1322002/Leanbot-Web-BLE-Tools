@@ -46,8 +46,8 @@ export class InoEditor {
       this.__pendingContent = String(contentString ?? "");
       return;
     }
-    this.#unlockReadOnlyEditor(); // if prior read-only, unlock it before setting new content
     this.editor.setValue(String(contentString ?? ""));
+    this.#setReadOnly(false); // always unlock when set content
   }
 
   setContentReadOnly(contentString) { // force set content and read-only mode, any setContent after will unlock it
@@ -203,13 +203,6 @@ export class InoEditor {
         };
       },
     });
-  }
-
-  #unlockReadOnlyEditor() { // unlock read-only state if prior set
-    if (!this.editor) return;
-    const isReadOnly = this.editor.getOption(monaco.editor.EditorOption.readOnly);
-    if (!isReadOnly) return;
-    this.#setReadOnly(false);
   }
 
   #setReadOnly(readOnly) { // force set read-only state
