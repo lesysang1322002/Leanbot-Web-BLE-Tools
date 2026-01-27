@@ -5,7 +5,8 @@
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
-window.SERVER        = params.get("SERVER") || "ide-server-qa.leanbot.space";
+// window.SERVER        = params.get("SERVER") || "ide-server-qa.leanbot.space";
+window.SERVER        = params.get("SERVER") || "cs.leanbot.space";
 window.MODE          = params.get("MODE");
 
 if (window.MODE === "xyz123") {
