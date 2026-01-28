@@ -889,36 +889,40 @@ function expandFolderChain(folderId) {
 }
 
 function getFolderContent(id, prefix = "") {
-
   const folderNode = items[id];
 
-  if (!folderNode) return ""; // items not exist
+  if (!folderNode) return ""; // item not exist
+  if (!isFolder(id)) return `${prefix}${folderNode.data}`; // file => return name
 
-  let content = `${prefix}${folderNode.data}`;
-
-  if (!isFolder(id)) return content; // not a folder => just return name
-
-  let lines = [];
-  
-  lines.push(content + "/"); // folder name
+  const lines = [];
+  lines.push(folderNode.data + "/"); // folder name
 
   const children = (folderNode.children || [])
     .map(id => items[id])
     .filter(Boolean);
 
-  // Folder empty => return "folder empty"
   if (children.length === 0) {
-    lines.push(`${prefix}   Folder empty`);
+    lines.push(`${prefix}   Folder empty`); // empty folder
     return lines.join("\n");
   }
 
-  // Folder not empty => list children
   children.forEach((child, index) => {
     const isLast = index === children.length - 1;
     const connector = isLast ? "└─ " : "├─ ";
-    const nextPrefix = prefix + (isLast ? "   " : "");
+    const isChildFolder = isFolder(child.index);
 
-    lines.push(prefix + connector + getFolderContent(child.index, nextPrefix).trimStart());
+    const childPrefix = prefix + (isLast ? "   " : "│  "); // next level prefix
+    const contentPrefix = isChildFolder
+      ? childPrefix
+      : prefix + connector; // prefix passed to recursion
+
+    const content = getFolderContent(child.index, contentPrefix); // recursive call
+
+    lines.push(
+      isChildFolder
+        ? prefix + connector + content // folder entry
+        : content // file entry
+    );
   });
 
   return lines.join("\n");
