@@ -9,11 +9,12 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+
   <!-- TOP BAR -->
   <div id="topBar" class="lb-topbar">
     <div class="lb-top-left">
       <div class="lb-tabs">
-        <button class ="lb-tab disabled" >
+        <button class="lb-tab disabled">
           <img class="lb-tab-icon" id="logoIcon" src="./img/logo-lb.png" />
         </button>
 
@@ -22,22 +23,22 @@
           <span>CODE</span>
         </button>
 
-        <button class="lb-tab disabled" >
+        <button class="lb-tab disabled">
           <img class="lb-tab-icon" src="./img/icons/libraries.png" />
           <span>LIBRARIES</span>
         </button>
 
-        <button class="lb-tab disabled" >
+        <button class="lb-tab disabled">
           <img class="lb-tab-icon" src="./img/icons/tools.png" />
           <span>TOOLS</span>
         </button>
 
-        <button class="lb-tab disabled" >
+        <button class="lb-tab disabled">
           <img class="lb-tab-icon" src="./img/icons/about.png" />
           <span>ABOUT</span>
         </button>
 
-        <button class="lb-tab disabled" >
+        <button class="lb-tab disabled">
           <img class="lb-tab-icon" id="ptutorIcon" src="./img/icons/ptutor.png" />
           <span>PTUTOR</span>
         </button>
@@ -45,8 +46,7 @@
     </div>
 
     <div class="lb-top-right">
-
-      <button id="btnCompile" class="lb-icon-btn" >
+      <button id="btnCompile" class="lb-icon-btn">
         <img class="lb-icon-img" src="./img/icons/compile.png" />
         <span>COMPILE</span>
       </button>
@@ -66,27 +66,36 @@
   <!-- WORKSPACE -->
   <div id="workspace">
 
+    <!-- editorRow: 2-column layout (file tree | editor) -->
     <div id="editorRow">
-      <!-- `FILE EXPLORER -->
-      <div id="fileTreePanel">
-        <div id="fileTreeToolbar">   <!-- toolbar cho file tree -->
-          <button class="lb-icon-btn" id="btnNewFile"  >＋ File</button>
-          <button class="lb-icon-btn" id="btnLoadFile" >Load File</button>
-          <input type="file" id="FileInput" accept=".ino" hidden> <!-- input file ẩn -->
+
+      <!-- LEFT COLUMN -->
+      <div id="fileTreeColumn">
+
+        <!-- toolbar (fixed, non-scroll) -->
+        <div id="fileTreeToolbar">
+          <button class="lb-icon-btn" id="btnNewFile">＋ File</button>
+          <button class="lb-icon-btn" id="btnLoadFile">Load File</button>
+          <input type="file" id="FileInput" accept=".ino" hidden>
           <button class="lb-icon-btn" id="btnNewFolder">＋ Folder</button>
         </div>
 
-        <div id="fileTreeMount"></div> <!-- mount cho react-complex-tree -->
-        <div id="treeCtxMenu" class="ctx-menu is-hidden">
-          <button type="button" id="ctxRename">Rename</button>
-          <button type="button" id="ctxDelete">Delete</button>
+        <!-- file tree (scrollable) -->
+        <div id="fileTreePanel">
+          <div id="fileTreeMount"></div>
+          <div id="treeCtxMenu" class="ctx-menu is-hidden">
+            <button type="button" id="ctxRename">Rename</button>
+            <button type="button" id="ctxDelete">Delete</button>
+          </div>
         </div>
+
       </div>
 
       <!-- EDITOR -->
       <div id="editorSection">
         <div id="codeEditor"></div>
       </div>
+
     </div>
 
     <!-- SERIAL MONITOR -->
@@ -168,7 +177,6 @@
               </div>
             </div>
 
-
           </div>
         </div>
 
@@ -198,7 +206,6 @@
             </div>
 
           </div>
-
         </div>
 
       </div>
@@ -208,25 +215,23 @@
 
   <!-- BOTTOM BAR -->
   <footer class="lb-bottombar">
-    <!-- LEFT -->
     <div class="lb-bottom-left">
       <span>Leanbot BLE © 2025</span>
-      <button class="lb-icon-btn disabled" >
+      <button class="lb-icon-btn disabled">
         <img class="lb-icon-img" src="./img/icons/git.png" />
         <span>LEANBOT GIT</span>
       </button>
-      <button class="lb-icon-btn disabled" >
+      <button class="lb-icon-btn disabled">
         <img class="lb-icon-img" src="./img/icons/blockly.png" />
         <span>BLOCKLY LEANBOT</span>
       </button>
     </div>
 
-    <!-- RIGHT -->
     <div class="lb-bottom-right">
-      <button id="btnConnect"    class="lb-icon-btn">SELECT LEANBOT...</button>
-      <span   id="leanbotStatus" class="disconnected">No Leanbot</span>
-      <button id="btnReconnect"  class="lb-icon-btn">RECONNECT</button>
-      <button class="lb-icon-btn disabled" >
+      <button id="btnConnect" class="lb-icon-btn">SELECT LEANBOT...</button>
+      <span id="leanbotStatus" class="disconnected">No Leanbot</span>
+      <button id="btnReconnect" class="lb-icon-btn">RECONNECT</button>
+      <button class="lb-icon-btn disabled">
         <span class="lb-meta">SERVER:</span>
         <span class="lb-pill online">ONLINE</span>
       </button>
@@ -236,8 +241,8 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/react-complex-tree/lib/bundle.js"></script>
-
   <script type="module" src="main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
+
 </body>
 </html>

@@ -164,26 +164,32 @@ body{
   min-height:0;
 }
 
-#fileTreePanel{
+#fileTreeColumn{
+  display:flex;
+  flex-direction:column;
   min-height:0;
-  overflow:auto;
   border-right:1px solid #333;
-  background: #fafafa;
+  background:#fafafa;
 }
 
 #fileTreeToolbar{
   display:flex;
-  flex-direction:row;
   gap:8px;
-  background: #f0f0f0;
-  position: sticky;   
-  top: 0;             /* dính trên cùng panel */
-  z-index: 10;        /* nổi trên tree */
+  padding:6px;
+  background:#f0f0f0;
+  border-bottom:1px solid #ccc;
+  flex:0 0 auto; /* do not grow, do not shrink */
 }
 
 #fileTreeToolbar .lb-icon-btn{
   width:auto;
   flex:1;
+}
+
+#fileTreePanel{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
 }
 
 .file-tree-item[disabled]{
