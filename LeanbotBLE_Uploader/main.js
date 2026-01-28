@@ -845,7 +845,7 @@ function requestTreeFocus(id) {
 let pendingTreeRenameId = null;
 
 // "2025.12.31-08.44.22.ino"
-function createItemName(parentId, desiredName) {
+function createItemName(desiredName) {
   let name = String(desiredName || "").trim();
   if (name === "") name = getTimestampName() + ".ino";
   return name;
@@ -910,7 +910,7 @@ function createItem(isFolder, defaultName) {
   let name = String(defaultName || "").trim();
   if (!isFolder) name = ensureInoExtension(name);
 
-  name = createItemName(parentId, name);
+  name = createItemName(name);
 
   const id = createUUID();
 
