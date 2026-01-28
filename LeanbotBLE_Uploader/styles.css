@@ -215,6 +215,7 @@ body{
 /* File tree selected / focused */
 .file-tree-item {
   width: 100%;
+  cursor: default !important;
 }
 
 .file-tree-item.is-selected {

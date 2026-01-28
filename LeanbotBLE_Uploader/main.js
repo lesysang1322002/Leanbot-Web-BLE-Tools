@@ -844,37 +844,11 @@ function requestTreeFocus(id) {
 
 let pendingTreeRenameId = null;
 
-function nameExistsInFolder(parentId, name) {
-  const p = items[parentId];
-  if (!p || !Array.isArray(p.children)) return false;
-
-  const target = String(name || "").trim().toLowerCase();
-  for (const cid of p.children) {
-    const it = items[cid];
-    if (!it) continue;
-    const n = String(it.data || "").trim().toLowerCase();
-    if (n === target) return true;
-  }
-  return false;
-}
-
-// "2025.12.31-08.44.ino" -> "2025.12.31-08.44 (1).ino"
-function makeUniqueDisplayName(parentId, desiredName) {
+// "2025.12.31-08.44.22.ino"
+function createItemName(parentId, desiredName) {
   let name = String(desiredName || "").trim();
   if (name === "") name = getTimestampName() + ".ino";
-
-  if (!nameExistsInFolder(parentId, name)) return name;
-
-  const m = name.match(/^(.*?)(\.[a-z0-9]+)$/i);
-  const base = m ? m[1] : name;
-  const ext  = m ? m[2] : "";
-
-  let i = 1;
-  while (true) {
-    const candidate = `${base} (${i})${ext}`;
-    if (!nameExistsInFolder(parentId, candidate)) return candidate;
-    i++;
-  }
+  return name;
 }
 
 // Mở folder nếu nó đang collapsed
@@ -895,14 +869,14 @@ function getFolderContent(id, prefix = "") {
   if (!isFolder(id)) return `${prefix}${folderNode.data}`; // file => return name
 
   const lines = [];
-  lines.push(folderNode.data + "/"); // folder name
+  lines.push(folderNode.data + " /"); // folder name
 
   const children = (folderNode.children || [])
     .map(id => items[id])
     .filter(Boolean);
 
   if (children.length === 0) {
-    lines.push(`${prefix}   Folder empty`); // empty folder
+    lines.push(`${prefix}└─ Folder empty`); // empty folder
     return lines.join("\n");
   }
 
@@ -936,7 +910,7 @@ function createItem(isFolder, defaultName) {
   let name = String(defaultName || "").trim();
   if (!isFolder) name = ensureInoExtension(name);
 
-  name = makeUniqueDisplayName(parentId, name);
+  name = createItemName(parentId, name);
 
   const id = createUUID();
 
@@ -1361,6 +1335,7 @@ reactRoot.render(
       canDropOnFolder: true,
       canReorderItems: true,
       canInvokePrimaryActionOnItemContainer: true,
+      defaultInteractionMode: "click-arrow-to-expand",
 
       onFocusItem: (item) => {
         if (!item) return;
