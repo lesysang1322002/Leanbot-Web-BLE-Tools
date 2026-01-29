@@ -4,8 +4,15 @@
 import { LeanbotCompiler } from "./LeanbotCompiler.js";
 
 export class LeanbotBLE {
-  // ===== SERVICE UUID CHUNG =====
-  static SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
+
+  static config = null;
+
+  static configInit(ideConfig) {  
+    this.config = ideConfig;
+    Serial.config     = ideConfig.Serial;
+    Uploader.config   = ideConfig.EspUploader;
+    JDYUploader.config = ideConfig.JDYUploader;
+  }
 
   // ---- PRIVATE MEMBERS ----
   #device  = null;
@@ -31,7 +38,7 @@ export class LeanbotBLE {
       // Nếu deviceName rỗng → quét tất cả thiết bị có service UUID tương ứng
       if (!deviceName || deviceName.trim() === "") {
         this.#device = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [LeanbotBLE.SERVICE_UUID] }],
+          filters: [{ services: [LeanbotBLE.config.SERVICE_UUID] }],
         });
       } 
       // Nếu có deviceName → chỉ quét thiết bị có tên trùng khớp
@@ -39,7 +46,7 @@ export class LeanbotBLE {
         this.#device = await navigator.bluetooth.requestDevice({
           filters: [{
             name: deviceName.trim(),
-            services: [LeanbotBLE.SERVICE_UUID],
+            services: [LeanbotBLE.config.SERVICE_UUID],
           }],
         });
       }
@@ -100,7 +107,7 @@ export class LeanbotBLE {
   getLeanbotID() {
     if (this.#device) return this.#device.name;
       
-    const lastDevice = localStorage.getItem("lastDeviceInfo");
+    const lastDevice = localStorage.getItem(this.config.LS_KEY_LAST_DEVICE);
     return lastDevice ? JSON.parse(lastDevice) : "No Leanbot";
   }
 
@@ -128,7 +135,7 @@ export class LeanbotBLE {
     /** ---------- GATT CONNECTION ---------- */
     
     this.#server = await this.#device.gatt.connect();
-    this.#service = await this.#server.getPrimaryService(LeanbotBLE.SERVICE_UUID);
+    this.#service = await this.#server.getPrimaryService(LeanbotBLE.config.SERVICE_UUID);
 
     /** ---------- CHARACTERISTICS ---------- */
     const chars = await this.#service.getCharacteristics();
@@ -148,7 +155,7 @@ export class LeanbotBLE {
 
     /** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
     console.log("Saving device to localStorage:", this.#device.name);
-    localStorage.setItem("lastDeviceInfo", JSON.stringify(this.#device.name));
+    localStorage.setItem(this.config.LS_KEY_LAST_DEVICE, JSON.stringify(this.#device.name));
   }
 
   #base64ToText(b64) {
@@ -171,6 +178,11 @@ export class LeanbotBLE {
   }
 
   constructor() {
+
+    if (!LeanbotBLE.config) {
+      throw new Error("Missing LeanbotBLE config");
+    }
+    
     this.onConnect = null;
     this.onDisconnect = null;
     this.onConnectError = null;
@@ -196,10 +208,17 @@ export class LeanbotBLE {
 // 🔹 SUBMODULE: SERIAL
 // ======================================================
 class Serial {
-  // UUID riêng của Serial
-  static SerialPipe_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+  
+  static config = null;
+
   #SerialPipe_char = null;
   #JDYUploader = null;
+
+  constructor(){
+    if (!Serial.config) { 
+      throw new Error("Missing Serial config");
+    }
+  }
 
   setJDYUploader(jdyUploader) {
     this.#JDYUploader = jdyUploader;
@@ -243,7 +262,7 @@ class Serial {
 
   /** Thiết lập characteristic + notify **/
   async setupConnection(characteristics) {
-    const fullUUID  = Serial.SerialPipe_UUID;
+    const fullUUID  = Serial.config.SerialPipe_UUID;
     const shortUUID = fullUUID.slice(4, 8); // ffe1
 
     let char = null;
@@ -348,8 +367,8 @@ class Serial {
 // 🔹 SUBMODULE: UPLOADER
 // ======================================================
 class Uploader {
-  static DataPipe_UUID    = '0000ffe2-0000-1000-8000-00805f9b34fb';
-  static ControlPipe_UUID = '0000ffe3-0000-1000-8000-00805f9b34fb';
+
+  static config = null;
 
   #JDYUploader = null;
 
@@ -369,7 +388,6 @@ class Uploader {
   totalBytesData     = 0;
   totalPackets       = 0;
   #PacketBufferSize  = 0;
-  #MaxPacketBufferSize = 4;
   
   // Queue state
   #ControlPipe_rxQueue = [];
@@ -393,6 +411,12 @@ class Uploader {
 
   #uploadStartMs = 0;
   #uploadEndMs = 0;
+
+  constructor() {
+    if (!Uploader.config) {
+      throw new Error("Missing EspUploader config");
+    }
+  }
 
   /** Kiểm tra hỗ trợ Uploader */
   isSupported() {
@@ -436,7 +460,7 @@ class Uploader {
       this.#lastReceived = -1;
       this.#ControlPipe_rxQueue = [];
       this.#ControlPipe_busy = true;
-      this.#PacketBufferSize = this.#MaxPacketBufferSize;
+      this.#PacketBufferSize = this.config.MaxPacketBufferSize;
 
       console.log('[START] Initializing upload......');
       for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
@@ -465,8 +489,8 @@ class Uploader {
 
   /** Setup Char + Notify + Queue */
   async setupConnection(characteristics, BLE_MaxLength, BLE_Interval, HASH) {
-    this.#DataPipe_char    = characteristics[Uploader.DataPipe_UUID] || null;
-    this.#ControlPipe_char = characteristics[Uploader.ControlPipe_UUID] || null;
+    this.#DataPipe_char    = characteristics[Uploader.config.DataPipe_UUID] || null;
+    this.#ControlPipe_char = characteristics[Uploader.config.ControlPipe_UUID] || null;
 
     if (!this.isSupported()) {
       console.log("Uploader: Not supported");
@@ -596,7 +620,6 @@ class Uploader {
   };
 
   // ========== Send next packet ==========
-  #timeoutDuration = 200;
   #timeoutCount = 0;
   #timeoutTimer = null;
   #isSending = false;
@@ -638,7 +661,7 @@ class Uploader {
         this.isUploadSessionActive = false;
         this.emitTransferError(err); 
       }
-    }, this.#timeoutDuration);
+    }, this.config.timeoutDurationMs);
   }
 
   async #onTransferInternal(received) {
@@ -651,7 +674,7 @@ class Uploader {
 
     this.#lastReceived = received;
 
-    if (this.#PacketBufferSize < this.#MaxPacketBufferSize) this.#PacketBufferSize++;
+    if (this.#PacketBufferSize < this.config.MaxPacketBufferSize) this.#PacketBufferSize++;
 
     const nextToSendLimit = received + this.#PacketBufferSize;
     while(this.#nextToSend <= nextToSendLimit && this.#nextToSend < this.#packets.length) {
@@ -736,6 +759,9 @@ class Uploader {
 // 🔹 SUBMODULE: JDYUploader
 // ======================================================
 class JDYUploader {
+
+  static config = null;
+
   #leanbot;
   #serial;
   #uploader;
@@ -747,7 +773,6 @@ class JDYUploader {
   #isCollectingPage  = false;
   #isWritingPage     = false;
 
-  #pageSize    = 128;
   #BLEPackets  = [];
   #pageBuffer  = [];
 
@@ -766,6 +791,11 @@ class JDYUploader {
 
   /* ------------------- CONSTRUCTOR ------------------- */
   constructor(ble, serial, uploader) {
+
+    if (!JDYUploader.config) {
+      throw new Error("Missing JDYUploader config");
+    }
+
     this.#leanbot = ble;     // dùng được hàm của LeanbotBLE
     this.#serial  = serial;  // dùng được hàm của Serial
     this.#uploader = uploader; // dùng được hàm của Uploader
@@ -806,7 +836,7 @@ class JDYUploader {
     const resultDisc = await this.#leanbot.disconnect();
     console.log("[UPLOAD] Disconnect result:", resultDisc?.message);
 
-    await new Promise(resolve => setTimeout(resolve, 3500));
+    await new Promise(resolve => setTimeout(resolve, this.config.prepareUploadDelayMs));
 
     console.log("[UPLOAD] Reconnecting...");
     let resultReco;
@@ -825,7 +855,7 @@ class JDYUploader {
       await this.#getSync();
     } else {
       // Nếu chưa compile xong thì cứ 500ms get sync 1 lần
-      this.intervalGetSync = setInterval(() => this.#getSync(), 500);
+      this.intervalGetSync = setInterval(() => this.#getSync(), this.config.getSyncIntervalMs);
     }
   }
 
@@ -877,7 +907,7 @@ class JDYUploader {
   
   /* ------------------- LOAD ADDRESS ------------------- */
   async #loadAddress(pageIndex) {
-    const byteAddress = pageIndex * this.#pageSize;
+    const byteAddress = pageIndex * this.config.PageSizeByte;
     const wordAddress = byteAddress >> 1;
     const addrLow     = wordAddress & 0xFF;
     const addrHigh    = (wordAddress >> 8) & 0xFF;
@@ -910,7 +940,7 @@ class JDYUploader {
     await this.#loadAddress(pageIndex);
 
     // 2) STK_READ_PAGE + len_hi + len_lo + 'F' + STK_CRC_EOP
-    const readPageCmd = new Uint8Array([0x74, 0x00, this.#pageSize, 0x46, 0x20]);
+    const readPageCmd = new Uint8Array([0x74, 0x00, this.config.PageSizeByte, 0x46, 0x20]);
     console.log("[READ] Sent READ_PAGE command");
     await this.#serial.SerialPipe_sendToLeanbot(readPageCmd, false);
 
@@ -930,7 +960,7 @@ class JDYUploader {
 
     if (chunk[chunk.length - 1] !== this.#responseACK[1]) return; // chưa kết thúc, chờ chunk tiếp theo
 
-    if (this.#pageBuffer.length !== this.#pageSize + 2) return; // kích thước không đúng, chờ chunk tiếp theo
+    if (this.#pageBuffer.length !== this.config.PageSizeByte + 2) return; // kích thước không đúng, chờ chunk tiếp theo
 
     this.#pageBuffer = this.#pageBuffer.slice(1, -1); // loại bỏ byte ACK đầu và cuối
     this.#isReadingPage = false;
@@ -941,14 +971,14 @@ class JDYUploader {
   async #writeFlash(pageIndex, pageData) {
     console.log(`[WRITE] Page ${pageIndex}`);
 
-    if (!(pageData instanceof Uint8Array) || pageData.length !== this.#pageSize) {
-      throw new Error(`pageData must be Uint8Array[${this.#pageSize}]`);
+    if (!(pageData instanceof Uint8Array) || pageData.length !== this.config.PageSizeByte) {
+      throw new Error(`pageData must be Uint8Array[${this.config.PageSizeByte}]`);
     }
     // 1) LOAD_ADDRESS
     await this.#loadAddress(pageIndex);
 
     // 2) PROG PAGE
-    const progPageHeader = new Uint8Array([0x64, 0x00, this.#pageSize,  0x46]); // STK_PROG_PAGE + len_hi + len_lo + 'F'
+    const progPageHeader = new Uint8Array([0x64, 0x00, this.config.PageSizeByte,  0x46]); // STK_PROG_PAGE + len_hi + len_lo + 'F'
     const progPageTail = new Uint8Array([0x20]); // STK_CRC_EOP
 
     console.log("[WRITE] Sending PAGE command");
@@ -963,7 +993,7 @@ class JDYUploader {
 
     while (this.#isWritingPage) await new Promise(resolve => setTimeout(resolve, 5));
 
-    this.#emitUploadMessage(`Write ${(pageIndex + 1) * this.#pageSize} bytes`);
+    this.#emitUploadMessage(`Write ${(pageIndex + 1) * this.config.PageSizeByte} bytes`);
   }
  
   async #handleWriteFlashAck(bytes) {
@@ -980,10 +1010,10 @@ class JDYUploader {
   /* ------------------- UPLOAD CODE ------------------- */
   async #uploadCode() {
     console.log("[UPLOAD] Starting code upload...");
-    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, this.#pageSize);
+    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, this.config.PageSizeByte);
 
     // Tổng số byte data thực sự (để UI dùng)
-    const totalBytesData = pages.length * this.#pageSize;
+    const totalBytesData = pages.length * this.config.PageSizeByte;
     this.#uploader.totalPackets   = pages.length;
     this.#uploader.totalBytesData = totalBytesData;
 
@@ -1022,15 +1052,15 @@ class JDYUploader {
     for (const block of mergedBlocks) {
       let addr = block.address;
       for (let i = 0; i < block.bytes.length; i++, addr++) {
-        const pageIndex  = Math.floor(addr / this.#pageSize);
-        const pageBase   = pageIndex * this.#pageSize;
-        const pageOffset = addr % this.#pageSize;
+        const pageIndex  = Math.floor(addr / this.config.PageSizeByte);
+        const pageBase   = pageIndex * this.config.PageSizeByte;
+        const pageOffset = addr % this.config.PageSizeByte;
 
         if (!pages[pageIndex]) {
           pages[pageIndex] = {
             pageIndex,
             address: pageBase,
-            bytes: new Uint8Array(this.#pageSize).fill(0xFF),
+            bytes: new Uint8Array(this.config.PageSizeByte).fill(0xFF),
           };
         }
         pages[pageIndex].bytes[pageOffset] = block.bytes[i];
@@ -1067,7 +1097,7 @@ class JDYUploader {
    * mode = "sample" → verify 1/16 số page, random
    */
   async verifyUploadedCode(mode = "sample") {
-    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, this.#pageSize);
+    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, this.config.PageSizeByte);
     const totalPages = pages.length;
 
     if (totalPages === 0) {

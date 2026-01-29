@@ -1,12 +1,38 @@
 // main.js
 // ============================================================
+// IMPORTS
+// ============================================================
+import { LeanbotBLE } from "./LeanbotBLE.js";
+import { InoEditor } from "./InoEditor.js";
+import { LeanbotCompiler } from "./LeanbotCompiler.js";
+
+// ============================================================
+// LOAD CONFIG
+// ============================================================
+
+async function loadConfig() {
+  try {
+    const response = await fetch('./IDEConfig.yaml');
+    const configText = await response.text();
+    const config = jsyaml.load(configText);
+    return config;
+  } catch (error) {
+    console.error('Config load failed:', error);
+    return null;
+  }
+}
+
+IDEConfig = await loadConfig();
+LeanbotBLE.configInit(IDEConfig.LeanbotBLE);
+LeanbotCompiler.configInit(IDEConfig.LeanbotCompiler);
+
+// ============================================================
 // URL PARAMETERS + GLOBAL CONFIG
 // ============================================================
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
-// window.SERVER        = params.get("SERVER") || "ide-server-qa.leanbot.space";
-window.SERVER        = params.get("SERVER") || "cs.leanbot.space";
+window.SERVER        = params.get("SERVER") || IDEConfig.Server;
 window.MODE          = params.get("MODE");
 
 if (window.MODE === "xyz123") {
@@ -21,10 +47,7 @@ console.log(`SERVER = ${window.SERVER}`);
 // ============================================================
 // IMPORTS + INIT LEANBOT
 // ============================================================
-import { LeanbotBLE } from "./LeanbotBLE.js";
 const leanbot = new LeanbotBLE();
-
-import { InoEditor } from "./InoEditor.js";
 const inoEditor = new InoEditor();
 
 // ============================================================

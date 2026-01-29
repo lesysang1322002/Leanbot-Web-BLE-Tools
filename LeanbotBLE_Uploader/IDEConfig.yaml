@@ -1,0 +1,28 @@
+LeanbotCompiler:
+  Server:           "cs.leanbot.space"
+  PredictedTotalMs: 10000
+  CompilePayload:
+    fqbn: "arduino:avr:uno"
+    flags:
+      verbose: false
+      preferLocal: false
+    libs: []
+  ProgressEmitIntervalMs: 500
+
+LeanbotBLE:
+  SERVICE_UUID:       '0000ffe0-0000-1000-8000-00805f9b34fb'
+  LS_KEY_LAST_DEVICE: "lastDeviceInfo"
+
+  Serial:
+    SerialPipe_UUID:  '0000ffe1-0000-1000-8000-00805f9b34fb'
+
+  EspUploader:
+    DataPipe_UUID:    '0000ffe2-0000-1000-8000-00805f9b34fb'
+    ControlPipe_UUID: '0000ffe3-0000-1000-8000-00805f9b34fb'
+    MaxPacketBufferSize: 4
+    timeoutDurationMs: 200
+
+  JDYUploader:
+    pageSizeByte: 128
+    getSyncIntervalMs: 500
+    prepareUploadDelayMs: 3500
