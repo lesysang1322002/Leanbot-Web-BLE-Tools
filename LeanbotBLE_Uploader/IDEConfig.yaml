@@ -1,7 +1,7 @@
 LeanbotCompiler:
-  Server:           "cs.leanbot.space"
-  PredictedTotalMs: 10000
-  CompilePayload:
+  Server:           "cs.leanbot.space" 
+  PredictedTotalMs: 10000 
+  CompilePayload:            # Tempate for compile payload
     fqbn: "arduino:avr:uno"
     flags:
       verbose: false
@@ -11,7 +11,7 @@ LeanbotCompiler:
 
 LeanbotBLE:
   SERVICE_UUID:       '0000ffe0-0000-1000-8000-00805f9b34fb'
-  LS_KEY_LAST_DEVICE: "lastDeviceInfo"
+  LS_KEY_LAST_DEVICE: "lastDeviceInfo"                        # LocalStorage key for last connected device info (example: id of last conected leanbot)
 
   Serial:
     SerialPipe_UUID:  '0000ffe1-0000-1000-8000-00805f9b34fb'
@@ -19,10 +19,10 @@ LeanbotBLE:
   EspUploader:
     DataPipe_UUID:    '0000ffe2-0000-1000-8000-00805f9b34fb'
     ControlPipe_UUID: '0000ffe3-0000-1000-8000-00805f9b34fb'
-    MaxPacketBufferSize: 4
-    timeoutDurationMs: 200
+    MaxPacketBufferSize: 4                                    # Max packet buffer size for ESP uploader (in packet)
+    timeoutDurationMs: 200                                    # Timeout duration for ESP uploader (in ms)
 
   JDYUploader:
-    pageSizeByte: 128
-    getSyncIntervalMs: 500
-    prepareUploadDelayMs: 3500
+    pageSizeByte: 128                                         # Page size in byte of a NANO MCU (needed for JDY uploader internal logic)
+    getSyncIntervalMs: 500                                    # When compile, get sync data each 500ms to keep NANO in bootloader mode
+    prepareUploadDelayMs: 3500                                # When starting upload, JDY disconnects, then wait 3500ms before reconnecting
