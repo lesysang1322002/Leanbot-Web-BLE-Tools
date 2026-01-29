@@ -32,7 +32,7 @@ LeanbotCompiler.configInit(IDEConfig.LeanbotCompiler);
 const params = new URLSearchParams(window.location.search);
 window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
 window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
-window.SERVER        = params.get("SERVER") || IDEConfig.Server;
+window.SERVER        = params.get("SERVER") || IDEConfig.LeanbotCompiler.Server;
 window.MODE          = params.get("MODE");
 
 if (window.MODE === "xyz123") {
