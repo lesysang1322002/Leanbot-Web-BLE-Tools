@@ -22,24 +22,24 @@ export class LeanbotCompiler {
     } 
   }
 
-  async compile(sourceCode, compileServer = this.config.Server) {
+  async compile(sourceCode, compileServer = LeanbotCompiler.config.Server) {
     const sketchName = "LeanbotSketch";
 
     const payload = {
-      fqbn: this.config.fqbn,
+      fqbn: LeanbotCompiler.config.CompilePayload.fqbn,
       files: [
         {
           content: sourceCode,
           name: `${sketchName}/${sketchName}.ino`,
         },
       ],
-      flags: this.config.flags,
-      libs: this.config.libs,
+      flags: LeanbotCompiler.config.CompilePayload.flags,
+      libs: LeanbotCompiler.config.libs,
     };
 
     this.#compileStartMs = performance.now();
     this.#compileEndMs = 0;
-    const predictedTotal = this.config.predictedTotalMs; //10000 ms = 10s
+    const predictedTotal = LeanbotCompiler.config.PredictedTotalMs; //10000 ms = 10s
 
     const emitProgress = () => {
       const elapsedTime = (performance.now() - this.#compileStartMs);
@@ -47,7 +47,7 @@ export class LeanbotCompiler {
       if (this.onCompileProgress) this.onCompileProgress(elapsedTime, estimatedTotal);
     };
 
-    const progressTimer = setInterval(emitProgress, this.config.ProgressEmitIntervalMs); // emit progress every 500ms
+    const progressTimer = setInterval(emitProgress, LeanbotCompiler.config.ProgressEmitIntervalMs); // emit progress every 500ms
 
     try {
       const compileResult = await this.#requestCompile(payload, compileServer);

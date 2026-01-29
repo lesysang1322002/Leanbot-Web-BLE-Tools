@@ -8,7 +8,7 @@ export class LeanbotBLE {
   static config = null;
 
   static configInit(ideConfig) {  
-    this.config = ideConfig;
+    LeanbotBLE.config = ideConfig;
     Serial.config     = ideConfig.Serial;
     Uploader.config   = ideConfig.EspUploader;
     JDYUploader.config = ideConfig.JDYUploader;
@@ -107,7 +107,7 @@ export class LeanbotBLE {
   getLeanbotID() {
     if (this.#device) return this.#device.name;
       
-    const lastDevice = localStorage.getItem(this.config.LS_KEY_LAST_DEVICE);
+    const lastDevice = localStorage.getItem(LeanbotBLE.config.LS_KEY_LAST_DEVICE);
     return lastDevice ? JSON.parse(lastDevice) : "No Leanbot";
   }
 
@@ -155,7 +155,7 @@ export class LeanbotBLE {
 
     /** --------- SAVE DEVICENAME TO LOCALSTORAGE --------- */
     console.log("Saving device to localStorage:", this.#device.name);
-    localStorage.setItem(this.config.LS_KEY_LAST_DEVICE, JSON.stringify(this.#device.name));
+    localStorage.setItem(LeanbotBLE.config.LS_KEY_LAST_DEVICE, JSON.stringify(this.#device.name));
   }
 
   #base64ToText(b64) {
@@ -460,7 +460,7 @@ class Uploader {
       this.#lastReceived = -1;
       this.#ControlPipe_rxQueue = [];
       this.#ControlPipe_busy = true;
-      this.#PacketBufferSize = this.config.MaxPacketBufferSize;
+      this.#PacketBufferSize = Uploader.config.MaxPacketBufferSize;
 
       console.log('[START] Initializing upload......');
       for (let i = 0; i < Math.min(this.#PacketBufferSize, this.#packets.length); i++) {
@@ -661,7 +661,7 @@ class Uploader {
         this.isUploadSessionActive = false;
         this.emitTransferError(err); 
       }
-    }, this.config.timeoutDurationMs);
+    }, Uploader.config.timeoutDurationMs);
   }
 
   async #onTransferInternal(received) {
@@ -674,7 +674,7 @@ class Uploader {
 
     this.#lastReceived = received;
 
-    if (this.#PacketBufferSize < this.config.MaxPacketBufferSize) this.#PacketBufferSize++;
+    if (this.#PacketBufferSize < Uploader.config.MaxPacketBufferSize) this.#PacketBufferSize++;
 
     const nextToSendLimit = received + this.#PacketBufferSize;
     while(this.#nextToSend <= nextToSendLimit && this.#nextToSend < this.#packets.length) {
@@ -836,7 +836,7 @@ class JDYUploader {
     const resultDisc = await this.#leanbot.disconnect();
     console.log("[UPLOAD] Disconnect result:", resultDisc?.message);
 
-    await new Promise(resolve => setTimeout(resolve, this.config.prepareUploadDelayMs));
+    await new Promise(resolve => setTimeout(resolve, JDYUploader.config.prepareUploadDelayMs));
 
     console.log("[UPLOAD] Reconnecting...");
     let resultReco;
@@ -855,7 +855,7 @@ class JDYUploader {
       await this.#getSync();
     } else {
       // Nếu chưa compile xong thì cứ 500ms get sync 1 lần
-      this.intervalGetSync = setInterval(() => this.#getSync(), this.config.getSyncIntervalMs);
+      this.intervalGetSync = setInterval(() => this.#getSync(), JDYUploader.config.getSyncIntervalMs);
     }
   }
 
@@ -907,7 +907,7 @@ class JDYUploader {
   
   /* ------------------- LOAD ADDRESS ------------------- */
   async #loadAddress(pageIndex) {
-    const byteAddress = pageIndex * this.config.PageSizeByte;
+    const byteAddress = pageIndex * JDYUploader.config.pageSizeByte;
     const wordAddress = byteAddress >> 1;
     const addrLow     = wordAddress & 0xFF;
     const addrHigh    = (wordAddress >> 8) & 0xFF;
@@ -940,7 +940,7 @@ class JDYUploader {
     await this.#loadAddress(pageIndex);
 
     // 2) STK_READ_PAGE + len_hi + len_lo + 'F' + STK_CRC_EOP
-    const readPageCmd = new Uint8Array([0x74, 0x00, this.config.PageSizeByte, 0x46, 0x20]);
+    const readPageCmd = new Uint8Array([0x74, 0x00, JDYUploader.config.pageSizeByte, 0x46, 0x20]);
     console.log("[READ] Sent READ_PAGE command");
     await this.#serial.SerialPipe_sendToLeanbot(readPageCmd, false);
 
@@ -960,7 +960,7 @@ class JDYUploader {
 
     if (chunk[chunk.length - 1] !== this.#responseACK[1]) return; // chưa kết thúc, chờ chunk tiếp theo
 
-    if (this.#pageBuffer.length !== this.config.PageSizeByte + 2) return; // kích thước không đúng, chờ chunk tiếp theo
+    if (this.#pageBuffer.length !== JDYUploader.config.pageSizeByte + 2) return; // kích thước không đúng, chờ chunk tiếp theo
 
     this.#pageBuffer = this.#pageBuffer.slice(1, -1); // loại bỏ byte ACK đầu và cuối
     this.#isReadingPage = false;
@@ -971,14 +971,14 @@ class JDYUploader {
   async #writeFlash(pageIndex, pageData) {
     console.log(`[WRITE] Page ${pageIndex}`);
 
-    if (!(pageData instanceof Uint8Array) || pageData.length !== this.config.PageSizeByte) {
-      throw new Error(`pageData must be Uint8Array[${this.config.PageSizeByte}]`);
+    if (!(pageData instanceof Uint8Array) || pageData.length !== JDYUploader.config.pageSizeByte) {
+      throw new Error(`pageData must be Uint8Array[${JDYUploader.config.pageSizeByte}]`);
     }
     // 1) LOAD_ADDRESS
     await this.#loadAddress(pageIndex);
 
     // 2) PROG PAGE
-    const progPageHeader = new Uint8Array([0x64, 0x00, this.config.PageSizeByte,  0x46]); // STK_PROG_PAGE + len_hi + len_lo + 'F'
+    const progPageHeader = new Uint8Array([0x64, 0x00, JDYUploader.config.pageSizeByte,  0x46]); // STK_PROG_PAGE + len_hi + len_lo + 'F'
     const progPageTail = new Uint8Array([0x20]); // STK_CRC_EOP
 
     console.log("[WRITE] Sending PAGE command");
@@ -993,7 +993,7 @@ class JDYUploader {
 
     while (this.#isWritingPage) await new Promise(resolve => setTimeout(resolve, 5));
 
-    this.#emitUploadMessage(`Write ${(pageIndex + 1) * this.config.PageSizeByte} bytes`);
+    this.#emitUploadMessage(`Write ${(pageIndex + 1) * JDYUploader.config.pageSizeByte} bytes`);
   }
  
   async #handleWriteFlashAck(bytes) {
@@ -1010,10 +1010,10 @@ class JDYUploader {
   /* ------------------- UPLOAD CODE ------------------- */
   async #uploadCode() {
     console.log("[UPLOAD] Starting code upload...");
-    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, this.config.PageSizeByte);
+    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, JDYUploader.config.pageSizeByte);
 
     // Tổng số byte data thực sự (để UI dùng)
-    const totalBytesData = pages.length * this.config.PageSizeByte;
+    const totalBytesData = pages.length * JDYUploader.config.pageSizeByte;
     this.#uploader.totalPackets   = pages.length;
     this.#uploader.totalBytesData = totalBytesData;
 
@@ -1052,15 +1052,15 @@ class JDYUploader {
     for (const block of mergedBlocks) {
       let addr = block.address;
       for (let i = 0; i < block.bytes.length; i++, addr++) {
-        const pageIndex  = Math.floor(addr / this.config.PageSizeByte);
-        const pageBase   = pageIndex * this.config.PageSizeByte;
-        const pageOffset = addr % this.config.PageSizeByte;
+        const pageIndex  = Math.floor(addr / JDYUploader.config.pageSizeByte);
+        const pageBase   = pageIndex * JDYUploader.config.pageSizeByte;
+        const pageOffset = addr % JDYUploader.config.pageSizeByte;
 
         if (!pages[pageIndex]) {
           pages[pageIndex] = {
             pageIndex,
             address: pageBase,
-            bytes: new Uint8Array(this.config.PageSizeByte).fill(0xFF),
+            bytes: new Uint8Array(JDYUploader.config.pageSizeByte).fill(0xFF),
           };
         }
         pages[pageIndex].bytes[pageOffset] = block.bytes[i];
@@ -1097,7 +1097,7 @@ class JDYUploader {
    * mode = "sample" → verify 1/16 số page, random
    */
   async verifyUploadedCode(mode = "sample") {
-    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, this.config.PageSizeByte);
+    const pages = this.#buildPagesFromBlocks(this.#BLEPackets, JDYUploader.config.pageSizeByte);
     const totalPages = pages.length;
 
     if (totalPages === 0) {

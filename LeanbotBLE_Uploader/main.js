@@ -22,7 +22,7 @@ async function loadConfig() {
   }
 }
 
-IDEConfig = await loadConfig();
+const IDEConfig = await loadConfig();
 LeanbotBLE.configInit(IDEConfig.LeanbotBLE);
 LeanbotCompiler.configInit(IDEConfig.LeanbotCompiler);
 
