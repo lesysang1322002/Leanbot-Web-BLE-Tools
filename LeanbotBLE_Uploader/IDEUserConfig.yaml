@@ -1,6 +1,0 @@
-LeanbotCompiler:
-  Server:            "cs.leanbot.space" 
-
-LeanbotBLE:
-  EspUploader:
-    BLE_MaxLength:    512
