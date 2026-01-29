@@ -7,11 +7,11 @@ export class LeanbotBLE {
 
   static config = null;
 
-  static configInit(ideConfig) {  
-    LeanbotBLE.config = ideConfig;
-    Serial.config     = ideConfig.Serial;
-    Uploader.config   = ideConfig.EspUploader;
-    JDYUploader.config = ideConfig.JDYUploader;
+  static setConfig(config) {  
+    LeanbotBLE.config = config;
+    Serial.config     = config.Serial;
+    Uploader.config   = config.EspUploader;
+    JDYUploader.config = config.JDYUploader;
   }
 
   // ---- PRIVATE MEMBERS ----
@@ -144,7 +144,7 @@ export class LeanbotBLE {
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
-    await this.Uploader.setupConnection(this.#chars, window.BLE_MaxLength, window.BLE_Interval);
+    await this.Uploader.setupConnection(this.#chars, Uploader.BLE_MaxLength, Uploader.BLE_Interval);
 
     /** ---------- CONNECT CALLBACK ---------- */
 
@@ -1248,7 +1248,7 @@ function hexLineToBytes(block) {
  * @returns {Uint8Array[]} packets - Array of BLE message bytes ready to send
  */
 function convertHexToBlePackets(hexText, { returnStep2 = false } = {}) {
-  const BLE_MaxLength = window.BLE_MaxLength || 512; // Mặc định 512 nếu không có thiết lập
+  const BLE_MaxLength = Uploader.BLE_MaxLength || 512; // Mặc định 512 nếu không có thiết lập
   console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
 
   // --- STEP 0: Split HEX text into LinesMessage ---

@@ -2,8 +2,8 @@ export class LeanbotCompiler {
 
   static config = null;
 
-  static configInit(ideConfig) {
-    LeanbotCompiler.config = ideConfig;
+  static setConfig(config) {
+    LeanbotCompiler.config = config;
   }
 
   #prevHash = "";

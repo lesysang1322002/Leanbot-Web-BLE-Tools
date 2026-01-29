@@ -1,5 +1,4 @@
 LeanbotCompiler:
-  Server:           "cs.leanbot.space" 
   PredictedTotalMs: 10000 
   CompilePayload:            # Tempate for compile payload
     fqbn: "arduino:avr:uno"
@@ -26,3 +25,7 @@ LeanbotBLE:
     pageSizeByte: 128                                         # Page size in byte of a NANO MCU (needed for JDY uploader internal logic)
     getSyncIntervalMs: 500                                    # When compile, get sync data each 500ms to keep NANO in bootloader mode
     prepareUploadDelayMs: 3500                                # When starting upload, JDY disconnects, then wait 3500ms before reconnecting
+
+Workspace:
+  LS_KEY_TREE:  "leanbot_workspace_tree"
+  LS_KEY_FILES: "leanbot_workspace_files"

@@ -7,12 +7,12 @@ import { InoEditor } from "./InoEditor.js";
 import { LeanbotCompiler } from "./LeanbotCompiler.js";
 
 // ============================================================
-// LOAD CONFIG
+// Load core config yaml (cannot change from web client)
 // ============================================================
 
-async function loadConfig() {
+async function loadConfig(url) {
   try {
-    const response = await fetch('./IDEConfig.yaml');
+    const response = await fetch(url);
     const configText = await response.text();
     const config = jsyaml.load(configText);
     return config;
@@ -22,31 +22,53 @@ async function loadConfig() {
   }
 }
 
-const IDEConfig = await loadConfig();
-LeanbotBLE.configInit(IDEConfig.LeanbotBLE);
-LeanbotCompiler.configInit(IDEConfig.LeanbotCompiler);
+const CoreConfig = await loadConfig('./IDECoreConfig.yaml');
+const UserConfig = await loadConfig('./IDEUserConfig.yaml');
+const LocalConfig = await loadFromLocalTree( 'IDELocalConfig/IDELocalConfig.yaml ')
+
+// ============================================================
+// Merge User and Core config
+// ============================================================
+
+const UserIDEConfig = deepMerge(UserConfig, LocalConfig);
+const IDEConfig = deepMerge(CoreConfig, UserIDEConfig);
+// console.log(IDEConfig);
 
 // ============================================================
 // URL PARAMETERS + GLOBAL CONFIG
 // ============================================================
 const params = new URLSearchParams(window.location.search);
-window.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
-window.BLE_Interval  = parseInt(params.get("BLE_Interval"));
-window.SERVER        = params.get("SERVER") || IDEConfig.LeanbotCompiler.Server;
-window.MODE          = params.get("MODE");
 
-if (window.MODE === "xyz123") {
-  window.SERVER = "";
+if(IDEConfig?.LeanbotBLE?.EspUploader){
+  IDEConfig.LeanbotBLE.EspUploader.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
+  IDEConfig.LeanbotBLE.EspUploader.BLE_Interval = parseInt(params.get("BLE_Interval"));
+}
+
+const mode = params.get("MODE");
+let server = params.get("SERVER");
+
+// Override server in test mode
+if (mode === "xyz123") {
+  server = "";
   console.log("[TEST MODE] Using empty SERVER");
 }
 
-console.log(`BLE_MaxLength = ${window.BLE_MaxLength}`);
-console.log(`BLE_Interval = ${window.BLE_Interval}`);
-console.log(`SERVER = ${window.SERVER}`);
+// Apply to IDE config if available
+if (IDEConfig.LeanbotCompiler) {
+  IDEConfig.LeanbotCompiler.Server = server;
+}
+
+console.log(`BLE_MaxLength = ${IDEConfig.LeanbotBLE.EspUploader.BLE_MaxLength}`);
+console.log(`BLE_Interval = ${IDEConfig.LeanbotBLE.EspUploader.BLE_Interval}`);
+console.log(`SERVER = ${IDEConfig.LeanbotCompiler.Server}`);
 
 // ============================================================
-// IMPORTS + INIT LEANBOT
+// save config then INIT LEANBOT
 // ============================================================
+
+LeanbotBLE.setConfig(IDEConfig.LeanbotBLE);
+LeanbotCompiler.setConfig(IDEConfig.LeanbotCompiler);
+
 const leanbot = new LeanbotBLE();
 const inoEditor = new InoEditor();
 
@@ -223,7 +245,7 @@ async function doCompile() {
   uiSetTab("program");
   uiResetCompile();
 
-  return await leanbot.Compiler.compile(sourceCode, window.SERVER);
+  return await leanbot.Compiler.compile(sourceCode, IDEConfig.LeanbotCompiler.Server);
 }
 
 leanbot.Compiler.onCompileSucess = (compileMessage) => {
@@ -233,7 +255,7 @@ leanbot.Compiler.onCompileSucess = (compileMessage) => {
     objectpk: "compile_res",
     thongtin: CompileCode,
     noidung: compileMessage,
-    server_: window.SERVER,
+    server_: IDEConfig.LeanbotCompiler.Server,
     t_phanhoi: Math.round(leanbot.Compiler.elapsedTimeMs())
   };
   logLbIDEEvent(LbIDEEvent);
@@ -255,7 +277,7 @@ leanbot.Compiler.onCompileError = (compileMessage) => {
     objectpk: "compile_err",
     thongtin: CompileCode,
     noidung: compileMessage,
-    server_: window.SERVER,
+    server_: IDEConfig.LeanbotCompiler.Server,
     t_phanhoi: Math.round(leanbot.Compiler.elapsedTimeMs())
   };
   logLbIDEEvent(LbIDEEvent);
@@ -297,7 +319,7 @@ btnUpload.addEventListener("click", async () => {
   uiResetUpload();
   isCompileAndUpload = true;
 
-  await leanbot.compileAndUpload(sourceCode, window.SERVER);
+  await leanbot.compileAndUpload(sourceCode, IDEConfig.LeanbotCompiler.Server);
 });
 
 // =================== Upload DOM Elements =================== //
@@ -564,92 +586,6 @@ function isInoFile(id) {
 // ============================================================
 //  LOCALSTORAGE (WORKSPACE)
 // ============================================================
-
-const LS_KEY_TREE  = "leanbot_workspace_tree";
-const LS_KEY_FILES = "leanbot_workspace_files";
-
-function saveWorkspaceTreeToLocalStorage() {
-  const data = {
-    items,
-    currentFileId: window.currentFileId
-  };
-
-  localStorage.setItem(LS_KEY_TREE, JSON.stringify(data));
-}
-
-function saveWorkspaceFilesToLocalStorage() {
-  const data = {
-    fileContents,
-    currentFileId: window.currentFileId
-  };
-
-  localStorage.setItem(LS_KEY_FILES, JSON.stringify(data));
-}
-
-function hasAnyInoFile() { // Check if there is any .ino file in the workspace
-  for (const id in items) {
-    if (!isInoFile(id)) continue;
-    return true;
-  }
-  return false;
-}
-
-function loadWorkspaceFromLocalStorage() {
-  try {
-    const rawTree  = localStorage.getItem(LS_KEY_TREE);
-    const rawFiles = localStorage.getItem(LS_KEY_FILES);
-
-    if(rawTree === null && rawFiles === null) { // no workspace found
-      console.log("[LS] No workspace found in localStorage");
-      return;
-    }
-
-    if (rawTree) {
-      const data = JSON.parse(rawTree);
-
-      Object.keys(items).forEach(k => delete items[k]);
-      Object.assign(items, data.items || {});
-
-      window.currentFileId = data.currentFileId || window.currentFileId;
-    }
-
-    if (rawFiles) {
-      const data = JSON.parse(rawFiles);
-
-      Object.keys(fileContents).forEach(k => delete fileContents[k]);
-      Object.assign(fileContents, data.fileContents || {});
-
-      window.currentFileId = data.currentFileId || window.currentFileId;
-    }
-    console.log("[LS] Workspace restored");
-  } catch (e) {
-    console.log("[LS] Restore failed", e);
-  }
-  finally {
-    if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.ino directly at root
-      console.log("[LS] No .ino file found, creating default BasicMotion.ino");
-      const id = createUUID();
-      items[id] = {
-        index: id,
-        isFolder: false,
-        children: [],
-        data: "BasicMotion.ino",
-        parent: "root",
-      };
-      
-      items.root.children ||= [];
-      if (!items.root.children.includes(id)) {
-        items.root.children.push(id);
-      }
-
-      fileContents[id] = inoTemplates.basicMotion || "";
-      window.currentFileId = id;
-    }
-    rebuildParents();
-    saveWorkspaceTreeToLocalStorage();
-    saveWorkspaceFilesToLocalStorage();
-  }
-}
 
 loadWorkspaceFromLocalStorage();
 window.__pendingOpenFileId = window.currentFileId || null;
@@ -1526,6 +1462,145 @@ if (initialOpenId) {
 }
 
 // ============================================================
+//  LOCALSTORAGE (WORKSPACE)
+// ============================================================
+
+function saveWorkspaceTreeToLocalStorage() {
+  if (!CoreConfig || !CoreConfig.Workspace) return;
+  
+  const data = {
+    items,
+    currentFileId: window.currentFileId
+  };
+
+  localStorage.setItem(CoreConfig.Workspace.LS_KEY_TREE, JSON.stringify(data));
+}
+
+function saveWorkspaceFilesToLocalStorage() {
+  if (!CoreConfig || !CoreConfig.Workspace) return;
+
+  const data = {
+    fileContents,
+    currentFileId: window.currentFileId
+  };
+
+  localStorage.setItem(CoreConfig.Workspace.LS_KEY_FILES, JSON.stringify(data));
+}
+
+function hasAnyInoFile() { // Check if there is any .ino file in the workspace
+  for (const id in items) {
+    if (!isInoFile(id)) continue;
+    return true;
+  }
+  return false;
+}
+
+function loadWorkspaceFromLocalStorage() {
+  
+  if (!CoreConfig || !CoreConfig.Workspace) return;
+
+  try {
+    const rawTree  = localStorage.getItem(CoreConfig.Workspace.LS_KEY_TREE);
+    const rawFiles = localStorage.getItem(CoreConfig.Workspace.LS_KEY_FILES);
+
+    if(rawTree === null && rawFiles === null) { // no workspace found
+      console.log("[LS] No workspace found in localStorage");
+      return;
+    }
+
+    if (rawTree) {
+      const data = JSON.parse(rawTree);
+
+      Object.keys(items).forEach(k => delete items[k]);
+      Object.assign(items, data.items || {});
+
+      window.currentFileId = data.currentFileId || window.currentFileId;
+    }
+
+    if (rawFiles) {
+      const data = JSON.parse(rawFiles);
+
+      Object.keys(fileContents).forEach(k => delete fileContents[k]);
+      Object.assign(fileContents, data.fileContents || {});
+
+      window.currentFileId = data.currentFileId || window.currentFileId;
+    }
+    console.log("[LS] Workspace restored");
+  } catch (e) {
+    console.log("[LS] Restore failed", e);
+  }
+  finally {
+    if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.ino directly at root
+      console.log("[LS] No .ino file found, creating default BasicMotion.ino");
+      const id = createUUID();
+      items[id] = {
+        index: id,
+        isFolder: false,
+        children: [],
+        data: "BasicMotion.ino",
+        parent: "root",
+      };
+      
+      items.root.children ||= [];
+      if (!items.root.children.includes(id)) {
+        items.root.children.push(id);
+      }
+
+      fileContents[id] = inoTemplates.basicMotion || "";
+      window.currentFileId = id;
+    }
+    rebuildParents();
+    saveWorkspaceTreeToLocalStorage();
+    saveWorkspaceFilesToLocalStorage();
+  }
+}
+
+async function loadFromLocalTree(path) {
+  if (!CoreConfig?.Workspace) return null;
+
+  const rawTree  = localStorage.getItem(CoreConfig.Workspace.LS_KEY_TREE);
+  const rawFiles = localStorage.getItem(CoreConfig.Workspace.LS_KEY_FILES);
+
+  if (!rawTree || !rawFiles) return null;
+
+  const treeData  = JSON.parse(rawTree);
+  const filesData = JSON.parse(rawFiles);
+
+  const items = treeData.items;
+  const fileContents = filesData.fileContents;
+
+  if (!items || !fileContents) return null;
+
+  const parts = String(path).trim().split("/").filter(Boolean);
+  let currentId = "root";
+
+  for (let i = 0; i < parts.length; i++) {
+    const name = parts[i];
+
+    const parent = items[currentId];
+    if (!parent || !Array.isArray(parent.children)) return null;
+
+    const nextId = parent.children.find(
+      id => items[id]?.data === name
+    );
+
+    if (!nextId) return null;
+
+    currentId = nextId;
+  }
+
+  const yamlText = fileContents[currentId];
+  if (!yamlText) return null;
+
+  try {
+    return jsyaml.load(yamlText);
+  } catch (err) {
+    console.error("YAML parse failed:", err);
+    return null;
+  }
+}
+
+// ============================================================
 // Leanbot IDE Event(ARDUINO)
 // ============================================================
 
@@ -1550,4 +1625,26 @@ function logLbIDEEvent(event) {
     server_    : ${event.server_}
     t_phanhoi  : ${event.t_phanhoi}`
   );
+}
+
+// ============================================================
+// Deep merge 2 object
+// ============================================================
+
+function deepMerge(a, b) {
+  const out = { ...a };
+
+  for (const k in b) {
+    if (
+      b[k] &&
+      typeof b[k] === "object" &&
+      !Array.isArray(b[k])
+    ) {
+      out[k] = deepMerge(a[k] || {}, b[k]);
+    } else {
+      out[k] = b[k];
+    }
+  }
+
+  return out;
 }
