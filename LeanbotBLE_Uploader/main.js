@@ -7,7 +7,122 @@ import { InoEditor } from "./InoEditor.js";
 import { LeanbotCompiler } from "./LeanbotCompiler.js";
 
 // ============================================================
-// Load core config yaml (cannot change from web client)
+//  LOCALSTORAGE (WORKSPACE)
+// ============================================================
+
+const LS_KEY_TREE =  "leanbot_workspace_tree";
+const LS_KEY_FILES = "leanbot_workspace_files";
+
+window.currentFileId = null;
+
+// Tạo dữ liệu tree
+const items = {
+  root: {
+    index: "root",
+    isFolder: true,
+    children: [],
+    data: "Workspace"
+  },
+};
+
+// nội dung file, key theo id file (item.index)
+const fileContents = {};
+
+function saveWorkspaceTreeToLocalStorage() {
+  const data = {
+    items,
+    currentFileId: window.currentFileId
+  };
+
+  localStorage.setItem(LS_KEY_TREE, JSON.stringify(data));
+}
+
+function saveWorkspaceFilesToLocalStorage() {
+  const data = {
+    fileContents,
+    currentFileId: window.currentFileId
+  };
+
+  localStorage.setItem(LS_KEY_FILES, JSON.stringify(data));
+}
+
+function loadWorkspaceFromLocalStorage() {
+  try {
+    const rawTree  = localStorage.getItem(LS_KEY_TREE);
+    const rawFiles = localStorage.getItem(LS_KEY_FILES);
+
+    if(rawTree === null && rawFiles === null) { // no workspace found
+      console.log("[LS] No workspace found in localStorage");
+      return;
+    }
+
+    if (rawTree) {
+      const data = JSON.parse(rawTree);
+
+      Object.keys(items).forEach(k => delete items[k]);
+      Object.assign(items, data.items || {});
+
+      window.currentFileId = data.currentFileId || window.currentFileId;
+    }
+
+    if (rawFiles) {
+      const data = JSON.parse(rawFiles);
+
+      Object.keys(fileContents).forEach(k => delete fileContents[k]);
+      Object.assign(fileContents, data.fileContents || {});
+
+      window.currentFileId = data.currentFileId || window.currentFileId;
+    }
+    console.log("[LS] Workspace restored");
+  } catch (e) {
+    console.log("[LS] Restore failed", e);
+  }
+  finally {
+    saveWorkspaceTreeToLocalStorage();
+    saveWorkspaceFilesToLocalStorage();
+  }
+}
+
+async function loadFromLocalTree(path) {
+
+  if (!items || !fileContents) return null;
+
+  const parts = String(path).trim().split("/").filter(Boolean);
+  let currentId = "root";
+
+  for (let i = 0; i < parts.length; i++) {
+    const name = parts[i];
+
+    const parent = items[currentId];
+    if (!parent || !Array.isArray(parent.children)) return null;
+
+    const nextId = parent.children.find(
+      id => items[id]?.data === name
+    );
+
+    if (!nextId) return null;
+
+    currentId = nextId;
+  }
+
+  const yamlText = fileContents[currentId];
+  if (!yamlText) return null;
+
+  try {
+    return jsyaml.load(yamlText);
+  } catch (err) {
+    console.error("YAML parse failed:", err);
+    return null;
+  }
+}
+
+loadWorkspaceFromLocalStorage();
+
+// ============================================================
+// CONFIG LOADING (Core → User → Local)
+// - CoreConfig: immutable, shipped with web client
+// - UserConfig: user override (server-side)
+// - LocalConfig: workspace YAML override
 // ============================================================
 
 async function loadConfig(url) {
@@ -24,14 +139,17 @@ async function loadConfig(url) {
 
 const CoreConfig = await loadConfig('./IDECoreConfig.yaml');
 const UserConfig = await loadConfig('./IDEUserConfig.yaml');
-const LocalConfig = await loadFromLocalTree( 'IDELocalConfig/IDELocalConfig.yaml ')
+
+const LocalConfigName = "IDELocalConfig"
+
+const LocalConfig = await loadFromLocalTree(`${LocalConfigName}/${LocalConfigName}.yaml`)
 
 // ============================================================
-// Merge User and Core config
+// Merge User and Core config: UserConfig ==> LocalConfig ==> CoreConfig
 // ============================================================
 
-const UserIDEConfig = deepOverride(UserConfig, LocalConfig);
-const IDEConfig = deepMerge(CoreConfig, UserIDEConfig);
+const IDEConfig = _.defaultsDeep({}, CoreConfig, LocalConfig, UserConfig);
+
 console.log(IDEConfig);
 
 // ============================================================
@@ -531,7 +649,9 @@ inoEditor.onChangeContent = () =>  {
 }
 
 // ============================================================
-//  FILE TREE Root Data
+// WORKSPACE BOOTSTRAP & INVARIANTS
+// - Load .ino templates
+// - Ensure workspace always contains at least one .ino file
 // ============================================================
 
 // Templates ino
@@ -562,19 +682,6 @@ function createUUID() {
   return crypto.randomUUID();
 }
 
-// Tạo dữ liệu tree
-const items = {
-  root: {
-    index: "root",
-    isFolder: true,
-    children: [],
-    data: "Workspace"
-  },
-};
-
-// nội dung file, key theo id file (item.index)
-const fileContents = {};
-
 function isFolder(id) {
   return !!id && !!items[id] && items[id].isFolder === true;
 }
@@ -589,11 +696,35 @@ function isInoFile(id) {
   return name.endsWith(".ino");
 }
 
-// ============================================================
-//  LOCALSTORAGE (WORKSPACE)
-// ============================================================
+// Create basicMotion.ino if there isnt any .ino file in the workspace
 
-loadWorkspaceFromLocalStorage();
+function hasAnyInoFile() { // Check if there is any .ino file in the workspace
+  for (const id in items) {
+    if (!isInoFile(id)) continue;
+    return true;
+  }
+  return false;
+}
+
+if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.ino directly at root
+  console.log("[LS] No .ino file found, creating default BasicMotion.ino");
+  const id = createUUID();
+  items[id] = {
+    index: id,
+    isFolder: false,
+    children: [],
+    data: "BasicMotion.ino",
+    parent: "root",
+ };
+      
+  items.root.children ||= [];
+  if (!items.root.children.includes(id)) {
+    items.root.children.push(id);
+  }
+
+  fileContents[id] = inoTemplates.basicMotion || "";
+}
+
 window.__pendingOpenFileId = window.currentFileId || null;
 
 // ============================================================
@@ -868,14 +999,17 @@ function getFolderContent(id, prefix = "") {
 }
 
 // Thêm file, folder
-function createItem(isFolder, defaultName) {
+function createItem(isFolder, defaultName, defaultfileContent = null) {
   const parentId = getTargetFolderId();
   console.log("[CREATE] target parentId =", parentId);
 
   let name = String(defaultName || "").trim();
-  if (!isFolder) name = ensureInoExtension(name);
 
-  name = createItemName(name);
+  if (!isFolder){
+    // If name already has an extension (anything after a dot), keep it
+    // If not, name = timestamp.ino
+    name = /\.[^./]+$/.test(name) ? name : ensureInoExtension(createItemName(name));
+  }
 
   const id = createUUID();
 
@@ -888,7 +1022,7 @@ function createItem(isFolder, defaultName) {
     items[parentId].children.includes(id)
   );
 
-  if (!isFolder) fileContents[id] = inoTemplates.default || "";
+  if (!isFolder) fileContents[id] = defaultfileContent || inoTemplates.default || "";
 
   emitChanged([parentId, id]);
 
@@ -973,6 +1107,11 @@ function renameFileId(id, newDisplayName) {
 
   pendingTreeFocusId = id;
   saveWorkspaceTreeToLocalStorage();
+
+  if(newDisplayName === LocalConfigName){ // Creat localConfigFolder => also create localConfigFile.yaml
+    const userConfigYaml = jsyaml.dump(UserConfig ?? {});
+    createItem(false, `${LocalConfigName}.yaml`, userConfigYaml);
+  }
 }
 
 // drag drop, reorder, move folder
@@ -1468,145 +1607,6 @@ if (initialOpenId) {
 }
 
 // ============================================================
-//  LOCALSTORAGE (WORKSPACE)
-// ============================================================
-
-function saveWorkspaceTreeToLocalStorage() {
-  if (!CoreConfig || !CoreConfig.Workspace) return;
-  
-  const data = {
-    items,
-    currentFileId: window.currentFileId
-  };
-
-  localStorage.setItem(CoreConfig.Workspace.LS_KEY_TREE, JSON.stringify(data));
-}
-
-function saveWorkspaceFilesToLocalStorage() {
-  if (!CoreConfig || !CoreConfig.Workspace) return;
-
-  const data = {
-    fileContents,
-    currentFileId: window.currentFileId
-  };
-
-  localStorage.setItem(CoreConfig.Workspace.LS_KEY_FILES, JSON.stringify(data));
-}
-
-function hasAnyInoFile() { // Check if there is any .ino file in the workspace
-  for (const id in items) {
-    if (!isInoFile(id)) continue;
-    return true;
-  }
-  return false;
-}
-
-function loadWorkspaceFromLocalStorage() {
-  
-  if (!CoreConfig || !CoreConfig.Workspace) return;
-
-  try {
-    const rawTree  = localStorage.getItem(CoreConfig.Workspace.LS_KEY_TREE);
-    const rawFiles = localStorage.getItem(CoreConfig.Workspace.LS_KEY_FILES);
-
-    if(rawTree === null && rawFiles === null) { // no workspace found
-      console.log("[LS] No workspace found in localStorage");
-      return;
-    }
-
-    if (rawTree) {
-      const data = JSON.parse(rawTree);
-
-      Object.keys(items).forEach(k => delete items[k]);
-      Object.assign(items, data.items || {});
-
-      window.currentFileId = data.currentFileId || window.currentFileId;
-    }
-
-    if (rawFiles) {
-      const data = JSON.parse(rawFiles);
-
-      Object.keys(fileContents).forEach(k => delete fileContents[k]);
-      Object.assign(fileContents, data.fileContents || {});
-
-      window.currentFileId = data.currentFileId || window.currentFileId;
-    }
-    console.log("[LS] Workspace restored");
-  } catch (e) {
-    console.log("[LS] Restore failed", e);
-  }
-  finally {
-    if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.ino directly at root
-      console.log("[LS] No .ino file found, creating default BasicMotion.ino");
-      const id = createUUID();
-      items[id] = {
-        index: id,
-        isFolder: false,
-        children: [],
-        data: "BasicMotion.ino",
-        parent: "root",
-      };
-      
-      items.root.children ||= [];
-      if (!items.root.children.includes(id)) {
-        items.root.children.push(id);
-      }
-
-      fileContents[id] = inoTemplates.basicMotion || "";
-      window.currentFileId = id;
-    }
-    rebuildParents();
-    saveWorkspaceTreeToLocalStorage();
-    saveWorkspaceFilesToLocalStorage();
-  }
-}
-
-async function loadFromLocalTree(path) {
-  if (!CoreConfig?.Workspace) return null;
-
-  const rawTree  = localStorage.getItem(CoreConfig.Workspace.LS_KEY_TREE);
-  const rawFiles = localStorage.getItem(CoreConfig.Workspace.LS_KEY_FILES);
-
-  if (!rawTree || !rawFiles) return null;
-
-  const treeData  = JSON.parse(rawTree);
-  const filesData = JSON.parse(rawFiles);
-
-  const items = treeData.items;
-  const fileContents = filesData.fileContents;
-
-  if (!items || !fileContents) return null;
-
-  const parts = String(path).trim().split("/").filter(Boolean);
-  let currentId = "root";
-
-  for (let i = 0; i < parts.length; i++) {
-    const name = parts[i];
-
-    const parent = items[currentId];
-    if (!parent || !Array.isArray(parent.children)) return null;
-
-    const nextId = parent.children.find(
-      id => items[id]?.data === name
-    );
-
-    if (!nextId) return null;
-
-    currentId = nextId;
-  }
-
-  const yamlText = fileContents[currentId];
-  if (!yamlText) return null;
-
-  try {
-    return jsyaml.load(yamlText);
-  } catch (err) {
-    console.error("YAML parse failed:", err);
-    return null;
-  }
-}
-
-// ============================================================
 // Leanbot IDE Event(ARDUINO)
 // ============================================================
 
@@ -1631,49 +1631,4 @@ function logLbIDEEvent(event) {
     server_    : ${event.server_}
     t_phanhoi  : ${event.t_phanhoi}`
   );
-}
-
-// ============================================================
-// Deep merge 2 object
-// ============================================================
-
-function deepMerge(target, source) {
-  const out = { ...target };
-
-  for (const k in source) {
-    if (
-      k in target &&
-      typeof target[k] === "object" &&
-      typeof source[k] === "object" &&
-      !Array.isArray(target[k]) &&
-      !Array.isArray(source[k])
-    ) {
-      out[k] = deepMerge(target[k], source[k]);
-    } else if (!(k in target)) { // Chỉ thêm field không có ở target.
-      out[k] = source[k];
-    }
-  }
-
-  return out;
-}
-
-function deepOverride(target, source) {
-  const out = { ...target };
-
-  for (const k in source) {
-    if (
-      k in target &&
-      typeof target[k] === "object" &&
-      typeof source[k] === "object" &&
-      !Array.isArray(target[k]) &&
-      !Array.isArray(source[k])
-    ) {
-      out[k] = deepOverride(target[k], source[k]);
-    } else {
-      // Nếu field trùng nhau => source có quyền cao hơn => ghi đè
-      out[k] = source[k];
-    }
-  }
-
-  return out;
 }

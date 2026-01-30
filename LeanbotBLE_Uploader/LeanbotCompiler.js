@@ -1,9 +1,9 @@
 export class LeanbotCompiler {
 
-  static config = null;
+  static #config = null;
 
   static setConfig(config) {
-    LeanbotCompiler.config = config;
+    LeanbotCompiler.#config = config;
   }
 
   #prevHash = "";
@@ -17,29 +17,29 @@ export class LeanbotCompiler {
   #compileEndMs = 0;
 
   constructor(){
-    if (!LeanbotCompiler.config) {
-      throw new Error("Missing LeanbotCompiler config");
+    if (!LeanbotCompiler.#config) {
+      throw new Error("Missing LeanbotCompiler #config");
     } 
   }
 
-  async compile(sourceCode, compileServer = LeanbotCompiler.config.Server) {
+  async compile(sourceCode, compileServer = LeanbotCompiler.#config.Server) {
     const sketchName = "LeanbotSketch";
 
     const payload = {
-      fqbn: LeanbotCompiler.config.CompilePayload.fqbn,
+      fqbn: LeanbotCompiler.#config.CompilePayload.fqbn,
       files: [
         {
           content: sourceCode,
           name: `${sketchName}/${sketchName}.ino`,
         },
       ],
-      flags: LeanbotCompiler.config.CompilePayload.flags,
-      libs: LeanbotCompiler.config.libs,
+      flags: LeanbotCompiler.#config.CompilePayload.flags,
+      libs: LeanbotCompiler.#config.libs,
     };
 
     this.#compileStartMs = performance.now();
     this.#compileEndMs = 0;
-    const predictedTotal = LeanbotCompiler.config.PredictedTotalMs; //10000 ms = 10s
+    const predictedTotal = LeanbotCompiler.#config.PredictedTotalMs; //10000 ms = 10s
 
     const emitProgress = () => {
       const elapsedTime = (performance.now() - this.#compileStartMs);
@@ -47,7 +47,7 @@ export class LeanbotCompiler {
       if (this.onCompileProgress) this.onCompileProgress(elapsedTime, estimatedTotal);
     };
 
-    const progressTimer = setInterval(emitProgress, LeanbotCompiler.config.ProgressEmitIntervalMs); // emit progress every 500ms
+    const progressTimer = setInterval(emitProgress, LeanbotCompiler.#config.ProgressEmitIntervalMs); // emit progress every 500ms
 
     try {
       const compileResult = await this.#requestCompile(payload, compileServer);
