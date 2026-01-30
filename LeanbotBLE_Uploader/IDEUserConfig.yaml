@@ -5,3 +5,6 @@ LeanbotBLE:
   EspUploader:
     BLE_MaxLength:    512
     BLE_Interval:     null
+
+Editor:
+  AutoSaveDelayMs: 10000

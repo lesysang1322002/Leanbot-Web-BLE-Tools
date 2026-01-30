@@ -30,32 +30,39 @@ const LocalConfig = await loadFromLocalTree( 'IDELocalConfig/IDELocalConfig.yaml
 // Merge User and Core config
 // ============================================================
 
-const UserIDEConfig = deepMerge(UserConfig, LocalConfig);
+const UserIDEConfig = deepOverride(UserConfig, LocalConfig);
 const IDEConfig = deepMerge(CoreConfig, UserIDEConfig);
-// console.log(IDEConfig);
+console.log(IDEConfig);
 
 // ============================================================
 // URL PARAMETERS + GLOBAL CONFIG
 // ============================================================
 const params = new URLSearchParams(window.location.search);
 
-if(IDEConfig?.LeanbotBLE?.EspUploader){
-  IDEConfig.LeanbotBLE.EspUploader.BLE_MaxLength = parseInt(params.get("BLE_MaxLength"));
-  IDEConfig.LeanbotBLE.EspUploader.BLE_Interval = parseInt(params.get("BLE_Interval"));
-}
+if (IDEConfig?.LeanbotBLE?.EspUploader) {
+  const BLE_MaxLength = params.get("BLE_MaxLength");
+  const BLE_Interval = params.get("BLE_Interval");
 
+  if (BLE_MaxLength !== null) {
+    IDEConfig.LeanbotBLE.EspUploader.BLE_MaxLength = BLE_MaxLength;
+  }
+
+  if (BLE_Interval !== null) {
+    IDEConfig.LeanbotBLE.EspUploader.BLE_Interval = BLE_Interval;
+  }
+}
 const mode = params.get("MODE");
-let server = params.get("SERVER");
+
+const serverParam = params.get("SERVER");
 
 // Override server in test mode
-if (mode === "xyz123") {
-  server = "";
-  console.log("[TEST MODE] Using empty SERVER");
-}
-
-// Apply to IDE config if available
 if (IDEConfig.LeanbotCompiler) {
-  IDEConfig.LeanbotCompiler.Server = server;
+  if (mode === "xyz123") {
+    IDEConfig.LeanbotCompiler.Server = "";
+    console.log("[TEST MODE] Using empty SERVER");
+  } else if (serverParam !== null) {
+    IDEConfig.LeanbotCompiler.Server = serverParam;
+  }
 }
 
 console.log(`BLE_MaxLength = ${IDEConfig.LeanbotBLE.EspUploader.BLE_MaxLength}`);
@@ -245,7 +252,7 @@ async function doCompile() {
   uiSetTab("program");
   uiResetCompile();
 
-  return await leanbot.Compiler.compile(sourceCode, IDEConfig.LeanbotCompiler.Server);
+  return await leanbot.Compiler.compile(sourceCode);
 }
 
 leanbot.Compiler.onCompileSucess = (compileMessage) => {
@@ -511,7 +518,6 @@ if (window.__pendingOpenFileId) {
 }
 
 // Autosave nội dung từ Monaco về fileContents
-const AutoSaveDelayMs = 10000; // 10 giây
 let saveTimer = null;
 
 inoEditor.onChangeContent = () =>  {
@@ -521,7 +527,7 @@ inoEditor.onChangeContent = () =>  {
   fileContents[id] = inoEditor.getContent();
 
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveWorkspaceFilesToLocalStorage, AutoSaveDelayMs); // save after 10000ms of inactivity
+  saveTimer = setTimeout(saveWorkspaceFilesToLocalStorage, IDEConfig.Editor.AutoSaveDelayMs); // save after 10000ms of inactivity
 }
 
 // ============================================================
@@ -958,9 +964,9 @@ function renameFileId(id, newDisplayName) {
 
   if (item.index === "root") return; // NEVER rename root
 
-  if (!isFolder(id)) {
-    newDisplayName = ensureInoExtension(newDisplayName);
-  }
+  // if (!isFolder(id)) {
+  //   newDisplayName = ensureInoExtension(newDisplayName);
+  // }
 
   item.data = newDisplayName;
   emitChanged([id]);
@@ -1631,18 +1637,41 @@ function logLbIDEEvent(event) {
 // Deep merge 2 object
 // ============================================================
 
-function deepMerge(a, b) {
-  const out = { ...a };
+function deepMerge(target, source) {
+  const out = { ...target };
 
-  for (const k in b) {
+  for (const k in source) {
     if (
-      b[k] &&
-      typeof b[k] === "object" &&
-      !Array.isArray(b[k])
+      k in target &&
+      typeof target[k] === "object" &&
+      typeof source[k] === "object" &&
+      !Array.isArray(target[k]) &&
+      !Array.isArray(source[k])
     ) {
-      out[k] = deepMerge(a[k] || {}, b[k]);
+      out[k] = deepMerge(target[k], source[k]);
+    } else if (!(k in target)) { // Chỉ thêm field không có ở target.
+      out[k] = source[k];
+    }
+  }
+
+  return out;
+}
+
+function deepOverride(target, source) {
+  const out = { ...target };
+
+  for (const k in source) {
+    if (
+      k in target &&
+      typeof target[k] === "object" &&
+      typeof source[k] === "object" &&
+      !Array.isArray(target[k]) &&
+      !Array.isArray(source[k])
+    ) {
+      out[k] = deepOverride(target[k], source[k]);
     } else {
-      out[k] = b[k];
+      // Nếu field trùng nhau => source có quyền cao hơn => ghi đè
+      out[k] = source[k];
     }
   }
 

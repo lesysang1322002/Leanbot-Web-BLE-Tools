@@ -1248,7 +1248,7 @@ function hexLineToBytes(block) {
  * @returns {Uint8Array[]} packets - Array of BLE message bytes ready to send
  */
 function convertHexToBlePackets(hexText, { returnStep2 = false } = {}) {
-  const BLE_MaxLength = Uploader.BLE_MaxLength || 512; // Mặc định 512 nếu không có thiết lập
+  const BLE_MaxLength = Uploader.BLE_MaxLength;
   console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
 
   // --- STEP 0: Split HEX text into LinesMessage ---
