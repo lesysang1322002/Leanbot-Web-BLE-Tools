@@ -5,6 +5,7 @@
 import { LeanbotBLE } from "./LeanbotBLE.js";
 import { InoEditor } from "./InoEditor.js";
 import { LeanbotCompiler } from "./LeanbotCompiler.js";
+import { LeanbotConfig } from "./Config.js";
 
 // ============================================================
 //  LOCALSTORAGE (WORKSPACE)
@@ -85,11 +86,9 @@ function loadWorkspaceFromLocalStorage() {
 
 // find and load from tree with absolute path 
 // e.g: path = test/test.txt => find test.txt inside test inside root.
-async function loadFromLocalTree(path) { 
-
-  const loadResult = {config: null, configText: ""};
+function loadFromLocalTree(path) { 
   
-  if (!items || !fileContents) return loadResult;
+  if (!items || !fileContents) return "";
 
   const parts = String(path).trim().split("/").filter(Boolean);
   let currentId = "root";
@@ -98,98 +97,39 @@ async function loadFromLocalTree(path) {
     const name = parts[i];
 
     const parent = items[currentId];
-    if (!parent || !Array.isArray(parent.children)) return loadResult;
+    if (!parent || !Array.isArray(parent.children)) return "";
 
     const nextId = parent.children.find(
       id => items[id]?.data === name
     );
 
-    if (!nextId) return loadResult;
+    if (!nextId) return "";
 
     currentId = nextId;
   }
-
-  const yamlText = fileContents[currentId];
-  if (!yamlText) return loadResult;
-
-  try {
-    const localConfig = jsyaml.load(yamlText);
-    loadResult.config = localConfig;
-    loadResult.configText= yamlText;
-  } catch (err) {
-    console.error("YAML parse failed:", err);
-  }
-  finally {
-    return loadResult;
-  }
+  
+  return fileContents[currentId]
 }
 
 loadWorkspaceFromLocalStorage();
 
 // ============================================================
-// CONFIG LOADING (Core → User → Local)
-// - CoreConfig: immutable, shipped with web client
-// - UserConfig: user override (server-side)
-// - LocalConfig: workspace YAML override
+// CONFIG LOADING
 // ============================================================
-
-async function loadConfig(url) {
-  try {
-    const response = await fetch(url);
-    const configText = await response.text();
-    const config = jsyaml.load(configText);
-    return {config: config, configText: configText};
-  } catch (error) {
-    console.error('Config load failed:', error);
-    return {config: null, configText: ""};
-  }
-}
-
-const CoreConfig = await loadConfig('./IDECoreConfig.yaml');
-const UserConfig = await loadConfig('./IDEUserConfig.yaml');
 
 const LocalConfigName = "IDELocalConfig"
 
-const LocalConfig = await loadFromLocalTree(`${LocalConfigName}/${LocalConfigName}.yaml`)
+const LocalConfigFile = loadFromLocalTree(`${LocalConfigName}/${LocalConfigName}.yaml`)
 
-// ============================================================
-// Merge User and Core config: UserConfig ==> LocalConfig ==> CoreConfig
-// ============================================================
+const Config = new LeanbotConfig();
 
-const IDEConfig = _.defaultsDeep({}, CoreConfig.config, LocalConfig.config, UserConfig.config);
+const IDEConfig = await Config.getIDEConfig(LocalConfigFile);
 
 console.log(IDEConfig);
 
 // ============================================================
 // URL PARAMETERS + GLOBAL CONFIG
 // ============================================================
-const params = new URLSearchParams(window.location.search);
-
-if (IDEConfig?.LeanbotBLE?.EspUploader) {
-  const BLE_MaxLength = params.get("BLE_MaxLength");
-  const BLE_Interval = params.get("BLE_Interval");
-
-  if (BLE_MaxLength !== null) {
-    IDEConfig.LeanbotBLE.EspUploader.BLE_MaxLength = BLE_MaxLength;
-  }
-
-  if (BLE_Interval !== null) {
-    IDEConfig.LeanbotBLE.EspUploader.BLE_Interval = BLE_Interval;
-  }
-}
-const mode = params.get("MODE");
-
-const serverParam = params.get("SERVER");
-
-// Override server in test mode
-if (IDEConfig.LeanbotCompiler) {
-  if (mode === "xyz123") {
-    IDEConfig.LeanbotCompiler.Server = "";
-    console.log("[TEST MODE] Using empty SERVER");
-  } else if (serverParam !== null) {
-    IDEConfig.LeanbotCompiler.Server = serverParam;
-  }
-}
 
 console.log(`BLE_MaxLength = ${IDEConfig.LeanbotBLE.EspUploader.BLE_MaxLength}`);
 console.log(`BLE_Interval = ${IDEConfig.LeanbotBLE.EspUploader.BLE_Interval}`);
@@ -1106,19 +1046,15 @@ function renameFileId(id, newDisplayName) {
 
   if (item.index === "root") return; // NEVER rename root
 
-  // if (!isFolder(id)) {
-  //   newDisplayName = ensureInoExtension(newDisplayName);
-  // }
+  if(newDisplayName === LocalConfigName && items[id].parent == "root"){ // Creat localConfigFolder => also create localConfigFile.yaml
+    createItem(false, `${LocalConfigName}.yaml`, Config.getUserConfigFile());
+  }
 
   item.data = newDisplayName;
   emitChanged([id]);
 
   pendingTreeFocusId = id;
   saveWorkspaceTreeToLocalStorage();
-
-  if(newDisplayName === LocalConfigName){ // Creat localConfigFolder => also create localConfigFile.yaml
-    createItem(false, `${LocalConfigName}.yaml`, UserConfig.configText);
-  }
 }
 
 // drag drop, reorder, move folder

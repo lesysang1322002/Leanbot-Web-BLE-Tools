@@ -1,10 +1,17 @@
 LeanbotCompiler:
-  Server:            "cs.leanbot.space" 
+  Server: "cs.leanbot.space"
+  # Compiler server hostname.
+  # Available options:
+  #   - cs.leanbot.space        (production)
+  #   - cs1.leanbot.space       (alternative production)
+  #   - ide-server-qa.leanbot.space (QA / testing)
 
 LeanbotBLE:
   EspUploader:
-    BLE_MaxLength:    512
-    BLE_Interval:     null
+    # Advanced settings.
+    # Do NOT modify unless you fully understand BLE constraints.
+    BLE_MaxLength: 512   # Maximum BLE packet length (bytes). Max supported value: 512
+    BLE_Interval: null  # BLE connection interval (units: 1.25 ms). Examples: 12, 24, ...
 
 Editor:
-  AutoSaveDelayMs: 10000
+  AutoSaveDelayMs: 10000  # Auto-save delay in milliseconds after editor changes
