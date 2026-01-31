@@ -83,9 +83,13 @@ function loadWorkspaceFromLocalStorage() {
   }
 }
 
-async function loadFromLocalTree(path) {
+// find and load from tree with absolute path 
+// e.g: path = test/test.txt => find test.txt inside test inside root.
+async function loadFromLocalTree(path) { 
 
-  if (!items || !fileContents) return null;
+  const loadResult = {config: null, configText: ""};
+  
+  if (!items || !fileContents) return loadResult;
 
   const parts = String(path).trim().split("/").filter(Boolean);
   let currentId = "root";
@@ -94,25 +98,29 @@ async function loadFromLocalTree(path) {
     const name = parts[i];
 
     const parent = items[currentId];
-    if (!parent || !Array.isArray(parent.children)) return null;
+    if (!parent || !Array.isArray(parent.children)) return loadResult;
 
     const nextId = parent.children.find(
       id => items[id]?.data === name
     );
 
-    if (!nextId) return null;
+    if (!nextId) return loadResult;
 
     currentId = nextId;
   }
 
   const yamlText = fileContents[currentId];
-  if (!yamlText) return null;
+  if (!yamlText) return loadResult;
 
   try {
-    return jsyaml.load(yamlText);
+    const localConfig = jsyaml.load(yamlText);
+    loadResult.config = localConfig;
+    loadResult.configText= yamlText;
   } catch (err) {
     console.error("YAML parse failed:", err);
-    return null;
+  }
+  finally {
+    return loadResult;
   }
 }
 
@@ -130,10 +138,10 @@ async function loadConfig(url) {
     const response = await fetch(url);
     const configText = await response.text();
     const config = jsyaml.load(configText);
-    return config;
+    return {config: config, configText: configText};
   } catch (error) {
     console.error('Config load failed:', error);
-    return null;
+    return {config: null, configText: ""};
   }
 }
 
@@ -148,7 +156,7 @@ const LocalConfig = await loadFromLocalTree(`${LocalConfigName}/${LocalConfigNam
 // Merge User and Core config: UserConfig ==> LocalConfig ==> CoreConfig
 // ============================================================
 
-const IDEConfig = _.defaultsDeep({}, CoreConfig, LocalConfig, UserConfig);
+const IDEConfig = _.defaultsDeep({}, CoreConfig.config, LocalConfig.config, UserConfig.config);
 
 console.log(IDEConfig);
 
@@ -1109,8 +1117,7 @@ function renameFileId(id, newDisplayName) {
   saveWorkspaceTreeToLocalStorage();
 
   if(newDisplayName === LocalConfigName){ // Creat localConfigFolder => also create localConfigFile.yaml
-    const userConfigYaml = jsyaml.dump(UserConfig ?? {});
-    createItem(false, `${LocalConfigName}.yaml`, userConfigYaml);
+    createItem(false, `${LocalConfigName}.yaml`, UserConfig.configText);
   }
 }
 
@@ -1453,7 +1460,7 @@ reactRoot.render(
       },
 
       onPrimaryAction: (item) => {
-        console.log("onPrimaryAction:", item.index);
+        // console.log("onPrimaryAction:", item.index);
         if (isFolder(item.index)){ // if folder, show content in editor
           const folderContent = getFolderContent(item.index); // in folder structure to console
           window.currentFileId = item.index;
