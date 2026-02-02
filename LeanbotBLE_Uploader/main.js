@@ -29,9 +29,6 @@ const items = {
   },
 };
 
-// nội dung file, key theo id file (item.index)
-const fileContents = {};
-
 function saveWorkspaceTreeToLocalStorage() {
   const data = {
     items,
@@ -41,27 +38,23 @@ function saveWorkspaceTreeToLocalStorage() {
   localStorage.setItem(LS_KEY_TREE, JSON.stringify(data));
 }
 
-function saveWorkspaceFilesToLocalStorage() {
-  Object.entries(fileContents).forEach(([fileId, content]) => {
-    localStorage.setItem(FILE_KEY_PREFIX + fileId, content);
-  });
-
-  localStorage.setItem(CURRENT_FILEID_KEY,window.currentFileId);
+function readFile(itemId) {
+  if(!itemId)return;
+  return localStorage.getItem(FILE_KEY_PREFIX + itemId) || null;
 }
 
-function loadWorkspaceFilesFromLocalStorage() {
-  Object.keys(fileContents).forEach(k => delete fileContents[k]);
+function writeFile(itemId, content){
+  if(!itemId)return;
+  localStorage.setItem(FILE_KEY_PREFIX + itemId, content);
+}
 
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
+function removeFile(itemId){
+  if(!itemId)return;
+  localStorage.removeItem(FILE_KEY_PREFIX + itemId);
+}
 
-    if (key.startsWith(FILE_KEY_PREFIX)) {
-      const fileId = key.slice(FILE_KEY_PREFIX.length);
-      fileContents[fileId] = localStorage.getItem(key);
-    }
-  }
-
-  window.currentFileId = localStorage.getItem(CURRENT_FILEID_KEY) || window.currentFileId;
+function saveCurrentFileID(){
+  localStorage.setItem(CURRENT_FILEID_KEY,window.currentFileId);
 }
 
 function loadWorkspaceFromLocalStorage() {
@@ -77,16 +70,14 @@ function loadWorkspaceFromLocalStorage() {
     const data = JSON.parse(rawTree);
     Object.keys(items).forEach(k => delete items[k]);
     Object.assign(items, data.items || {});
-    window.currentFileId = data.currentFileId || window.currentFileId;
 
-    loadWorkspaceFilesFromLocalStorage();
+    window.currentFileId = localStorage.getItem(CURRENT_FILEID_KEY) || window.currentFileId;
 
     console.log("[LS] Workspace restored");
   } catch (e) {
     console.log("[LS] Restore failed", e);
   } finally {
     saveWorkspaceTreeToLocalStorage();
-    saveWorkspaceFilesToLocalStorage();
   }
 }
 
@@ -94,7 +85,7 @@ function loadWorkspaceFromLocalStorage() {
 // e.g: path = test/test.txt => find test.txt inside test inside root.
 function loadFromLocalTree(path) { 
   
-  if (!items || !fileContents) return "";
+  if (!items) return "";
 
   const parts = String(path).trim().split("/").filter(Boolean);
   let currentId = "root";
@@ -114,7 +105,7 @@ function loadFromLocalTree(path) {
     currentId = nextId;
   }
   
-  return fileContents[currentId]
+  return readFile(currentId);
 }
 
 loadWorkspaceFromLocalStorage();
@@ -341,8 +332,6 @@ leanbot.Compiler.onCompileSucess = (compileMessage) => {
 
   UploaderCompileLog.value = compileMessage;
   UploaderCompileTitle.className = "green";
-
-  saveWorkspaceFilesToLocalStorage(); // Lưu workspace khi compile thành công
 
   if (!isCompileAndUpload) return;
   uploadStart = performance.now(); // reset upload start time
@@ -596,10 +585,10 @@ inoEditor.onChangeContent = () =>  {
   const id = window.currentFileId;
   if (!id) return;
 
-  fileContents[id] = inoEditor.getContent();
+  const currentfileContents = inoEditor.getContent();
 
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveWorkspaceFilesToLocalStorage, IDEConfig.Editor.AutoSaveDelayMs); // save after 10000ms of inactivity
+  saveTimer = setTimeout(() => {writeFile(id, currentfileContents)}, IDEConfig.Editor.AutoSaveDelayMs); // save after 10000ms of inactivity
 }
 
 // ============================================================
@@ -676,10 +665,12 @@ if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.
     items.root.children.push(id);
   }
 
-  fileContents[id] = inoTemplates.basicMotion || "";
+  writeFile(id, inoTemplates.basicMotion || "");
 }
 
-window.__pendingOpenFileId = window.currentFileId || null;
+openFileInMonaco(window.currentFileId || null); 
+// Reopen the item that was last opened in the previous session.
+// If no workspace exists (first time opening the editor), open basicMotion.ino.
 
 // ============================================================
 //  FILE TREE + WORKSPACE management
@@ -726,11 +717,11 @@ function openFileInMonaco(fileId) {
     return;
   }
 
-  const content = fileContents[fileId] ?? "";
+  const content = readFile(fileId) ?? "";
   window.currentFileId = fileId;
   inoEditor.setContent(content);
 
-  saveWorkspaceFilesToLocalStorage();
+  saveCurrentFileID(); // save current file id to local storage  
 }
 
 // Lấy folder đích để thêm file, folder
@@ -797,7 +788,7 @@ window.importLocalFileToTree = (loaded) => {
   items[parentId].children ||= [];
   items[parentId].children.push(id);
 
-  fileContents[id] = text;
+  writeFile(id, text);
 
   emitChanged([parentId, id]);
 
@@ -976,7 +967,7 @@ function createItem(isFolder, defaultName, defaultfileContent = null) {
     items[parentId].children.includes(id)
   );
 
-  if (!isFolder) fileContents[id] = defaultfileContent || inoTemplates.default || "";
+  if (!isFolder) writeFile(id, defaultfileContent || inoTemplates.default || "");
 
   emitChanged([parentId, id]);
 
@@ -1255,7 +1246,7 @@ function deleteSubtree(id) {
   if (isFolder(id) && Array.isArray(it.children)) {
     for (const cid of it.children) deleteSubtree(cid);
   } else {
-    delete fileContents[id];
+    delete removeFile(id);
   }
 
   delete items[id];
