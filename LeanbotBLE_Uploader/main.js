@@ -11,6 +11,66 @@ import { LeanbotConfig } from "./Config.js";
 //  LOCALSTORAGE (WORKSPACE)
 // ============================================================
 
+// === Compress === // 
+
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+
+/* Uint8Array -> base64 */
+function uint8ToBase64(bytes) {
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary);
+}
+
+/* base64 -> Uint8Array */
+function base64ToUint8(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+// ===== Compress & decompress helpers ===== //
+
+async function compressString(str) {
+
+  const t1 = performance.now();
+  const stream = new Blob([textEncoder.encode(str)])
+    .stream()
+    .pipeThrough(new CompressionStream('gzip'));
+
+  const buffer = await new Response(stream).arrayBuffer();
+  const compressed = uint8ToBase64(new Uint8Array(buffer));
+
+  const t2 = performance.now();
+  console.log(`[COMPRESS] ${str.length} -> ${compressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
+
+  return compressed;
+}
+
+async function decompressString(base64) {
+
+  const t1 = performance.now();
+  const bytes = base64ToUint8(base64);
+
+  const stream = new Blob([bytes])
+    .stream()
+    .pipeThrough(new DecompressionStream('gzip'));
+
+  const buffer = await new Response(stream).arrayBuffer();
+  const decompressed = textDecoder.decode(buffer);
+
+  const t2 = performance.now();
+  console.log(`[DECOMPRESS] ${base64.length} -> ${decompressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
+
+  return decompressed;
+}
+
+// ==== save/write local storage ==== //
+
 const LS_KEY_TREE = "leanbot_workspace_tree";
 
 const FILE_KEY_PREFIX = "Workspace_File_";
@@ -29,61 +89,89 @@ const items = {
   },
 };
 
-function saveWorkspaceTreeToLocalStorage() {
+async function saveWorkspaceTreeToLocalStorage() {
+  console.log("Save workspace tree to Local Storage");
   const data = {
     items,
     currentFileId: window.currentFileId
   };
 
-  localStorage.setItem(LS_KEY_TREE, JSON.stringify(data));
+  const json = JSON.stringify(data);
+  const compressed = await compressString(json);
+
+  localStorage.setItem(LS_KEY_TREE, compressed);
 }
 
-function readFile(itemId) {
-  if(!itemId)return;
-  return localStorage.getItem(FILE_KEY_PREFIX + itemId) || null;
+function fileKey(uuid) {
+  return FILE_KEY_PREFIX + uuid;
 }
 
-function writeFile(itemId, content){
-  if(!itemId)return;
-  localStorage.setItem(FILE_KEY_PREFIX + itemId, content);
+async function readFile(uuid) {
+  if (!uuid) return null;
+
+  const compressed = localStorage.getItem(fileKey(uuid));
+  if (!compressed) return null;
+
+  return await decompressString(compressed);
 }
 
-function removeFile(itemId){
-  if(!itemId)return;
-  localStorage.removeItem(FILE_KEY_PREFIX + itemId);
+async function writeFile(uuid, content) {
+  if (!uuid) return;
+
+  const prev = await readFile(uuid);
+  if (content === prev) {
+    console.log("Skip write, uuid:", uuid);
+    return;
+  }
+
+  const compressed = await compressString(content);
+  localStorage.setItem(fileKey(uuid), compressed);
+}
+
+function removeFile(uuid){
+  if(!uuid)return;
+  localStorage.removeItem(fileKey(uuid));
 }
 
 function saveCurrentFileID(){
   localStorage.setItem(CURRENT_FILEID_KEY,window.currentFileId);
 }
 
-function loadWorkspaceFromLocalStorage() {
-  try {
-    const rawTree = localStorage.getItem(LS_KEY_TREE);
+async function changeCurrentFileId(newFileId){
+  if(newFileId === window.currentFileId)return;
+  if(window.currentFileId) await writeFile(window.currentFileId, inoEditor.getContent());
+  window.currentFileId = newFileId;
+}
 
-    if (!rawTree) {
+async function loadWorkspaceFromLocalStorage() {
+  console.log("Load workspace tree from Local Storage");
+  try {
+    const compressed = localStorage.getItem(LS_KEY_TREE);
+
+    if (!compressed) {
       console.log("[LS] No workspace found in localStorage");
       return;
     }
 
-    // load tree
-    const data = JSON.parse(rawTree);
+    const json = await decompressString(compressed);
+    const data = JSON.parse(json);
+
     Object.keys(items).forEach(k => delete items[k]);
     Object.assign(items, data.items || {});
 
-    window.currentFileId = localStorage.getItem(CURRENT_FILEID_KEY) || window.currentFileId;
+    window.currentFileId = localStorage.getItem(CURRENT_FILEID_KEY) || data.currentFileId || null;
 
     console.log("[LS] Workspace restored");
   } catch (e) {
-    console.log("[LS] Restore failed", e);
+    console.error("[LS] Restore failed", e);
   } finally {
-    saveWorkspaceTreeToLocalStorage();
+    await saveWorkspaceTreeToLocalStorage();
   }
 }
 
 // find and load from tree with absolute path 
 // e.g: path = test/test.txt => find test.txt inside test inside root.
-function loadFromLocalTree(path) { 
+async function loadFromLocalTree(path) { 
   
   if (!items) return "";
 
@@ -97,7 +185,7 @@ function loadFromLocalTree(path) {
     if (!parent || !Array.isArray(parent.children)) return "";
 
     const nextId = parent.children.find(
-      id => items[id]?.data === name
+      uuid => items[uuid]?.data === name
     );
 
     if (!nextId) return "";
@@ -105,7 +193,7 @@ function loadFromLocalTree(path) {
     currentId = nextId;
   }
   
-  return readFile(currentId);
+  return await readFile(currentId);
 }
 
 loadWorkspaceFromLocalStorage();
@@ -116,7 +204,7 @@ loadWorkspaceFromLocalStorage();
 
 const LocalConfigName = "IDELocalConfig"
 
-const LocalConfigFile = loadFromLocalTree(`${LocalConfigName}/${LocalConfigName}.yaml`)
+const LocalConfigFile = await loadFromLocalTree(`${LocalConfigName}/${LocalConfigName}.yaml`)
 
 const Config = new LeanbotConfig();
 
@@ -573,22 +661,24 @@ tabs.forEach(tab => {
 await inoEditor.attach(document.getElementById("codeEditor"));
 
 if (window.__pendingOpenFileId) {
-  const id = window.__pendingOpenFileId;
+  const uuid = window.__pendingOpenFileId;
   window.__pendingOpenFileId = null;
-  openFileInMonaco(id);
+  await openFileInMonaco(uuid);
 }
 
 // Autosave nội dung từ Monaco về fileContents
 let saveTimer = null;
 
 inoEditor.onChangeContent = () =>  {
-  const id = window.currentFileId;
-  if (!id) return;
+  const uuid = window.currentFileId;
+  if (!uuid) return;
+
+  console.log("There is change", window.currentFileId); // In ra mỗi khi editor nhận diện có thay đổi.
 
   const currentfileContents = inoEditor.getContent();
 
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {writeFile(id, currentfileContents)}, IDEConfig.Editor.AutoSaveDelayMs); // save after 10000ms of inactivity
+  saveTimer = setTimeout(async () => {await writeFile(uuid, currentfileContents)}, IDEConfig.Editor.AutoSaveDelayMs); // save after 10000ms of inactivity
 }
 
 // ============================================================
@@ -625,14 +715,14 @@ function createUUID() {
   return crypto.randomUUID();
 }
 
-function isFolder(id) {
-  return !!id && !!items[id] && items[id].isFolder === true;
+function isFolder(uuid) {
+  return !!uuid && !!items[uuid] && items[uuid].isFolder === true;
 }
 
-function isInoFile(id) {
-  if (!id || !items[id]) return false;
+function isInoFile(uuid) {
+  if (!uuid || !items[uuid]) return false;
 
-  const it = items[id];
+  const it = items[uuid];
   if (!it || it.isFolder) return false;
 
   const name = String(it.data || "").trim().toLowerCase();
@@ -642,8 +732,8 @@ function isInoFile(id) {
 // Create basicMotion.ino if there isnt any .ino file in the workspace
 
 function hasAnyInoFile() { // Check if there is any .ino file in the workspace
-  for (const id in items) {
-    if (!isInoFile(id)) continue;
+  for (const uuid in items) {
+    if (!isInoFile(uuid)) continue;
     return true;
   }
   return false;
@@ -651,9 +741,9 @@ function hasAnyInoFile() { // Check if there is any .ino file in the workspace
 
 if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.ino directly at root
   console.log("[LS] No .ino file found, creating default BasicMotion.ino");
-  const id = createUUID();
-  items[id] = {
-    index: id,
+  const uuid = createUUID();
+  items[uuid] = {
+    index: uuid,
     isFolder: false,
     children: [],
     data: "BasicMotion.ino",
@@ -661,15 +751,15 @@ if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.
  };
       
   items.root.children ||= [];
-  if (!items.root.children.includes(id)) {
-    items.root.children.push(id);
+  if (!items.root.children.includes(uuid)) {
+    items.root.children.push(uuid);
   }
 
-  window.currentFileId = id;
-  writeFile(id, inoTemplates.basicMotion || "");
+  await writeFile(uuid, inoTemplates.basicMotion || "");
+  await changeCurrentFileId(uuid);
 }
 
-openFileInMonaco(window.currentFileId || null); 
+await openFileInMonaco(window.currentFileId || null); 
 // Reopen the item that was last opened in the previous session.
 // If no workspace exists (first time opening the editor), open basicMotion.ino.
 
@@ -683,21 +773,21 @@ let lastSelectedIds  = [window.currentFileId];
 
 // Gắn parent cho mỗi node, để move nhanh
 function rebuildParents() {
-  for (const id in items) items[id].parent = null;
-  for (const id in items) {
-    const ch = items[id].children;
+  for (const uuid in items) items[uuid].parent = null;
+  for (const uuid in items) {
+    const ch = items[uuid].children;
     if (!Array.isArray(ch)) continue;
-    for (const cid of ch) if (items[cid]) items[cid].parent = id;
+    for (const cid of ch) if (items[cid]) items[cid].parent = uuid;
   }
 }
 rebuildParents();
 
-function getAncestorFolders(id) {
+function getAncestorFolders(uuid) {
 
-  if (!id || !items[id]) return []; // incase id is null or invalid
+  if (!uuid || !items[uuid]) return []; // incase uuid is null or invalid
 
   const out = [];
-  let p = items[id]?.parent;
+  let p = items[uuid]?.parent;
 
   while (p && p !== "root") {
     out.unshift(p);
@@ -710,7 +800,7 @@ const { UncontrolledTreeEnvironment, Tree, StaticTreeDataProvider } = window.Rea
 const dataProvider = new StaticTreeDataProvider(items, (item, data) => ({ ...item, data }));
 const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
 
-function openFileInMonaco(fileId) { 
+async function openFileInMonaco(fileId) { 
   if (isFolder(fileId)) return; // avoid if a folder is passed
 
   if (!inoEditor.__isMonacoReady|| !inoEditor) {
@@ -718,11 +808,12 @@ function openFileInMonaco(fileId) {
     return;
   }
 
-  const content = readFile(fileId) ?? "";
-  window.currentFileId = fileId;
+  const content = await readFile(fileId) ?? "";
+  // window.currentFileId = fileId;
+  await changeCurrentFileId(fileId);
   inoEditor.setContent(content);
 
-  saveCurrentFileID(); // save current file id to local storage  
+  saveCurrentFileID(); // save current file uuid to local storage  
 }
 
 // Lấy folder đích để thêm file, folder
@@ -746,7 +837,7 @@ btnLoadFile.addEventListener("click", async () => {
   if (!loaded) return;
 
   // chuyển cho FILE TREE tạo file mới + mở trong Monaco
-  window.importLocalFileToTree?.(loaded);
+  await window.importLocalFileToTree?.(loaded);
 });
 
 // Hàm load file và trả về đối tượng { fileName, ext, text }
@@ -768,7 +859,7 @@ async function loadFile() {
 }
 
 // Nhận file local đã đọc từ loadFile() và tạo file mới trong tree
-window.importLocalFileToTree = (loaded) => {
+window.importLocalFileToTree = async (loaded) => {
   if (!loaded) return;
 
   const fileName = String(loaded.fileName || getTimestampName() + ".ino");
@@ -776,10 +867,10 @@ window.importLocalFileToTree = (loaded) => {
 
   const parentId = getTargetFolderId();
 
-  const id = createUUID();
+  const uuid = createUUID();
 
-  items[id] = {
-    index: id,
+  items[uuid] = {
+    index: uuid,
     isFolder: false,
     children: [],
     data: fileName,
@@ -787,15 +878,15 @@ window.importLocalFileToTree = (loaded) => {
   };
 
   items[parentId].children ||= [];
-  items[parentId].children.push(id);
+  items[parentId].children.push(uuid);
 
-  writeFile(id, text);
+  await writeFile(uuid, text);
 
-  emitChanged([parentId, id]);
+  emitChanged([parentId, uuid]);
 
-  pendingTreeFocusId = id;
-  openFileInMonaco(id);
-  saveWorkspaceTreeToLocalStorage();
+  pendingTreeFocusId = uuid;
+  await openFileInMonaco(uuid);
+  await saveWorkspaceTreeToLocalStorage();
 };
 
 
@@ -830,7 +921,7 @@ fileTreePanel?.addEventListener("drop", async (e) => {
 
     try {
       const text = await readFileAsText(f);
-      window.importLocalFileToTree?.({
+      await window.importLocalFileToTree?.({
         fileName: f.name,
         ext: (f.name.split(".").pop() || "").toLowerCase(),
         text
@@ -854,34 +945,34 @@ function readFileAsText(file) {
 
 // ===== sync state tree (selected, focused) cho thao tác ngoài tree =====
 window.__rctItemActions ||= new Map();
-const rememberItemActions = (id, ctx) => id && ctx && window.__rctItemActions.set(id, ctx);
+const rememberItemActions = (uuid, ctx) => uuid && ctx && window.__rctItemActions.set(uuid, ctx);
 
 let pendingTreeFocusId = null;
 
-function focusTreeItemNow(id) {
-  const ctx = window.__rctItemActions.get(id);
+function focusTreeItemNow(uuid) {
+  const ctx = window.__rctItemActions.get(uuid);
   if (!ctx) return false;
 
   try { ctx.focusItem?.(); } catch (e) {}
   try { ctx.selectItem?.(); } catch (e) {}
 
-  lastFocusedId = id;
-  lastSelectedIds = [id];
+  lastFocusedId = uuid;
+  lastSelectedIds = [uuid];
   return true;
 }
 
-function requestTreeFocus(id) {
-  if (!id || !items[id]) return;
+function requestTreeFocus(uuid) {
+  if (!uuid || !items[uuid]) return;
 
   // Ensure visibility
-  const parent = items[id].parent;
+  const parent = items[uuid].parent;
   if (parent) expandFolderChain(parent);
 
   // Request focus (deferred)
-  pendingTreeFocusId = id;
+  pendingTreeFocusId = uuid;
 
   // Force tree to re-render so renderItem can consume the request
-  emitChanged([parent || "root", id]);
+  emitChanged([parent || "root", uuid]);
 }
 
 let pendingTreeRenameId = null;
@@ -895,26 +986,26 @@ function createItemName(desiredName) {
 
 // Mở folder nếu nó đang collapsed
 function expandFolderChain(folderId) {
-  let id = folderId; 
+  let uuid = folderId; 
 
-  while (id && id !== "root") {
-    const ctx = window.__rctItemActions.get(id);
+  while (uuid && uuid !== "root") {
+    const ctx = window.__rctItemActions.get(uuid);
     try { ctx?.expandItem?.(); } catch (e) {} 
-    id = items[id]?.parent;
+    uuid = items[uuid]?.parent;
   }
 }
 
-function getFolderContent(id, prefix = "") {
-  const folderNode = items[id];
+function getFolderContent(uuid, prefix = "") {
+  const folderNode = items[uuid];
 
   if (!folderNode) return ""; // item not exist
-  if (!isFolder(id)) return `${prefix}${folderNode.data}`; // file => return name
+  if (!isFolder(uuid)) return `${prefix}${folderNode.data}`; // file => return name
 
   const lines = [];
   lines.push(folderNode.data + " /"); // folder name
 
   const children = (folderNode.children || [])
-    .map(id => items[id])
+    .map(uuid => items[uuid])
     .filter(Boolean);
 
   if (children.length === 0) {
@@ -945,7 +1036,7 @@ function getFolderContent(id, prefix = "") {
 }
 
 // Thêm file, folder
-function createItem(isFolder, defaultName, defaultfileContent = null) {
+async function createItem(isFolder, defaultName, defaultfileContent = null) {
   const parentId = getTargetFolderId();
   console.log("[CREATE] target parentId =", parentId);
 
@@ -957,44 +1048,44 @@ function createItem(isFolder, defaultName, defaultfileContent = null) {
     name = /\.[^./]+$/.test(name) ? name : ensureInoExtension(createItemName(name));
   }
 
-  const id = createUUID();
+  const uuid = createUUID();
 
-  items[id] = { index: id, isFolder, children: [], data: name, parent: parentId };
-  console.log("[CREATE] item.parent =", items[id].parent);
+  items[uuid] = { index: uuid, isFolder, children: [], data: name, parent: parentId };
+  console.log("[CREATE] item.parent =", items[uuid].parent);
   items[parentId].children ||= [];
-  items[parentId].children.push(id);
+  items[parentId].children.push(uuid);
   console.log(
     "[CHECK] parent contains child =",
-    items[parentId].children.includes(id)
+    items[parentId].children.includes(uuid)
   );
+  if (!isFolder) await writeFile(uuid, defaultfileContent || inoTemplates.default || "");
 
-  if (!isFolder) writeFile(id, defaultfileContent || inoTemplates.default || "");
-
-  emitChanged([parentId, id]);
+  emitChanged([parentId, uuid]);
 
   // Mở chain folder cha để nhìn thấy item mới
   // Nếu tạo folder, mở luôn chính folder đó
-  setTimeout(() => {
+  setTimeout(async () => {
     expandFolderChain(parentId);
 
     if (isFolder) {
       try {
-        const folderContent = getFolderContent(id); // in folder structure to console
-        window.currentFileId = id;
+        const folderContent = getFolderContent(uuid); // in folder structure to console
+        // window.currentFileId = uuid;
+        await changeCurrentFileId(uuid);
         inoEditor.setContentReadOnly(folderContent);
-        const ctx = window.__rctItemActions.get(id);
+        const ctx = window.__rctItemActions.get(uuid);
         ctx?.expandItem?.();
       } catch (e) {
-        console.log("[TREE] expand new folder failed =", id, e);
+        console.log("[TREE] expand new folder failed =", uuid, e);
       }
     }
   }, 0);
 
-  pendingTreeRenameId = id;
-  pendingTreeFocusId  = id;
+  pendingTreeRenameId = uuid;
+  pendingTreeFocusId  = uuid;
 
-  if (!isFolder) openFileInMonaco(id);
-  saveWorkspaceTreeToLocalStorage();
+  if (!isFolder) await openFileInMonaco(uuid);
+  await saveWorkspaceTreeToLocalStorage();
 }
 
 const btnNewFile = document.getElementById("btnNewFile");
@@ -1014,16 +1105,16 @@ function getTimestampName() {
   return `${yyyy}.${mm}.${dd}-${hh}.${mi}.${sec}`;
 }
 
-btnNewFile?.addEventListener("click", () => {
+btnNewFile?.addEventListener("click", async () => {
   const name = getTimestampName() + ".ino";
   console.log("Creating new file:", name);
-  createItem(false, name);
+  await createItem(false, name);
 });
 
-btnNewFolder?.addEventListener("click", () => {
+btnNewFolder?.addEventListener("click", async () => {
   const name = getTimestampName();
   console.log("Creating new folder:", name);
-  createItem(true, name);
+  await createItem(true, name);
 });
 
 function ensureInoExtension(name) {
@@ -1038,21 +1129,21 @@ function ensureInoExtension(name) {
 }
 
 // rename file bằng F2
-function renameFileId(id, newDisplayName) {
-  const item = items[id];
+async function renameFileId(uuid, newDisplayName) {
+  const item = items[uuid];
   if (!item) return;
 
   if (item.index === "root") return; // NEVER rename root
 
-  if(newDisplayName === LocalConfigName && items[id].parent == "root"){ // Creat localConfigFolder => also create localConfigFile.yaml
-    createItem(false, `${LocalConfigName}.yaml`, Config.getUserConfigFile());
+  if(newDisplayName === LocalConfigName && items[uuid].parent == "root"){ // Creat localConfigFolder => also create localConfigFile.yaml
+    await createItem(false, `${LocalConfigName}.yaml`, Config.getUserConfigFile());
   }
 
   item.data = newDisplayName;
-  emitChanged([id]);
+  emitChanged([uuid]);
 
-  pendingTreeFocusId = id;
-  saveWorkspaceTreeToLocalStorage();
+  pendingTreeFocusId = uuid;
+  await saveWorkspaceTreeToLocalStorage();
 }
 
 // drag drop, reorder, move folder
@@ -1068,13 +1159,13 @@ function removeFromParent(childId) {
   }
 
   // fallback: nếu parent bị sai, quét toàn bộ folder để xóa mọi chỗ đang chứa childId
-  for (const id in items) {
-    const it = items[id];
-    if (!isFolder(id) || !Array.isArray(it.children)) continue;
+  for (const uuid in items) {
+    const it = items[uuid];
+    if (!isFolder(uuid) || !Array.isArray(it.children)) continue;
 
     const before = it.children.length;
     it.children = it.children.filter((x) => x !== childId);
-    if (it.children.length !== before) removedParent = removedParent || id;
+    if (it.children.length !== before) removedParent = removedParent || uuid;
   }
 
   return removedParent;
@@ -1106,7 +1197,7 @@ function isDescendantOf(candidateChild, candidateParent) {
   return false;
 }
 
-function handleDrop(itemsDragged, target) {
+async function handleDrop(itemsDragged, target) {
   if (!target) return;
 
   const draggedIds = Array.from(new Set((itemsDragged || []).map(x => x.index)));
@@ -1138,30 +1229,30 @@ function handleDrop(itemsDragged, target) {
   }
 
   // Chặn kéo folder vào chính con của nó
-  for (const id of draggedIds) {
-    if (id === destFolderId) return;
-    if (isFolder(id) && isDescendantOf(destFolderId, id)) return;
+  for (const uuid of draggedIds) {
+    if (uuid === destFolderId) return;
+    if (isFolder(uuid) && isDescendantOf(destFolderId, uuid)) return;
   }
 
   const changed = new Set([destFolderId]);
 
   // Bỏ khỏi parent cũ
-  for (const id of draggedIds) {
-    const oldParent = removeFromParent(id);
+  for (const uuid of draggedIds) {
+    const oldParent = removeFromParent(uuid);
     if (oldParent) changed.add(oldParent);
   }
 
   // Chèn vào folder đích theo thứ tự
-  draggedIds.forEach((id, i) => {
-    insertIntoFolder(destFolderId, id, insertIndex + i);
-    changed.add(id);
+  draggedIds.forEach((uuid, i) => {
+    insertIntoFolder(destFolderId, uuid, insertIndex + i);
+    changed.add(uuid);
   });
 
   rebuildParents();
   emitChanged(Array.from(changed));
-  saveWorkspaceTreeToLocalStorage();
+  await saveWorkspaceTreeToLocalStorage();
 
-  setTimeout(() => {
+  setTimeout(async () => {
     expandFolderChain(destFolderId);
 
     if (draggedIds.length === 1) {
@@ -1185,7 +1276,7 @@ function handleDrop(itemsDragged, target) {
 
       // Nếu là file: mở file, đồng thời folder cha đã được expand ở trên
       console.log("[MOVE] open moved file =", movedId, "parent =", movedItem.parent);
-      openFileInMonaco(movedId);
+      await openFileInMonaco(movedId);
     }
   }, 0);
 }
@@ -1219,9 +1310,9 @@ function hideCtxMenu() {
   ctxTargetId = null;
 }
 
-function showCtxMenu(x, y, itemId) {
+function showCtxMenu(x, y, uuid) {
   if (!ctxMenu) return;
-  ctxTargetId = itemId;
+  ctxTargetId = uuid;
 
   ctxMenu.classList.remove("is-hidden");
 
@@ -1240,29 +1331,29 @@ addEventListener("click", hideCtxMenu);
 ctxMenu?.addEventListener("click", (e) => e.stopPropagation());
 
 // Xóa item 
-function deleteSubtree(id) {
-  const it = items[id];
+function deleteSubtree(uuid) {
+  const it = items[uuid];
   if (!it) return;
 
-  if (isFolder(id) && Array.isArray(it.children)) {
+  if (isFolder(uuid) && Array.isArray(it.children)) {
     for (const cid of it.children) deleteSubtree(cid);
   } else {
-    delete removeFile(id);
+    delete removeFile(uuid);
   }
 
-  delete items[id];
+  delete items[uuid];
 }
 
-function deleteItemWithConfirm(itemId) {
-  const it = items[itemId];
+async function deleteItemWithConfirm(uuid) {
+  const it = items[uuid];
   if (!it) return;
 
-  const name = it.data || itemId;
-  const childCount = isFolder(itemId) ? (it.children?.length || 0) : 0;
+  const name = it.data || uuid;
+  const childCount = isFolder(uuid) ? (it.children?.length || 0) : 0;
 
   let message;
 
-  if (isFolder(itemId)) {
+  if (isFolder(uuid)) {
     message = childCount > 0
       ? `Delete folder "${name}" and its ${childCount} items?`
       : `Delete folder "${name}"?`;
@@ -1271,20 +1362,20 @@ function deleteItemWithConfirm(itemId) {
   }
 
   const ok = window.confirm(message);
-  console.log("[DELETE] confirm =", ok, "id =", itemId);
+  console.log("[DELETE] confirm =", ok, "uuid =", uuid);
 
   if (!ok) return;
 
-  deleteItemById(itemId);
+  await deleteItemById(uuid);
 }
 
-function pickNextTreeItem(id) {
+function pickNextTreeItem(uuid) {
   let firstFolder = null;
 
   for (const it of Object.values(items)) {
     if (!it || it.index === "root") continue;
 
-    if(id === it.index) continue; // id is the id going to be deleted
+    if(uuid === it.index) continue; // uuid is the uuid going to be deleted
 
     // prefer file
     if (!isFolder(it.index)) {
@@ -1304,24 +1395,26 @@ function pickNextTreeItem(id) {
   return null;
 }
 
-function deleteItemById(id) {
-  if (!id || !items[id] || id === "root") return;
+async function deleteItemById(uuid) {
+  if (!uuid || !items[uuid] || uuid === "root") return;
 
-  const parent = items[id]?.parent;
-  const nextFocus = parent && parent !== "root"? parent: pickNextTreeItem(id); // when delte, focus parent, buf if parent is non exits or root, focus the first file in tree
+  const parent = items[uuid]?.parent;
+  const nextFocus = parent && parent !== "root"? parent: pickNextTreeItem(uuid); // when delte, focus parent, buf if parent is non exits or root, focus the first file in tree
 
-  // gỡ id khỏi mọi folder trước, tránh lệch parent sau drag
-  const removedParent = removeFromParent(id) || (items[id].parent || "root");
+  // gỡ uuid khỏi mọi folder trước, tránh lệch parent sau drag
+  const removedParent = removeFromParent(uuid) || (items[uuid].parent || "root");
 
-  deleteSubtree(id);
+  deleteSubtree(uuid);
 
   // focus lại
   pendingTreeFocusId = items[removedParent] ? removedParent : "root";
 
-  window.currentFileId = nextFocus;
+  // window.currentFileId = nextFocus;
+  await changeCurrentFileId(nextFocus);
+
   if (nextFocus) {
     requestTreeFocus(nextFocus);
-    if(!isFolder(nextFocus))openFileInMonaco(nextFocus); // Nếu là file, mở trong editor
+    if(!isFolder(nextFocus))await openFileInMonaco(nextFocus); // Nếu là file, mở trong editor
     else {
         const folderContent = getFolderContent(nextFocus); // in folder structure to console
         inoEditor.setContentReadOnly(folderContent);  
@@ -1336,23 +1429,23 @@ function deleteItemById(id) {
 
   rebuildParents();
   emitChanged([removedParent, "root"]);
-  saveWorkspaceTreeToLocalStorage();
+  await saveWorkspaceTreeToLocalStorage();
 }
 
-ctxDeleteBtn?.addEventListener("click", (e) => {
+ctxDeleteBtn?.addEventListener("click", async (e) => {
   e.stopPropagation();
-  const id = ctxTargetId;
+  const uuid = ctxTargetId;
   hideCtxMenu();
-  deleteItemWithConfirm(id);
+  await deleteItemWithConfirm(uuid);
 });
 
 // Rename ngay khi bấm rename trong context menu
 ctxRenameBtn?.addEventListener("click", (e) => {
   e.stopPropagation();
-  const id = ctxTargetId;
+  const uuid = ctxTargetId;
   hideCtxMenu();
 
-  const ctx = window.__rctItemActions.get(id);
+  const ctx = window.__rctItemActions.get(uuid);
   if (!ctx?.startRenamingItem) return;
 
   try { ctx.focusItem?.(); } catch (err) {}
@@ -1393,26 +1486,27 @@ reactRoot.render(
         if (lastSelectedIds.length > 0) lastFocusedId = lastSelectedIds[lastSelectedIds.length - 1];
       },
 
-      onPrimaryAction: (item) => {
+      onPrimaryAction: async (item) => {
         // console.log("onPrimaryAction:", item.index);
         if (isFolder(item.index)){ // if folder, show content in editor
           const folderContent = getFolderContent(item.index); // in folder structure to console
-          window.currentFileId = item.index;
+          // window.currentFileId = item.index;
+          await changeCurrentFileId(item.index);
           inoEditor.setContentReadOnly(folderContent);
           return;
         }
         // if file, open in monaco
         pendingTreeFocusId = item.index;
-        openFileInMonaco(item.index);
+        await openFileInMonaco(item.index);
       },
 
-      onRenameItem: (item, name) => {
+      onRenameItem: async (item, name) => {
         if (!item) return;
-        renameFileId(item.index, name);
+        await renameFileId(item.index, name);
       },
 
-      onDrop: (itemsDragged, target) => {
-        handleDrop(itemsDragged, target);
+      onDrop: async (itemsDragged, target) => {
+        await handleDrop(itemsDragged, target);
       },
 
       renderItem: ({ item, title, arrow, context, children, depth }) => {
@@ -1544,7 +1638,7 @@ reactRoot.render(
 // Initial focus file
 pendingTreeFocusId = initialOpenId;
 if (initialOpenId) {
-  openFileInMonaco(initialOpenId);
+  await openFileInMonaco(initialOpenId);
 }
 
 // ============================================================
