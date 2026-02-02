@@ -665,6 +665,7 @@ if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.
     items.root.children.push(id);
   }
 
+  window.currentFileId = id;
   writeFile(id, inoTemplates.basicMotion || "");
 }
 
