@@ -11,8 +11,11 @@ import { LeanbotConfig } from "./Config.js";
 //  LOCALSTORAGE (WORKSPACE)
 // ============================================================
 
-const LS_KEY_TREE =  "leanbot_workspace_tree";
-const LS_KEY_FILES = "leanbot_workspace_files";
+const LS_KEY_TREE = "leanbot_workspace_tree";
+
+const FILE_KEY_PREFIX = "Workspace_File_";
+
+const CURRENT_FILEID_KEY = "leanbot_workspace_current_fileID";
 
 window.currentFileId = null;
 
@@ -39,46 +42,49 @@ function saveWorkspaceTreeToLocalStorage() {
 }
 
 function saveWorkspaceFilesToLocalStorage() {
-  const data = {
-    fileContents,
-    currentFileId: window.currentFileId
-  };
+  Object.entries(fileContents).forEach(([fileId, content]) => {
+    localStorage.setItem(FILE_KEY_PREFIX + fileId, content);
+  });
 
-  localStorage.setItem(LS_KEY_FILES, JSON.stringify(data));
+  localStorage.setItem(CURRENT_FILEID_KEY,window.currentFileId);
+}
+
+function loadWorkspaceFilesFromLocalStorage() {
+  Object.keys(fileContents).forEach(k => delete fileContents[k]);
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+
+    if (key.startsWith(FILE_KEY_PREFIX)) {
+      const fileId = key.slice(FILE_KEY_PREFIX.length);
+      fileContents[fileId] = localStorage.getItem(key);
+    }
+  }
+
+  window.currentFileId = localStorage.getItem(CURRENT_FILEID_KEY) || window.currentFileId;
 }
 
 function loadWorkspaceFromLocalStorage() {
   try {
-    const rawTree  = localStorage.getItem(LS_KEY_TREE);
-    const rawFiles = localStorage.getItem(LS_KEY_FILES);
+    const rawTree = localStorage.getItem(LS_KEY_TREE);
 
-    if(rawTree === null && rawFiles === null) { // no workspace found
+    if (!rawTree) {
       console.log("[LS] No workspace found in localStorage");
       return;
     }
 
-    if (rawTree) {
-      const data = JSON.parse(rawTree);
+    // load tree
+    const data = JSON.parse(rawTree);
+    Object.keys(items).forEach(k => delete items[k]);
+    Object.assign(items, data.items || {});
+    window.currentFileId = data.currentFileId || window.currentFileId;
 
-      Object.keys(items).forEach(k => delete items[k]);
-      Object.assign(items, data.items || {});
+    loadWorkspaceFilesFromLocalStorage();
 
-      window.currentFileId = data.currentFileId || window.currentFileId;
-    }
-
-    if (rawFiles) {
-      const data = JSON.parse(rawFiles);
-
-      Object.keys(fileContents).forEach(k => delete fileContents[k]);
-      Object.assign(fileContents, data.fileContents || {});
-
-      window.currentFileId = data.currentFileId || window.currentFileId;
-    }
     console.log("[LS] Workspace restored");
   } catch (e) {
     console.log("[LS] Restore failed", e);
-  }
-  finally {
+  } finally {
     saveWorkspaceTreeToLocalStorage();
     saveWorkspaceFilesToLocalStorage();
   }
