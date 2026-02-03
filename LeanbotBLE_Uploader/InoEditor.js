@@ -64,6 +64,31 @@ export class InoEditor {
   #registerArduinoLanguage() {
     // Arduino keywords thêm vào highlight
     monaco.languages.register({ id: "arduino" });
+    monaco.languages.setLanguageConfiguration("arduino", {
+        comments: {
+        lineComment: "//",
+        blockComment: ["/*", "*/"],
+      },
+      brackets: [
+        ["{", "}"],
+        ["[", "]"],
+        ["(", ")"],
+      ],
+      autoClosingPairs: [
+        { open: "{", close: "}" },
+        { open: "[", close: "]" },
+        { open: "(", close: ")" },
+        { open: "\"", close: "\"" },
+        { open: "'", close: "'" },
+      ],
+      surroundingPairs: [
+        { open: "{", close: "}" },
+        { open: "[", close: "]" },
+        { open: "(", close: ")" },
+        { open: "\"", close: "\"" },
+        { open: "'", close: "'" },
+      ],
+    });
     monaco.languages.setMonarchTokensProvider("arduino", {
     tokenizer: {
         root: [
