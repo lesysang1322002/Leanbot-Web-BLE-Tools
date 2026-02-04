@@ -12,16 +12,8 @@ import { LeanbotFs } from "./LeanFs.js";
 //  Mount Leanbot File System
 // ============================================================
 
-const { UncontrolledTreeEnvironment, Tree, StaticTreeDataProvider } = window.ReactComplexTree;
-// const dataProvider = new StaticTreeDataProvider(items, (item, data) => ({ ...item, data }));
-// const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
-
 const leanfs = new LeanbotFs();
-
-const dataProvider = await leanfs.mount(StaticTreeDataProvider);
-if (!dataProvider) console.error("Data provider INVALID");
-
-const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
+await leanfs.mount();
 
 // ============================================================
 // Restore Current ID
@@ -45,34 +37,11 @@ async function changeCurrentFileId(newFileId){
 // CONFIG LOADING
 // ============================================================
 
-// find and load from tree with absolute path 
-// e.g: path = test/test.txt => find test.txt inside test inside root.
-async function loadFromLocalTree(path) {
-  if (!path) return "";
+const LocalConfigName = "IDELocalConfig";
 
-  const parts = String(path).trim().split("/").filter(Boolean);
-  let currentId = leanfs.getRoot(); // start at root
+const LocalConfigUUID = leanfs.getItemByPath(leanfs.getRoot(), `${LocalConfigName}/${LocalConfigName}.yaml`); // find from root
 
-  if (!currentId) return "";
-
-  for (const name of parts) {
-    const children = leanfs.getAllChildren(currentId);
-    if (!children.length) return "";
-
-    const nextId = children.find(
-      uuid => leanfs.getName(uuid) === name
-    );
-
-    if (!nextId) return "";
-
-    currentId = nextId;
-  }
-  return await leanfs.readFile(currentId);
-}
-
-const LocalConfigName = "IDELocalConfig"
-
-const LocalConfigFile = await loadFromLocalTree(`${LocalConfigName}/${LocalConfigName}.yaml`)
+const LocalConfigFile = await leanfs.readFile(LocalConfigUUID);
 
 const Config = new LeanbotConfig();
 
@@ -571,6 +540,10 @@ async function initInoTemplates() {
 
 await initInoTemplates();
 
+const { UncontrolledTreeEnvironment, Tree, StaticTreeDataProvider } = window.ReactComplexTree;
+const dataProvider = new StaticTreeDataProvider(leanfs.getItems(), (item, data) => ({ ...item, data }));
+const emitChanged = (ids) => dataProvider.onDidChangeTreeDataEmitter.emit(ids);
+
 // Trạng thái Monaco
 window.__pendingOpenFileId = window.__pendingOpenFileId ?? null;
 
@@ -599,7 +572,8 @@ function hasAnyInoFile(fs) { // Check if there is any .ino file in the workspace
 
 if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.ino directly at root
   console.log("[LS] No .ino file found, creating default BasicMotion.ino");
-  const uuid = await leanfs.createFile(leanfs.getRoot(), "BasicMotion.ino")
+  const uuid = await leanfs.createFile(leanfs.getRoot());
+  await leanfs.rename(uuid, "BasicMotion.ino");
   await leanfs.writeFile(uuid, inoTemplates.basicMotion || "");
   await changeCurrentFileId(uuid);
 }
@@ -697,7 +671,8 @@ window.importLocalFileToTree = async (loaded) => {
 
   const parentId = getTargetFolderId();
 
-  const uuid = await leanfs.createFile(parentId, fileName);
+  const uuid = await leanfs.createFile(parentId);
+  await leanfs.rename(uuid, fileName);
 
   await leanfs.writeFile(uuid, text);
 
@@ -711,7 +686,8 @@ window.importLocalFileToTree = async (loaded) => {
 const fileTreePanel = document.getElementById("fileTreePanel");
 
 function isValidDropFile(file) {
-  if (!file || !file.name) return false;
+  if (!file) return false;
+  if (!file.name) return false;
   const name = file.name.toLowerCase();
   return name.endsWith(".ino") || name.endsWith(".h") || name.endsWith(".cpp") || name.endsWith(".c");
 }
@@ -791,55 +767,52 @@ function expandFolderChain(folderId) {
   }
 }
 
-// Thêm file, folder
-async function createItem(isFolder, defaultName = null, defaultfileContent = null) {
-  const parentId = getTargetFolderId();
-  console.log("[CREATE] target parentId =", parentId);
-
-  let uuid;
-
-  if(isFolder) uuid = await leanfs.createDir(parentId, defaultName);
-  else {
-    uuid = await leanfs.createFile(parentId, defaultName);
-    await leanfs.writeFile(uuid, defaultfileContent || inoTemplates.default || "");
-  }
-
-  emitChanged([parentId, uuid]);
-
-  // Mở chain folder cha để nhìn thấy item mới
-  // Nếu tạo folder, mở luôn chính folder đó
-  setTimeout(async () => {
-    expandFolderChain(parentId);
-
-    if (isFolder) {
-      try {
-        const folderContent = leanfs.readDir(uuid); // in folder structure to console
-        // window.currentFileId = uuid;
-        await changeCurrentFileId(uuid);
-        inoEditor.setContentReadOnly(folderContent);
-        const ctx = window.__rctItemActions.get(uuid);
-        ctx?.expandItem?.();
-      } catch (e) {
-        console.log("[TREE] expand new folder failed =", uuid, e);
-      }
-    }
-  }, 0);
-
-  pendingTreeRenameId = uuid;
-  pendingTreeFocusId  = uuid;
-
-  if (!isFolder) await openFileInMonaco(uuid);
-}
-
 const btnNewFile = document.getElementById("btnNewFile");
 const btnNewFolder = document.getElementById("btnNewFolder");
 
 btnNewFile?.addEventListener("click", async () => {
-  await createItem(false);
+  const parentId = getTargetFolderId();
+  // console.log("[CREATE] target parentId =", parentId);
+
+  const itemUUID = await leanfs.createFile(parentId); // Create a file
+  const newname = NameEnsureInoExtension(itemUUID);
+  console.log("new file name:", newname);
+  await leanfs.rename(itemUUID, newname);             // rename it to somename with .ino (for example: "2025.12.31-08.44.22.ino")
+  await leanfs.writeFile(itemUUID, inoTemplates.default || ""); // content = deafult.ino
+  
+  emitChanged([parentId, itemUUID]);
+  
+  pendingTreeRenameId = itemUUID;
+  pendingTreeFocusId  = itemUUID;
+
+  await openFileInMonaco(itemUUID);
 });
 
 btnNewFolder?.addEventListener("click", async () => {
-  await createItem(true);
+ const parentId = getTargetFolderId();
+  // console.log("[CREATE] target parentId =", parentId);
+
+  const itemUUID = await leanfs.createDir(parentId); // Create a dir, default name: "2025.12.31-08.44.22"
+
+  emitChanged([parentId, itemUUID]);
+
+ // Mở chain folder cha để nhìn thấy item mới
+  // Nếu tạo folder, mở luôn chính folder đó
+  setTimeout(async () => {
+    expandFolderChain(parentId);
+    try {
+      const folderContent = leanfs.readDir(itemUUID); // in folder structure to console
+      await changeCurrentFileId(itemUUID);
+      inoEditor.setContentReadOnly(folderContent);
+      const ctx = window.__rctItemActions.get(itemUUID);
+      ctx?.expandItem?.();
+    } catch (e) {
+      console.log("[TREE] expand new folder failed =", itemUUID, e);
+    }
+  }, 0);
+  
+  pendingTreeRenameId = itemUUID;
+  pendingTreeFocusId  = itemUUID;
 });
 
 // rename file bằng F2
@@ -847,15 +820,23 @@ async function renameFileId(uuid, newDisplayName) {
   
   if (leanfs.isExist(uuid) === false) return;
 
-  leanfs.reName(uuid, newDisplayName);
+  leanfs.rename(uuid, newDisplayName);
 
+  // Rename a folder in root to LocalConfigName => auto  Create LocalConfig File
   if(newDisplayName === LocalConfigName && leanfs.getParent(uuid) == leanfs.getRoot()){ // Creat localConfigFolder => also create localConfigFile.yaml
     console.log("Auto Create Local Config File");
-    await createItem(false, `${LocalConfigName}.yaml`, Config.getUserConfigFile());
+    const childUUID = await leanfs.createFile(uuid); // Create a file
+    await leanfs.rename(childUUID,  `${LocalConfigName}.yaml`);    // rename
+    await leanfs.writeFile(childUUID, Config.getUserConfigFile()); // copy content of UserConfigFile
+  
+    emitChanged([uuid, childUUID]);
+  
+    pendingTreeFocusId  = childUUID;
+    await openFileInMonaco(childUUID);
+    return;
   }
 
   emitChanged([uuid]);
-
   pendingTreeFocusId = uuid;
 }
 
@@ -1019,7 +1000,8 @@ addEventListener("click", hideCtxMenu);
 ctxMenu?.addEventListener("click", (e) => e.stopPropagation());
 
 async function deleteItemWithConfirm(uuid) {
-  if (!leanfs.isExist(uuid) || uuid === leanfs.getRoot()) return;
+  if (!leanfs.isExist(uuid)) return;
+  if (uuid === leanfs.getRoot()) return;
 
   const name = leanfs.getName(uuid);
   const isFolder = leanfs.isDir(uuid);
@@ -1070,7 +1052,9 @@ function pickNextTreeItem(uuid) {
 }
 
 async function deleteItemById(uuid) {
-  if (!uuid || !leanfs.isExist(uuid) || uuid === leanfs.getRoot()) return;
+  if (!uuid) return;
+  if (!leanfs.isExist(uuid)) return;
+  if (uuid === leanfs.getRoot()) return;
 
   const nextFocus = pickNextTreeItem(uuid);
 
@@ -1377,4 +1361,17 @@ function dumpItemInfo(item){
   }
 
   console.log("===== end =====");
+}
+
+function NameEnsureInoExtension(itemUUID) {
+  if(!itemUUID) return null;
+  if(!leanfs.isExist(itemUUID)) return null;
+
+  let currentName = String(leanfs.getName(itemUUID));
+
+  // nếu đã có .ino thì giữ nguyên
+  if (currentName.toLowerCase().endsWith(".ino")) return currentName;
+
+  // không có đuôi → tự thêm .ino
+  return currentName + ".ino";
 }

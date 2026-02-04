@@ -1,6 +1,7 @@
 export class LeanbotFs{
-    static #LS_KEY_TREE = "leanbot_workspace_tree";
+    static #LS_KEY_TREE =     "leanbot_workspace_tree";
     static #FILE_KEY_PREFIX = "Workspace_File_";
+    static #rootUUID =        "bd70ce61-fc7d-41a5-b0f9-0017e998813a"; // random generate from https://www.uuidgenerator.net/
 
     static leanfs_TYPE = Object.freeze({
         DIR:        "dir",
@@ -10,13 +11,9 @@ export class LeanbotFs{
         OTHERS:     "others"
     });
 
-    #isMountedSuccess = false;
-    #textEncoder = null;
-    #textDecoder = null;
-
     #items = {
-        root: {
-            index: "root", // Always create default root (id = "root")
+        [LeanbotFs.#rootUUID]: {
+            index: LeanbotFs.#rootUUID, // root
             isFolder: true,
             children: [],
             data: "Workspace"
@@ -28,16 +25,9 @@ export class LeanbotFs{
         if (!new.target) {
             throw new Error("LeanbotFs must be called with 'new'");
         }
-
-        this.#isMountedSuccess = false;
-
-        // compress/decompress helper
-        this.#textEncoder = new TextEncoder();
-        this.#textDecoder = new TextDecoder();
-
     }
 
-    async mount(StaticTreeDataProvider){
+    async mount(){
         try{
             // Restore workspace from localStorage if available (overwrites items, root UUID, and currentID).
             await this.#loadWorkspaceFromLocalStorage(); 
@@ -45,26 +35,28 @@ export class LeanbotFs{
             this.#rebuildParents();
             // console.log("items:", this.#items)
 
-            const dataProvider = new StaticTreeDataProvider(this.#items, (item, data) => ({ ...item, data }));
-
-            this.#isMountedSuccess = true;
             console.log("[MOUNT LEANBOTFS] Mount success");
-            return dataProvider;
         }
         catch(e){
-            console.error(`[MOUNT LEANBOTFS] Error occur: ${e}`);
-            this.#isMountedSuccess = false;
-            return null;
+            throw new Error(`[MOUNT LEANBOTFS] Error occur: ${e}`)
         }
     }
 
+    /**-------------------------------------------------------- */
+    /** getItems()
+    * Dev-only accessor for StaticTreeDataProvider.
+    * Exposes live data; any other use can corrupt filesystem state.
+    */
+    getItems(){
+        return this.#items;
+    }
+    /**-------------------------------------------------------- */
+
     getRoot(){
-        if(this.#isMountedSuccess === false) return null;
-        return this.#items.root.index;
+        return LeanbotFs.#rootUUID;
     }
 
     getParent(itemUUID) { // Return 
-        if (this.#isMountedSuccess === false) return null;
         if (!itemUUID) return null;
 
         const it = this.#items[itemUUID];
@@ -77,51 +69,64 @@ export class LeanbotFs{
     }
 
     getAllChildren(itemUUID) { // Return children array of this one node (if there is any)
-        if (!this.#isMountedSuccess) return [];
 
-        if (!itemUUID || !this.#items[itemUUID] || !this.#items[itemUUID].isFolder) return [];
+        if (!itemUUID) return [];
+        if (!this.#items[itemUUID]) return [];
+        if (!this.#items[itemUUID].isFolder) return [];
 
         return (this.#items[itemUUID].children || []).filter(cid => this.#items[cid]);
     }
 
-    isExist(itemUUID){
-        return !!itemUUID && !!this.#items[itemUUID];
+    isExist(itemUUID) {
+        if (!itemUUID) return false;
+        if (!this.#items[itemUUID]) return false;
+        return true;
     }
 
-    isFile(itemUUID){
-        return !!itemUUID && !!this.#items[itemUUID] && this.#items[itemUUID].isFolder === false;
+    isFile(itemUUID) {
+        if (!itemUUID) return false;
+
+        const item = this.#items[itemUUID];
+        if (!item) return false;
+
+        return item.isFolder === false;
     }
 
-    isDir(itemUUID){
-        return !!itemUUID && !!this.#items[itemUUID] && this.#items[itemUUID].isFolder === true;
+    isDir(itemUUID) {
+        if (!itemUUID) return false;
+
+        const item = this.#items[itemUUID];
+        if (!item) return false;
+
+        return item.isFolder === true;
     }
 
-    async createFile(parentUUID, defaultName = null){ // default name = timestamp
+    async createFile(parentUUID){ // default name = timestamp
 
-        if (!parentUUID || this.#isMountedSuccess === false) return null;
+        if (!parentUUID) return null;
 
-        const name = defaultName || getTimestampName();
-        console.log("Creating new file:", name);
+        const childUUID = await this.#createItem(parentUUID);
+        this.#items[childUUID].isFolder = false; // file
+        console.log("Creating new file (uuid):", childUUID);
 
-        const childUUID = await this.#createItem(parentUUID, false, name);
         return childUUID;
     }
 
-    async createDir(parentUUID, defaultName = null){ // default name = timestamp
+    async createDir(parentUUID){ // default name = timestamp
 
-        if (!parentUUID || this.#isMountedSuccess === false) return null;
+        if (!parentUUID) return null;
 
-        const name = defaultName || getTimestampName();
-        console.log("Creating new dir:", name);
+        const childUUID = await this.#createItem(parentUUID);
+        this.#items[childUUID].isFolder = true; // dir
+        console.log("Creating new Dir (uuid):", childUUID);
 
-        const childUUID = await this.#createItem(parentUUID, true, name);
         return childUUID;
     }
 
     // rename file bằng F2
-    async reName(itemUUID, newName) {
+    async rename(itemUUID, newName) {
 
-        if (!itemUUID || this.#isMountedSuccess === false) return;
+        if (!itemUUID) return;
 
         const item = this.#items[itemUUID];
         if (!item) return;
@@ -133,14 +138,16 @@ export class LeanbotFs{
     }
 
     getName(itemUUID){
-        if (!itemUUID || !this.#items[itemUUID] || this.#isMountedSuccess === false) return null; // Invalid ID => always return failed
+        if (!itemUUID) return null; // Invalid ID => always return failed
+        if (!this.#items[itemUUID]) return null;
         return this.#items[itemUUID].data;
     }
 
     getItemType(itemUUID) {
 
-        // Invalid or missing UUID or just failed to mount -> default return unknown type
-        if (!itemUUID || this.#isMountedSuccess === false || !this.#items[itemUUID]) return LeanbotFs.leanfs_TYPE.OTHERS;
+        // Invalid or missing UUID or just failed to mount -> return null (none of the leanfs_TYPE)
+        if (!itemUUID) return null;
+        if (!this.#items[itemUUID]) return null;
 
         // Folders are directories regardless of name or extension (include root)
         if (this.isDir(itemUUID)) return LeanbotFs.leanfs_TYPE.DIR;
@@ -156,7 +163,8 @@ export class LeanbotFs{
             if (typeof name !== "string") return null;
 
             const lastDot = name.lastIndexOf(".");
-            if (lastDot <= 0 || lastDot === name.length - 1) return null;
+            if (lastDot <= 0) return null;
+            if (lastDot === name.length - 1) return null;
             return name.slice(lastDot + 1).toLowerCase();
         })();
 
@@ -177,7 +185,7 @@ export class LeanbotFs{
     }
 
     async readFile(itemUUID) {
-        if (!itemUUID || this.#isMountedSuccess === false) return null;
+        if (!itemUUID) return null;
 
         if (!this.isFile(itemUUID)) return null;
 
@@ -188,7 +196,7 @@ export class LeanbotFs{
     }
 
     async writeFile(itemUUID, content) {
-        if (!itemUUID || this.#isMountedSuccess === false) return;
+        if (!itemUUID) return;
 
         if (!this.isFile(itemUUID)) return;
 
@@ -202,13 +210,15 @@ export class LeanbotFs{
         localStorage.setItem(this.#fileKey(itemUUID), compressed);
     }
 
-    async deleteFile(uuid) {
-        if (!uuid || !this.#items[uuid] || this.isFile(uuid) === false) return;
+    async deleteFile(itemUUID) {
+        if (!itemUUID) return;
+        if (!this.#items[itemUUID]) return;
+        if (this.isFile(itemUUID) === false) return;
 
-        // gỡ uuid khỏi mọi folder trước, tránh lệch parent sau drag
-        this.#removeFromParent(uuid);
+        // gỡ itemUUID khỏi mọi folder trước, tránh lệch parent sau drag
+        this.#removeFromParent(itemUUID);
 
-        this.#removeItem(uuid);
+        this.#removeItem(itemUUID);
 
         this.#rebuildParents();
 
@@ -216,7 +226,7 @@ export class LeanbotFs{
     }
 
     readDir(itemUUID, prefix = "") {
-        if (!itemUUID || this.#isMountedSuccess === false) return "";
+        if (!itemUUID) return "";
 
         const folderNode = this.#items[itemUUID];
 
@@ -255,19 +265,88 @@ export class LeanbotFs{
         return lines.join("\n");
     }
 
-    async deleteDir(uuid) {
-        if (!uuid || !this.#items[uuid] || this.isDir(uuid) === false) return;
+    async deleteDir(itemUUID) {
+        if (!itemUUID) return;
+        if (!this.#items[itemUUID]) return;
+        if (this.isDir(itemUUID) === false) return;
 
-        if(uuid === this.getRoot())return; // NEVER delte root id.
+        if(itemUUID === this.getRoot())return; // NEVER delte root id.
 
-        // gỡ uuid khỏi mọi folder trước, tránh lệch parent sau drag
-        this.#removeFromParent(uuid);
+        const children = [...this.getAllChildren(itemUUID)];
+        
+        for(const child of children){ // remove subtree
+            if(this.isFile(child)) this.deleteFile(child);
+            if(this.isDir(child))this.deleteDir(child);
+        };
+        this.#removeFromParent(itemUUID); // Remove this directory from its parent
 
-        this.#deleteSubTree(uuid);
+        this.#removeItem(itemUUID); // Remove the directory itself
 
         this.#rebuildParents();
 
         await this.#saveWorkspaceTreeToLocalStorage();
+    }
+
+    // find and load from tree with absolute path 
+    // e.g: path = test/test.txt => find test.txt inside test inside root.
+    loadFromLocalTree(path) {
+        if (!path) return "";
+
+        const parts = String(path).trim().split("/").filter(Boolean);
+        let currentId = this.getRoot(); // start at root
+
+        if (!currentId) return "";
+
+        for (const name of parts) {
+            const children = this.getAllChildren(currentId);
+            if (!children.length) return "";
+
+            const nextId = children.find(
+                uuid => this.getName(uuid) === name
+            );
+
+            if (!nextId) return "";
+
+            currentId = nextId;
+        }
+        return currentId;
+    }
+
+    // find and load from tree with absolute path 
+    // e.g: path = test/test.txt => find test.txt inside test inside root.
+    getItemByPath(parentUUID, pathString){
+        if(!parentUUID) return null;            // if parentUUID not exitst
+        if(!this.isDir(parentUUID))return null; // parentUUID is not dir
+
+        const parts = String(pathString).trim().split("/").filter(Boolean);
+        let currentId = parentUUID; // start at parent
+
+        if (!currentId) return "";
+
+        for (const name of parts) {
+
+            const nextId = this.getChildByName(currentId, name);
+
+            if (!nextId) return "";
+
+            currentId = nextId; // go to text level of the tree
+        }
+        return currentId;
+    }
+
+    getChildByName(parentUUID, name){
+        if(!parentUUID) return null;            // if parentUUID not exitst
+        if(!this.isDir(parentUUID))return null; // parentUUID is not dir
+
+        const children = this.getAllChildren(parentUUID);
+
+        if (!children.length) return null; // dir is emtpy
+
+        const childUUID  = children.find(
+            uuid => this.getName(uuid) === name
+        );
+
+        return childUUID ;
     }
 
     //============================================================
@@ -296,7 +375,7 @@ export class LeanbotFs{
     async #compressString(str) {
 
         const t1 = performance.now();
-        const stream = new Blob([this.#textEncoder.encode(str)])
+        const stream = new Blob([new TextEncoder().encode(str)])
             .stream()
             .pipeThrough(new CompressionStream('gzip'));
 
@@ -319,7 +398,7 @@ export class LeanbotFs{
             .pipeThrough(new DecompressionStream('gzip'));
 
         const buffer = await new Response(stream).arrayBuffer();
-        const decompressed = this.#textDecoder.decode(buffer);
+        const decompressed = new TextDecoder().decode(buffer);
 
         const t2 = performance.now();
         console.log(`[DECOMPRESS] ${base64.length} -> ${decompressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
@@ -335,10 +414,9 @@ export class LeanbotFs{
             items: this.#items,
         };
 
-        const json = JSON.stringify(data);
-        const compressed = await this.#compressString(json);
+        const json = JSON.stringify(data)
 
-        localStorage.setItem(LeanbotFs.#LS_KEY_TREE, compressed);
+        localStorage.setItem(LeanbotFs.#LS_KEY_TREE, json);
     }
 
     #fileKey(uuid) {
@@ -348,15 +426,13 @@ export class LeanbotFs{
     async #loadWorkspaceFromLocalStorage() {
         console.log("Load workspace tree from Local Storage");
         try {
-            const compressedTree = localStorage.getItem(LeanbotFs.#LS_KEY_TREE);
+            const rawTree = localStorage.getItem(LeanbotFs.#LS_KEY_TREE);
 
-            if (!compressedTree) {
+            if (!rawTree) {
                 console.log("[LS] No workspace found in localStorage");
                 return;
             }
-
-            const json = await this.#decompressString(compressedTree);
-            const data = JSON.parse(json);
+            const data = JSON.parse(rawTree);
 
             Object.keys(this.#items).forEach(k => delete this.#items[k]);
             Object.assign(this.#items, data.items || {});
@@ -402,7 +478,8 @@ export class LeanbotFs{
         // fallback: nếu parent bị sai, quét toàn bộ folder để xóa mọi chỗ đang chứa childId
         for (const uuid in this.#items) {
             const it = this.#items[uuid];
-            if (!this.isDir(uuid) || !Array.isArray(it.children)) continue;
+            if (!this.isDir(uuid)) continue;
+            if (!Array.isArray(it.children)) continue;
 
             const before = it.children.length;
             it.children = it.children.filter((x) => x !== childId);
@@ -415,7 +492,7 @@ export class LeanbotFs{
     // === Create New item (file or dir) === // 
 
     // Thêm file, folder
-    async #createItem(parentId, isFolder, defaultName = null) {
+    async #createItem(parentId) {
 
         if (!this.#items[parentId]) {
             throw new Error("Invalid parentId: " + parentId);
@@ -423,17 +500,9 @@ export class LeanbotFs{
 
         console.log("[CREATE] target parentId =", parentId);
 
-        let name = String(defaultName || "").trim();
-
-        if (!isFolder){
-            // If name already has an extension (anything after a dot), keep it
-            // If not, name = timestamp.ino
-            name = /\.[a-zA-Z]+$/.test(name) ? name : ensureInoExtension(createItemName(name));
-        }
-
         const uuid = createUUID();
 
-        this.#items[uuid] = { index: uuid, isFolder, children: [], data: name, parent: parentId };
+        this.#items[uuid] = { index: uuid, isFolder: null, children: [], data: getTimestampName(), parent: parentId };
         console.log("[CREATE] item.parent =", this.#items[uuid].parent);
         this.#items[parentId].children ||= [];
         this.#items[parentId].children.push(uuid);
@@ -446,54 +515,10 @@ export class LeanbotFs{
 
         return uuid;
     }
-
-    #deleteSubTree(rootUUID) {
-        const root = this.#items[rootUUID];
-        if (!root || !this.isDir(rootUUID)) return;
-
-        const stack = [rootUUID];
-        const order = [];
-
-        // Collect all nodes
-        while (stack.length) {
-            const uuid = stack.pop();
-            const item = this.#items[uuid];
-            if (!item) continue;
-
-            order.push(uuid);
-
-            if (item.isFolder && Array.isArray(item.children)) {
-                stack.push(...item.children);
-            }
-        }
-
-        // Delete bottom-up
-        for (let i = order.length - 1; i >= 0; i--) {
-            this.#removeItem(order[i]);
-        }
-    }
 }
 
 function createUUID() {
   return crypto.randomUUID();
-}
-
-function ensureInoExtension(name) {
-  const n = String(name || "").trim();
-  if (n === "") return getTimestampName() + ".ino";
-
-  // nếu đã có .ino thì giữ nguyên
-  if (n.toLowerCase().endsWith(".ino")) return n;
-
-  // không có đuôi → tự thêm .ino
-  return n + ".ino";
-}
-
-// Default name: "2025.12.31-08.44.22.ino"
-function createItemName(desiredName) {
-  let name = String(desiredName || "").trim();
-  if (name === "") name = getTimestampName() + ".ino";
-  return name;
 }
 
 function getTimestampName() {

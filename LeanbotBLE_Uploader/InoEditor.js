@@ -64,6 +64,9 @@ export class InoEditor {
   #registerArduinoLanguage() {
     // Arduino keywords thêm vào highlight
     monaco.languages.register({ id: "arduino" });
+
+    // Needed for Ctrl + / to work (requires `comments` in language configuration): https://github.com/microsoft/monaco-editor/discussions/3840
+    // Mirrors Monaco's built-in C++ config: https://github.com/microsoft/monaco-editor/blob/main/src/languages/definitions/cpp/cpp.ts
     monaco.languages.setLanguageConfiguration("arduino", {
         comments: {
         lineComment: "//",
