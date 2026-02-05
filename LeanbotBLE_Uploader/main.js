@@ -477,6 +477,9 @@ const monitorPanel   = document.getElementById("monitorPanel");
 const tabs           = document.querySelectorAll("#serialTabs .serial-tab");
 const btnCloseSerial = document.getElementById("btnCloseSerial");
 
+const editorSection = document.getElementById('editorSection');
+const autoHideCheckbox = document.getElementById('autoHideSerial');
+
 function openSerial() {
   workspace.classList.add("serial-open");
   serialSection.classList.remove("is-hidden");
@@ -506,7 +509,9 @@ function uiSetTab(name) {
 
 // Click SERIAL → mở PROGRAM
 btnSerial.addEventListener("click", () => {
-  uiSetTab("monitor");
+  const isOpen = workspace.classList.contains("serial-open");
+  if(!isOpen)openSerial();
+  else closeSerial();
 });
 
 // Click tab
@@ -514,6 +519,15 @@ tabs.forEach(tab => {
   tab.addEventListener("click", () => {
     uiSetTab(tab.dataset.tab);
   });
+});
+
+editorSection.addEventListener('mousedown', (e) => {
+  if (!autoHideCheckbox.checked) return;
+
+  // nếu serial đang mở thì mới hide
+  if (!serialSection.classList.contains('is-hidden')) {
+    closeSerial();
+  }
 });
 
 // ============================================================

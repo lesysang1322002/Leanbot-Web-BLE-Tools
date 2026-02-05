@@ -18,20 +18,20 @@
           <img class="lb-tab-icon" id="logoIcon" src="./img/logo-lb.png" />
         </button>
 
-        <button id="btnCode" class="lb-tab disabled">
+        <!-- <button id="btnCode" class="lb-tab disabled hidden">
           <img class="lb-tab-icon" id="codeIcon" src="./img/icons/code.png" />
           <span>CODE</span>
         </button>
 
-        <button class="lb-tab disabled">
+        <button class="lb-tab disabled hidden">
           <img class="lb-tab-icon" src="./img/icons/libraries.png" />
           <span>LIBRARIES</span>
         </button>
 
-        <button class="lb-tab disabled">
+        <button class="lb-tab disabled hidden">
           <img class="lb-tab-icon" src="./img/icons/tools.png" />
           <span>TOOLS</span>
-        </button>
+        </button> -->
 
         <button class="lb-tab disabled">
           <img class="lb-tab-icon" src="./img/icons/about.png" />
@@ -108,9 +108,16 @@
           <button class="serial-tab" data-tab="monitor">MONITOR</button>
         </div>
 
-        <button id="btnCloseSerial">
-          <img class="lb-icon-img" src="./img/icons/close.png" />
-        </button>
+        <div id="serialTabsRight">
+          <label id="autoHideWrap" class="text-checkbox">
+            <input type="checkbox" id="autoHideSerial" checked>
+            Auto hide
+          </label>
+
+          <button id="btnCloseSerial">
+            <img class="lb-icon-img" src="./img/icons/close.png" />
+          </button>
+        </div>
       </div>
 
       <!-- Panels -->
@@ -221,10 +228,10 @@
         <img class="lb-icon-img" src="./img/icons/git.png" />
         <span>LEANBOT GIT</span>
       </button>
-      <button class="lb-icon-btn disabled">
+      <!-- <button class="lb-icon-btn disabled">
         <img class="lb-icon-img" src="./img/icons/blockly.png" />
         <span>BLOCKLY LEANBOT</span>
-      </button>
+      </button> -->
     </div>
 
     <div class="lb-bottom-right">

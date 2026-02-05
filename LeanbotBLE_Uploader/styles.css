@@ -75,6 +75,10 @@ body{
   opacity:0.5;
 }
 
+.lb-tab.disabled.hidden {
+  visibility: hidden;
+}
+
 .lb-tab:hover,
 .lb-icon-btn:hover{ background:#e0e0e0; }
 
@@ -302,6 +306,15 @@ body{
   letter-spacing:0.8px;
   color:#666;
   cursor:pointer;
+}
+
+/* đẩy cụm phải sang phải */
+#serialTabsRight{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:6px; /* khoảng cách Auto hide ↔ Close */
+  padding-right:4px;
 }
 
 #serialTabs .serial-tab.active{
