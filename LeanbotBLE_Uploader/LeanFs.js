@@ -284,31 +284,6 @@ export class LeanFs{
 
     // find and load from tree with absolute path 
     // e.g: path = test/test.txt => find test.txt inside test inside root.
-    loadFromLocalTree(path) {
-        if (!path) return "";
-
-        const parts = String(path).trim().split("/").filter(Boolean);
-        let currentId = this.getRoot(); // start at root
-
-        if (!currentId) return "";
-
-        for (const name of parts) {
-            const children = this.getAllChildren(currentId);
-            if (!children.length) return "";
-
-            const nextId = children.find(
-                uuid => this.getName(uuid) === name
-            );
-
-            if (!nextId) return "";
-
-            currentId = nextId;
-        }
-        return currentId;
-    }
-
-    // find and load from tree with absolute path 
-    // e.g: path = test/test.txt => find test.txt inside test inside root.
     getItemByPath(parentUUID, pathString){
         if(!parentUUID) return null;            // if parentUUID not exitst
         if(!this.isDir(parentUUID))return null; // parentUUID is not dir
