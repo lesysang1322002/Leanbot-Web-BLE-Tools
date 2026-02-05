@@ -6,14 +6,14 @@ import { LeanbotBLE } from "./LeanbotBLE.js";
 import { InoEditor } from "./InoEditor.js";
 import { LeanbotCompiler } from "./LeanbotCompiler.js";
 import { LeanbotConfig } from "./Config.js";
-import { LeanbotFs } from "./LeanFs.js";
+import { LeanFs } from "./LeanFs.js";
 
 // ============================================================
 //  Mount Leanbot File System
 // ============================================================
 
-const leanfs = new LeanbotFs();
-await leanfs.mount();
+const leanfs = new LeanFs();
+leanfs.mount();
 
 // ============================================================
 // Restore Current ID
@@ -29,7 +29,7 @@ function saveCurrentFileID(){
 
 async function changeCurrentFileId(newFileId){
   if(newFileId === window.currentFileId)return;
-  if(window.currentFileId) await leanfs.writeFile(window.currentFileId, inoEditor.getContent());
+  await leanfs.writeFile(window.currentFileId, inoEditor.getContent());
   window.currentFileId = newFileId;
 }
 
@@ -551,14 +551,13 @@ window.__pendingOpenFileId = window.__pendingOpenFileId ?? null;
 
 function hasAnyInoFile(fs) { // Check if there is any .ino file in the workspace
   const root = leanfs.getRoot();
-  if (!root) return false;
 
   const stack = [root];
 
   while (stack.length) {
     const uuid = stack.pop();
 
-    if (leanfs.isType(uuid, LeanbotFs.leanfs_TYPE.INO)) {
+    if (leanfs.isType(uuid, LeanFs.leanfs_TYPE.INO)) {
       return true;
     }
 
@@ -572,8 +571,8 @@ function hasAnyInoFile(fs) { // Check if there is any .ino file in the workspace
 
 if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.ino directly at root
   console.log("[LS] No .ino file found, creating default BasicMotion.ino");
-  const uuid = await leanfs.createFile(leanfs.getRoot());
-  await leanfs.rename(uuid, "BasicMotion.ino");
+  const uuid = leanfs.createFile(leanfs.getRoot());
+  leanfs.rename(uuid, "BasicMotion.ino");
   await leanfs.writeFile(uuid, inoTemplates.basicMotion || "");
   await changeCurrentFileId(uuid);
 }
@@ -671,8 +670,8 @@ window.importLocalFileToTree = async (loaded) => {
 
   const parentId = getTargetFolderId();
 
-  const uuid = await leanfs.createFile(parentId);
-  await leanfs.rename(uuid, fileName);
+  const uuid = leanfs.createFile(parentId);
+  leanfs.rename(uuid, fileName);
 
   await leanfs.writeFile(uuid, text);
 
@@ -774,10 +773,10 @@ btnNewFile?.addEventListener("click", async () => {
   const parentId = getTargetFolderId();
   // console.log("[CREATE] target parentId =", parentId);
 
-  const itemUUID = await leanfs.createFile(parentId); // Create a file
+  const itemUUID = leanfs.createFile(parentId); // Create a file
   const newname = NameEnsureInoExtension(itemUUID);
   console.log("new file name:", newname);
-  await leanfs.rename(itemUUID, newname);             // rename it to somename with .ino (for example: "2025.12.31-08.44.22.ino")
+  leanfs.rename(itemUUID, newname);             // rename it to somename with .ino (for example: "2025.12.31-08.44.22.ino")
   await leanfs.writeFile(itemUUID, inoTemplates.default || ""); // content = deafult.ino
   
   emitChanged([parentId, itemUUID]);
@@ -788,11 +787,11 @@ btnNewFile?.addEventListener("click", async () => {
   await openFileInMonaco(itemUUID);
 });
 
-btnNewFolder?.addEventListener("click", async () => {
+btnNewFolder?.addEventListener("click", () => {
  const parentId = getTargetFolderId();
   // console.log("[CREATE] target parentId =", parentId);
 
-  const itemUUID = await leanfs.createDir(parentId); // Create a dir, default name: "2025.12.31-08.44.22"
+  const itemUUID = leanfs.createDir(parentId); // Create a dir, default name: "2025.12.31-08.44.22"
 
   emitChanged([parentId, itemUUID]);
 
@@ -825,8 +824,8 @@ async function renameFileId(uuid, newDisplayName) {
   // Rename a folder in root to LocalConfigName => auto  Create LocalConfig File
   if(newDisplayName === LocalConfigName && leanfs.getParent(uuid) == leanfs.getRoot()){ // Creat localConfigFolder => also create localConfigFile.yaml
     console.log("Auto Create Local Config File");
-    const childUUID = await leanfs.createFile(uuid); // Create a file
-    await leanfs.rename(childUUID,  `${LocalConfigName}.yaml`);    // rename
+    const childUUID = leanfs.createFile(uuid); // Create a file
+    leanfs.rename(childUUID,  `${LocalConfigName}.yaml`);    // rename
     await leanfs.writeFile(childUUID, Config.getUserConfigFile()); // copy content of UserConfigFile
   
     emitChanged([uuid, childUUID]);
@@ -1052,16 +1051,15 @@ function pickNextTreeItem(uuid) {
 }
 
 async function deleteItemById(uuid) {
-  if (!uuid) return;
   if (!leanfs.isExist(uuid)) return;
   if (uuid === leanfs.getRoot()) return;
 
   const nextFocus = pickNextTreeItem(uuid);
 
   if (leanfs.isDir(uuid)) {
-    await leanfs.deleteDir(uuid);
+    leanfs.deleteDir(uuid);
   } else {
-    await leanfs.deleteFile(uuid);
+    leanfs.deleteFile(uuid);
   }
 
   await changeCurrentFileId(nextFocus);
@@ -1137,10 +1135,6 @@ reactRoot.render(
 
       onPrimaryAction: async (item) => {
         // console.log("onPrimaryAction:", item.index);
-        console.log("\n\n")
-        dumpItemInfo(item.index);
-        console.log("\n\n")
-
         if (leanfs.isDir(item.index)){ // if folder, show content in editor
           const folderContent = leanfs.readDir(item.index); // in folder structure to console
           // window.currentFileId = item.index;
@@ -1321,50 +1315,8 @@ function logLbIDEEvent(event) {
   );
 }
 
-function dumpItemInfo(item){
-  console.log("===== onPrimaryAction =====");
-
-  // raw
-  console.log("UUID:", item);
-
-  // existence
-  console.log("exists:", leanfs.isExist(item));
-
-  // name
-  console.log("name:", leanfs.getName(item));
-
-  // type
-  console.log("type:", leanfs.getItemType(item));
-  console.log("isDir:", leanfs.isDir(item));
-  console.log("isFile:", leanfs.isFile(item));
-
-  // hierarchy
-  const parent = leanfs.getParent(item);
-  console.log("parent UUID:", parent);
-  console.log("parent name:", parent ? leanfs.getName(parent) : null);
-
-  // children (object-like: name -> UUID)
-  console.log("children:");
-  if (leanfs.isDir(item)) {
-    const children = leanfs.getAllChildren(item);
-
-    if (children.length === 0) {
-      console.log("  (empty)");
-    } else {
-      for (const cid of children) {
-        const name = leanfs.getName(cid);
-        console.log(`>  ${name}: ${cid}`);
-      }
-    }
-  } else {
-    console.log(">  (not a directory)");
-  }
-
-  console.log("===== end =====");
-}
-
 function NameEnsureInoExtension(itemUUID) {
-  if(!itemUUID) return null;
+
   if(!leanfs.isExist(itemUUID)) return null;
 
   let currentName = String(leanfs.getName(itemUUID));

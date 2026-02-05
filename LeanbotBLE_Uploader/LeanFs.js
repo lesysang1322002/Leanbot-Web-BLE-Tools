@@ -1,4 +1,4 @@
-export class LeanbotFs{
+export class LeanFs{
     static #LS_KEY_TREE =     "leanbot_workspace_tree";
     static #FILE_KEY_PREFIX = "Workspace_File_";
     static #rootUUID =        "bd70ce61-fc7d-41a5-b0f9-0017e998813a"; // random generate from https://www.uuidgenerator.net/
@@ -12,8 +12,8 @@ export class LeanbotFs{
     });
 
     #items = {
-        [LeanbotFs.#rootUUID]: {
-            index: LeanbotFs.#rootUUID, // root
+        [LeanFs.#rootUUID]: {
+            index: LeanFs.#rootUUID, // root
             isFolder: true,
             children: [],
             data: "Workspace"
@@ -23,22 +23,22 @@ export class LeanbotFs{
     constructor(){
         // Enforce to always create New Object
         if (!new.target) {
-            throw new Error("LeanbotFs must be called with 'new'");
+            throw new Error("LeanFs must be called with 'new'");
         }
     }
 
-    async mount(){
+    mount(){
         try{
             // Restore workspace from localStorage if available (overwrites items, root UUID, and currentID).
-            await this.#loadWorkspaceFromLocalStorage(); 
+            this.#loadWorkspaceFromLocalStorage(); 
 
             this.#rebuildParents();
             // console.log("items:", this.#items)
 
-            console.log("[MOUNT LEANBOTFS] Mount success");
+            console.log("[MOUNT LeanFs] Mount success");
         }
         catch(e){
-            throw new Error(`[MOUNT LEANBOTFS] Error occur: ${e}`)
+            throw new Error(`[MOUNT LeanFs] Error occur: ${e}`)
         }
     }
 
@@ -53,7 +53,7 @@ export class LeanbotFs{
     /**-------------------------------------------------------- */
 
     getRoot(){
-        return LeanbotFs.#rootUUID;
+        return LeanFs.#rootUUID;
     }
 
     getParent(itemUUID) { // Return 
@@ -101,22 +101,25 @@ export class LeanbotFs{
         return item.isFolder === true;
     }
 
-    async createFile(parentUUID){ // default name = timestamp
+    createFile(parentUUID){ // default name = timestamp
 
         if (!parentUUID) return null;
 
-        const childUUID = await this.#createItem(parentUUID);
+        if(!this.#items[parentUUID]) return null;
+
+        const childUUID = this.#createItem(parentUUID);
         this.#items[childUUID].isFolder = false; // file
         console.log("Creating new file (uuid):", childUUID);
 
         return childUUID;
     }
 
-    async createDir(parentUUID){ // default name = timestamp
+    createDir(parentUUID){ // default name = timestamp
 
         if (!parentUUID) return null;
+        if(!this.#items[parentUUID]) return null;
 
-        const childUUID = await this.#createItem(parentUUID);
+        const childUUID = this.#createItem(parentUUID);
         this.#items[childUUID].isFolder = true; // dir
         console.log("Creating new Dir (uuid):", childUUID);
 
@@ -124,7 +127,7 @@ export class LeanbotFs{
     }
 
     // rename file bằng F2
-    async rename(itemUUID, newName) {
+    rename(itemUUID, newName) {
 
         if (!itemUUID) return;
 
@@ -134,7 +137,7 @@ export class LeanbotFs{
         if (item.index === this.getRoot()) return; // NEVER rename root
 
         item.data = newName;
-        await this.#saveWorkspaceTreeToLocalStorage();
+        this.#saveWorkspaceTreeToLocalStorage();
     }
 
     getName(itemUUID){
@@ -145,12 +148,8 @@ export class LeanbotFs{
 
     getItemType(itemUUID) {
 
-        // Invalid or missing UUID or just failed to mount -> return null (none of the leanfs_TYPE)
-        if (!itemUUID) return null;
-        if (!this.#items[itemUUID]) return null;
-
         // Folders are directories regardless of name or extension (include root)
-        if (this.isDir(itemUUID)) return LeanbotFs.leanfs_TYPE.DIR;
+        if (this.isDir(itemUUID)) return LeanFs.leanfs_TYPE.DIR;
 
         // Extract file extension from the last '.' only
         // Examples:
@@ -170,13 +169,13 @@ export class LeanbotFs{
 
         switch (ext) {
             case "ino":
-                return LeanbotFs.leanfs_TYPE.INO;
+                return LeanFs.leanfs_TYPE.INO;
             case "blockly":
-                return LeanbotFs.leanfs_TYPE.BLOCKLY;
+                return LeanFs.leanfs_TYPE.BLOCKLY;
             case "yaml":
-                return LeanbotFs.leanfs_TYPE.YAML;
+                return LeanFs.leanfs_TYPE.YAML;
             default:
-                return LeanbotFs.leanfs_TYPE.OTHERS;
+                return LeanFs.leanfs_TYPE.OTHERS;
         }
     }
 
@@ -192,7 +191,7 @@ export class LeanbotFs{
         const compressed = localStorage.getItem(this.#fileKey(itemUUID));
         if (!compressed) return null;
 
-        return await this.#decompressString(compressed);
+        return await decompressString(compressed);
     }
 
     async writeFile(itemUUID, content) {
@@ -206,13 +205,11 @@ export class LeanbotFs{
             return;
         }
 
-        const compressed = await this.#compressString(content);
+        const compressed = await compressString(content);
         localStorage.setItem(this.#fileKey(itemUUID), compressed);
     }
 
-    async deleteFile(itemUUID) {
-        if (!itemUUID) return;
-        if (!this.#items[itemUUID]) return;
+    deleteFile(itemUUID) {
         if (this.isFile(itemUUID) === false) return;
 
         // gỡ itemUUID khỏi mọi folder trước, tránh lệch parent sau drag
@@ -222,7 +219,7 @@ export class LeanbotFs{
 
         this.#rebuildParents();
 
-        await this.#saveWorkspaceTreeToLocalStorage();
+        this.#saveWorkspaceTreeToLocalStorage();
     }
 
     readDir(itemUUID, prefix = "") {
@@ -265,9 +262,7 @@ export class LeanbotFs{
         return lines.join("\n");
     }
 
-    async deleteDir(itemUUID) {
-        if (!itemUUID) return;
-        if (!this.#items[itemUUID]) return;
+    deleteDir(itemUUID) {
         if (this.isDir(itemUUID) === false) return;
 
         if(itemUUID === this.getRoot())return; // NEVER delte root id.
@@ -284,7 +279,7 @@ export class LeanbotFs{
 
         this.#rebuildParents();
 
-        await this.#saveWorkspaceTreeToLocalStorage();
+        this.#saveWorkspaceTreeToLocalStorage();
     }
 
     // find and load from tree with absolute path 
@@ -353,62 +348,9 @@ export class LeanbotFs{
     // Private
     //============================================================
 
-    // === Compress Helper === // 
-
-    /* Uint8Array -> base64 */
-    #uint8ToBase64(bytes) {
-        let binary = '';
-        bytes.forEach(b => binary += String.fromCharCode(b));
-        return btoa(binary);
-    }
-
-    /* base64 -> Uint8Array */
-    #base64ToUint8(base64) {
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i);
-        }
-        return bytes;
-    }
-
-    async #compressString(str) {
-
-        const t1 = performance.now();
-        const stream = new Blob([new TextEncoder().encode(str)])
-            .stream()
-            .pipeThrough(new CompressionStream('gzip'));
-
-        const buffer = await new Response(stream).arrayBuffer();
-        const compressed = this.#uint8ToBase64(new Uint8Array(buffer));
-
-        const t2 = performance.now();
-        console.log(`[COMPRESS] ${str.length} -> ${compressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
-
-        return compressed;
-    }
-
-    async #decompressString(base64) {
-
-        const t1 = performance.now();
-        const bytes = this.#base64ToUint8(base64);
-
-        const stream = new Blob([bytes])
-            .stream()
-            .pipeThrough(new DecompressionStream('gzip'));
-
-        const buffer = await new Response(stream).arrayBuffer();
-        const decompressed = new TextDecoder().decode(buffer);
-
-        const t2 = performance.now();
-        console.log(`[DECOMPRESS] ${base64.length} -> ${decompressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
-
-        return decompressed;
-    }
-
     // === Storage Manage === //
 
-    async #saveWorkspaceTreeToLocalStorage() {
+    #saveWorkspaceTreeToLocalStorage() {
         console.log("Save workspace tree to Local Storage");
         const data = {
             items: this.#items,
@@ -416,17 +358,17 @@ export class LeanbotFs{
 
         const json = JSON.stringify(data)
 
-        localStorage.setItem(LeanbotFs.#LS_KEY_TREE, json);
+        localStorage.setItem(LeanFs.#LS_KEY_TREE, json);
     }
 
     #fileKey(uuid) {
-        return LeanbotFs.#FILE_KEY_PREFIX + uuid;
+        return LeanFs.#FILE_KEY_PREFIX + uuid;
     }
 
-    async #loadWorkspaceFromLocalStorage() {
+    #loadWorkspaceFromLocalStorage() {
         console.log("Load workspace tree from Local Storage");
         try {
-            const rawTree = localStorage.getItem(LeanbotFs.#LS_KEY_TREE);
+            const rawTree = localStorage.getItem(LeanFs.#LS_KEY_TREE);
 
             if (!rawTree) {
                 console.log("[LS] No workspace found in localStorage");
@@ -441,12 +383,11 @@ export class LeanbotFs{
         } catch (e) {
             console.error("[LS] Restore failed", e);
         } finally {
-            await this.#saveWorkspaceTreeToLocalStorage();
+            this.#saveWorkspaceTreeToLocalStorage();
         }
     }
 
     #removeItem(itemUUID){
-        if (!itemUUID || !this.#items[itemUUID]) return;
         localStorage.removeItem(this.#fileKey(itemUUID));
         delete this.#items[itemUUID];
     }
@@ -492,11 +433,7 @@ export class LeanbotFs{
     // === Create New item (file or dir) === // 
 
     // Thêm file, folder
-    async #createItem(parentId) {
-
-        if (!this.#items[parentId]) {
-            throw new Error("Invalid parentId: " + parentId);
-        }
+    #createItem(parentId) {
 
         console.log("[CREATE] target parentId =", parentId);
 
@@ -511,7 +448,7 @@ export class LeanbotFs{
             this.#items[parentId].children.includes(uuid)
         );
 
-        await this.#saveWorkspaceTreeToLocalStorage();
+        this.#saveWorkspaceTreeToLocalStorage();
 
         return uuid;
     }
@@ -535,3 +472,63 @@ function getTimestampName() {
   return `${yyyy}.${mm}.${dd}-${hh}.${mi}.${sec}`;
 }
 
+// === Compress Helper === // 
+
+/* Uint8Array -> base64 */
+function uint8ToBase64(bytes) {
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return btoa(binary);
+}
+
+/* base64 -> Uint8Array */
+function base64ToUint8(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+async function compressString(str) {
+
+    if(!compressString.textEncoder){
+        compressString.textEncoder = new TextEncoder();
+    }
+
+    const t1 = performance.now();
+    const stream = new Blob([compressString.textEncoder.encode(str)])
+        .stream()
+        .pipeThrough(new CompressionStream('gzip'));
+
+    const buffer = await new Response(stream).arrayBuffer();
+    const compressed = uint8ToBase64(new Uint8Array(buffer));
+
+    const t2 = performance.now();
+    console.log(`[COMPRESS] ${str.length} -> ${compressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
+
+    return compressed;
+}
+
+async function decompressString(base64) {
+
+    if(!decompressString.textDecoder){
+        decompressString.textDecoder = new TextDecoder();
+    }
+
+    const t1 = performance.now();
+    const bytes = base64ToUint8(base64);
+
+    const stream = new Blob([bytes])
+        .stream()
+        .pipeThrough(new DecompressionStream('gzip'));
+
+    const buffer = await new Response(stream).arrayBuffer();
+    const decompressed = decompressString.textDecoder.decode(buffer);
+
+    const t2 = performance.now();
+    console.log(`[DECOMPRESS] ${base64.length} -> ${decompressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
+
+    return decompressed;
+}
