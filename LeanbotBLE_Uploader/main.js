@@ -218,13 +218,35 @@ const UploaderCompileLog   = document.getElementById("compileLog");
 const UploaderCompileTitle = document.getElementById("compileTitle");
 const UploaderCompileProg  = document.getElementById("progCompile");
 
-btnCompile.addEventListener("click", async () => {
-  await doCompile();
-});
-
 let currentCompileCode = null; // Use to capture snapshot of the source code being compiled
 
+window.treelocked = false; // Global UI lock flag to prevent workspace navigation or mutation
+
+function setUICompileAndBuildEnabled(enable){
+  
+  // Compile / Upload actions
+  btnCompile.disabled = !enable;
+  btnUpload.disabled  = !enable;
+
+  window.treelocked = !enable;    // Lock file tree to prevent switching files, renaming
+
+  btnNewFile.disabled  = !enable;  // Disable workspace mutation actions (create / import)
+  btnNewFolder.disabled  = !enable; 
+  btnLoadFile.disabled = !enable;
+}
+
+btnCompile.addEventListener("click", async () => {
+ // Prevent multiple compile/upload actions while a compile is in progress
+  setUICompileAndBuildEnabled(false);
+
+  await doCompile();
+
+  // Re-enable actions after compile completes
+  setUICompileAndBuildEnabled(true); 
+});
+
 async function doCompile() {
+
   const sourceCode = inoEditor.getCppCode();
   currentCompileCode = sourceCode;
   if (!sourceCode || sourceCode.trim() === "") {
@@ -237,7 +259,7 @@ async function doCompile() {
   uiSetTab("program");
   uiResetCompile();
 
-  return await leanbot.Compiler.compile(sourceCode);
+  return await leanbot.Compiler.compile(sourceCode); // Run compiler 
 }
 
 leanbot.Compiler.onCompileSucess = (compileMessage) => {
@@ -302,6 +324,9 @@ btnUpload.addEventListener("click", async () => {
     return null;
   }
 
+ // Prevent multiple compile/upload actions while a compile is in progress
+  setUICompileAndBuildEnabled(false);
+
   compileStart = performance.now();
   ProgramTab.classList.remove("hide-upload"); // Hiện phần upload
   uiSetTab("program");
@@ -310,6 +335,9 @@ btnUpload.addEventListener("click", async () => {
   isCompileAndUpload = true;
 
   await leanbot.compileAndUpload(sourceCode, IDEConfig.LeanbotCompiler.Server);
+
+  // Re-enable actions after compile completes
+  setUICompileAndBuildEnabled(true); 
 });
 
 // =================== Upload DOM Elements =================== //
@@ -979,6 +1007,7 @@ function hideCtxMenu() {
 }
 
 function showCtxMenu(x, y, uuid) {
+  if(window.treelocked) return;
   if (!ctxMenu) return;
   ctxTargetId = uuid;
 
@@ -1116,8 +1145,12 @@ reactRoot.render(
 
       allowRenaming: true,
 
-      canDragAndDrop: true,
-      canDropOnFolder: true,
+      // canDragAndDrop: true,
+      canDragAndDrop: false,
+
+      // canDropOnFolder: true,
+      canDropOnFolder: false,
+
       canReorderItems: true,
       canInvokePrimaryActionOnItemContainer: true,
       defaultInteractionMode: "click-arrow-to-expand",
@@ -1134,6 +1167,8 @@ reactRoot.render(
       },
 
       onPrimaryAction: async (item) => {
+
+        if(window.treelocked) return;
         // console.log("onPrimaryAction:", item.index);
         if (leanfs.isDir(item.index)){ // if folder, show content in editor
           const folderContent = leanfs.readDir(item.index); // in folder structure to console

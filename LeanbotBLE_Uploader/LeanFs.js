@@ -38,6 +38,7 @@ export class LeanFs{
             console.log("[MOUNT LeanFs] Mount success");
         }
         catch(e){
+            alert("Mount LeanFs Failed!");
             throw new Error(`[MOUNT LeanFs] Error occur: ${e}`)
         }
     }
@@ -417,7 +418,8 @@ export class LeanFs{
         this.#items[uuid] = { index: uuid, isFolder: null, children: [], data: getTimestampName(), parent: parentId };
         console.log("[CREATE] item.parent =", this.#items[uuid].parent);
         this.#items[parentId].children ||= [];
-        this.#items[parentId].children.push(uuid);
+        // this.#items[parentId].children.push(uuid);
+        this.#items[parentId].children.unshift(uuid); // keep newly created items at the top of the list
         console.log(
             "[CHECK] parent contains child =",
             this.#items[parentId].children.includes(uuid)
