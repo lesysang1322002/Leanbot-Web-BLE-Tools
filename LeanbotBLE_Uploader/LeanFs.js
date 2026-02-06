@@ -58,57 +58,41 @@ export class LeanFs{
     }
 
     getParent(itemUUID) { // Return 
-        if (!itemUUID) return null;
-
-        const it = this.#items[itemUUID];
-        if (!it) return null;
+        const it = this.#getItem(itemUUID);
+        if(!it) return null;
 
         const p = it.parent;
-        if (!p) return null;
+        if(!this.#getItem(it.parent))return null;
 
-        return this.#items[p] ? p : null;
+        return p;
     }
 
     getAllChildren(itemUUID) { // Return children array of this one node (if there is any)
-
-        if (!itemUUID) return [];
-        if (!this.#items[itemUUID]) return [];
-        if (!this.#items[itemUUID].isFolder) return [];
-
+        if(!this.isDir(itemUUID))return [];
         return (this.#items[itemUUID].children || []).filter(cid => this.#items[cid]);
     }
 
     isExist(itemUUID) {
-        if (!itemUUID) return false;
-        if (!this.#items[itemUUID]) return false;
-        return true;
+        return !!this.#getItem(itemUUID);
     }
 
     isFile(itemUUID) {
-        if (!itemUUID) return false;
-
-        const item = this.#items[itemUUID];
+        const item = this.#getItem(itemUUID);
         if (!item) return false;
-
         return item.isFolder === false;
     }
 
     isDir(itemUUID) {
-        if (!itemUUID) return false;
-
-        const item = this.#items[itemUUID];
+        const item = this.#getItem(itemUUID);
         if (!item) return false;
-
         return item.isFolder === true;
     }
 
     createFile(parentUUID){ // default name = timestamp
 
-        if (!parentUUID) return null;
-
-        if(!this.#items[parentUUID]) return null;
-
         const childUUID = this.#createItem(parentUUID);
+        if(!childUUID) return null;
+
         this.#items[childUUID].isFolder = false; // file
         console.log("Creating new file (uuid):", childUUID);
 
@@ -117,10 +101,9 @@ export class LeanFs{
 
     createDir(parentUUID){ // default name = timestamp
 
-        if (!parentUUID) return null;
-        if(!this.#items[parentUUID]) return null;
-
         const childUUID = this.#createItem(parentUUID);
+        if(!childUUID) return null;
+
         this.#items[childUUID].isFolder = true; // dir
         console.log("Creating new Dir (uuid):", childUUID);
 
@@ -130,21 +113,19 @@ export class LeanFs{
     // rename file bằng F2
     rename(itemUUID, newName) {
 
-        if (!itemUUID) return;
-
-        const item = this.#items[itemUUID];
+        if (itemUUID === this.getRoot()) return; // NEVER rename root
+        
+        const item = this.#getItem(itemUUID);
         if (!item) return;
-
-        if (item.index === this.getRoot()) return; // NEVER rename root
 
         item.data = newName;
         this.#saveWorkspaceTreeToLocalStorage();
     }
 
     getName(itemUUID){
-        if (!itemUUID) return null; // Invalid ID => always return failed
-        if (!this.#items[itemUUID]) return null;
-        return this.#items[itemUUID].data;
+        const item = this.#getItem(itemUUID);
+        if(!item) return null;
+        return item.data;
     }
 
     getItemType(itemUUID) {
@@ -185,7 +166,6 @@ export class LeanFs{
     }
 
     async readFile(itemUUID) {
-        if (!itemUUID) return null;
 
         if (!this.isFile(itemUUID)) return null;
 
@@ -196,7 +176,6 @@ export class LeanFs{
     }
 
     async writeFile(itemUUID, content) {
-        if (!itemUUID) return;
 
         if (!this.isFile(itemUUID)) return;
 
@@ -211,6 +190,8 @@ export class LeanFs{
     }
 
     deleteFile(itemUUID) {
+        
+        if(itemUUID === this.getRoot())return; // NEVER delte root id.
         if (this.isFile(itemUUID) === false) return;
 
         // gỡ itemUUID khỏi mọi folder trước, tránh lệch parent sau drag
@@ -264,7 +245,7 @@ export class LeanFs{
     }
 
     deleteDir(itemUUID) {
-        if (this.isDir(itemUUID) === false) return;
+        if (!this.isDir(itemUUID)) return;
 
         if(itemUUID === this.getRoot())return; // NEVER delte root id.
 
@@ -286,19 +267,19 @@ export class LeanFs{
     // find and load from tree with absolute path 
     // e.g: path = test/test.txt => find test.txt inside test inside root.
     getItemByPath(parentUUID, pathString){
-        if(!parentUUID) return null;            // if parentUUID not exitst
+
         if(!this.isDir(parentUUID))return null; // parentUUID is not dir
 
         const parts = String(pathString).trim().split("/").filter(Boolean);
         let currentId = parentUUID; // start at parent
 
-        if (!currentId) return "";
+        if (!currentId) return null;
 
         for (const name of parts) {
 
             const nextId = this.getChildByName(currentId, name);
 
-            if (!nextId) return "";
+            if (!nextId) return null;
 
             currentId = nextId; // go to text level of the tree
         }
@@ -306,7 +287,7 @@ export class LeanFs{
     }
 
     getChildByName(parentUUID, name){
-        if(!parentUUID) return null;            // if parentUUID not exitst
+
         if(!this.isDir(parentUUID))return null; // parentUUID is not dir
 
         const children = this.getAllChildren(parentUUID);
@@ -355,12 +336,20 @@ export class LeanFs{
             Object.keys(this.#items).forEach(k => delete this.#items[k]);
             Object.assign(this.#items, data.items || {});
 
+                        this.#saveWorkspaceTreeToLocalStorage();
             console.log("[LS] Workspace restored");
         } catch (e) {
             console.error("[LS] Restore failed", e);
-        } finally {
-            this.#saveWorkspaceTreeToLocalStorage();
-        }
+            throw e;
+        } 
+        // finally {
+        //     this.#saveWorkspaceTreeToLocalStorage();
+        // }
+    }
+
+    #getItem(itemUUID){
+        if(!itemUUID)return null;
+        return this.#items[itemUUID];
     }
 
     #removeItem(itemUUID){
@@ -384,12 +373,14 @@ export class LeanFs{
     #removeFromParent(childId) {
         let removedParent = null;
 
-        const p = this.#items[childId]?.parent;
-        if (p && this.#items[p]?.children) {
-            const list = this.#items[p].children;
+        const parentUUID = this.getParent(childId);
+        const p = this.#getItem(parentUUID);
+
+        if (p?.children) {
+            const list = p.children;
             const before = list.length;
-            this.#items[p].children = list.filter((x) => x !== childId);
-            if (this.#items[p].children.length !== before) removedParent = p;
+            p.children = list.filter((x) => x !== childId);
+            if (p.children.length !== before) removedParent = parentUUID;
         }
 
         // fallback: nếu parent bị sai, quét toàn bộ folder để xóa mọi chỗ đang chứa childId
@@ -411,18 +402,21 @@ export class LeanFs{
     // Thêm file, folder
     #createItem(parentId) {
 
+        const p = this.#getItem(parentId);
+        if(!p)return null;
+
         console.log("[CREATE] target parentId =", parentId);
 
         const uuid = createUUID();
 
         this.#items[uuid] = { index: uuid, isFolder: null, children: [], data: getTimestampName(), parent: parentId };
         console.log("[CREATE] item.parent =", this.#items[uuid].parent);
-        this.#items[parentId].children ||= [];
-        // this.#items[parentId].children.push(uuid);
-        this.#items[parentId].children.unshift(uuid); // keep newly created items at the top of the list
+        p.children ||= [];
+        // p.children.push(uuid);
+        p.children.unshift(uuid); // keep newly created items at the top of the list
         console.log(
             "[CHECK] parent contains child =",
-            this.#items[parentId].children.includes(uuid)
+            p.children.includes(uuid)
         );
 
         this.#saveWorkspaceTreeToLocalStorage();

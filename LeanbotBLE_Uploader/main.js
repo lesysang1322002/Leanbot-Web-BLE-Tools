@@ -16,24 +16,6 @@ const leanfs = new LeanFs();
 leanfs.mount();
 
 // ============================================================
-// Restore Current ID
-// ============================================================
-
-const CURRENT_FILEID_KEY = "leanbot_workspace_current_fileID";
-
-window.currentFileId = localStorage.getItem(CURRENT_FILEID_KEY) || leanfs.getRoot() || null;
-
-function saveCurrentFileID(){
-  localStorage.setItem(CURRENT_FILEID_KEY, window.currentFileId);
-}
-
-async function changeCurrentFileId(newFileId){
-  if(newFileId === window.currentFileId)return;
-  await leanfs.writeFile(window.currentFileId, inoEditor.getContent());
-  window.currentFileId = newFileId;
-}
-
-// ============================================================
 // CONFIG LOADING
 // ============================================================
 
@@ -236,30 +218,36 @@ function setUICompileAndBuildEnabled(enable){
 }
 
 btnCompile.addEventListener("click", async () => {
- // Prevent multiple compile/upload actions while a compile is in progress
-  setUICompileAndBuildEnabled(false);
-
   await doCompile();
-
-  // Re-enable actions after compile completes
-  setUICompileAndBuildEnabled(true); 
 });
 
-async function doCompile() {
-
+function getSourceCode(){
   const sourceCode = inoEditor.getCppCode();
-  currentCompileCode = sourceCode;
   if (!sourceCode || sourceCode.trim() === "") {
     alert("No code to compile!");
     return null;
   }
+  currentCompileCode = sourceCode;
+  return sourceCode;
+}
+
+async function CompileUploadLock(fn){
+  setUICompileAndBuildEnabled(false);
+  try { return await fn(); }
+  finally { setUICompileAndBuildEnabled(true); }
+}
+
+async function doCompile() {
+  
+  const sourceCode = getSourceCode();
+  if (!sourceCode) return null;
 
   compileStart = performance.now();
   ProgramTab.classList.add("hide-upload");
   uiSetTab("program");
   uiResetCompile();
 
-  return await leanbot.Compiler.compile(sourceCode); // Run compiler 
+  return await CompileUploadLock(() =>leanbot.Compiler.compile(sourceCode)); // Run compiler 
 }
 
 leanbot.Compiler.onCompileSucess = (compileMessage) => {
@@ -318,14 +306,8 @@ btnUpload.addEventListener("click", async () => {
     return;
   }
 
-  const sourceCode = inoEditor.getCppCode();
-  if (!sourceCode || sourceCode.trim() === "") {
-    alert("No code to compile!");
-    return null;
-  }
-
- // Prevent multiple compile/upload actions while a compile is in progress
-  setUICompileAndBuildEnabled(false);
+  const sourceCode = getSourceCode();
+  if (!sourceCode) return null;
 
   compileStart = performance.now();
   ProgramTab.classList.remove("hide-upload"); // Hiện phần upload
@@ -334,10 +316,7 @@ btnUpload.addEventListener("click", async () => {
   uiResetUpload();
   isCompileAndUpload = true;
 
-  await leanbot.compileAndUpload(sourceCode, IDEConfig.LeanbotCompiler.Server);
-
-  // Re-enable actions after compile completes
-  setUICompileAndBuildEnabled(true); 
+  await CompileUploadLock(() => leanbot.compileAndUpload(sourceCode, IDEConfig.LeanbotCompiler.Server));
 });
 
 // =================== Upload DOM Elements =================== //
@@ -556,6 +535,24 @@ inoEditor.onChangeContent = () =>  {
 }
 
 // ============================================================
+// Restore Current ID
+// ============================================================
+
+const CURRENT_FILEID_KEY = "leanbot_workspace_current_fileID";
+
+window.currentFileId = localStorage.getItem(CURRENT_FILEID_KEY) || leanfs.getRoot() || null;
+
+function saveCurrentFileID(){
+  localStorage.setItem(CURRENT_FILEID_KEY, window.currentFileId);
+}
+
+async function changeCurrentFileId(newFileId){
+  if(newFileId === window.currentFileId)return;
+  await leanfs.writeFile(window.currentFileId, inoEditor.getContent());
+  window.currentFileId = newFileId;
+}
+
+// ============================================================
 // WORKSPACE BOOTSTRAP & INVARIANTS
 // - Load .ino templates
 // - Ensure workspace always contains at least one .ino file
@@ -591,23 +588,13 @@ window.__pendingOpenFileId = window.__pendingOpenFileId ?? null;
 
 // Create basicMotion.ino if there isnt any .ino file in the workspace
 
-function hasAnyInoFile(fs) { // Check if there is any .ino file in the workspace
-  const root = leanfs.getRoot();
-
-  const stack = [root];
-
+function hasAnyInoFile() { // Check if there is any .ino file in the workspace
+  const stack = [leanfs.getRoot()];
   while (stack.length) {
-    const uuid = stack.pop();
-
-    if (leanfs.isType(uuid, LeanFs.leanfs_TYPE.INO)) {
-      return true;
-    }
-
-    if (leanfs.isDir(uuid)) {
-      stack.push(...leanfs.getAllChildren(uuid));
-    }
+    const id = stack.pop();
+    if (leanfs.isType(id, LeanFs.leanfs_TYPE.INO)) return true;
+    if (leanfs.isDir(id)) stack.push(...leanfs.getAllChildren(id));
   }
-
   return false;
 }
 
@@ -632,9 +619,6 @@ let lastFocusedId    = window.currentFileId;
 let lastSelectedIds  = [window.currentFileId];
 
 function getAncestorFolders(uuid) { // get ancestor until the root
-
-  if (!uuid) return []; // incase uuid is null or invalid
-
   const out = [];
   let p = leanfs.getParent(uuid);
 
@@ -1365,8 +1349,6 @@ function logLbIDEEvent(event) {
 }
 
 function NameEnsureInoExtension(itemUUID) {
-
-  if(!leanfs.isExist(itemUUID)) return null;
 
   let currentName = String(leanfs.getName(itemUUID));
 
