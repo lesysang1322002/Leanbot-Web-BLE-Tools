@@ -792,6 +792,13 @@ function expandFolderChain(folderId) {
   }
 }
 
+const btnShowTree = document.getElementById('btnShowTree');
+const editorRow   = document.getElementById('editorRow');
+
+btnShowTree.addEventListener('click', () => {
+  editorRow.classList.toggle('tree-collapsed');
+});
+
 const btnNewFile = document.getElementById("btnNewFile");
 const btnNewFolder = document.getElementById("btnNewFolder");
 
@@ -978,9 +985,7 @@ async function renameFileId(uuid, newDisplayName) {
 // ============================================================
 // TREE VIEWSTATE + CONTEXT MENU
 // ============================================================
-const initialOpenId = (window.currentFileId && leanfs.isExist(window.currentFileId))
-  ? window.currentFileId
-  : null;
+const initialOpenId = leanfs.isExist(window.currentFileId)? window.currentFileId: null;
 
 const ancestorFolders = getAncestorFolders(initialOpenId);
 
