@@ -61,10 +61,10 @@ export class LeanFs{
         const it = this.#getItem(itemUUID);
         if(!it) return null;
 
-        const p = it.parent;
-        if(!this.#getItem(it.parent))return null;
+        const p = this.#getItem(it.parent);
+        if(!p)return null;
 
-        return p;
+        return p.index;
     }
 
     getAllChildren(itemUUID) { // Return children array of this one node (if there is any)
