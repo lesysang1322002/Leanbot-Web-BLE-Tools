@@ -16,7 +16,8 @@ export class LeanFs{
             index: LeanFs.#rootUUID, // root
             isFolder: true,
             children: [],
-            data: "Workspace"
+            data: "Workspace",
+            contentHash: null,
         },
     };
     
@@ -169,24 +170,28 @@ export class LeanFs{
 
         if (!this.isFile(itemUUID)) return null;
 
-        const compressed = localStorage.getItem(this.#fileKey(itemUUID));
-        if (!compressed) return null;
+        const content = localStorage.getItem(this.#fileKey(itemUUID));
 
-        return await decompressString(compressed);
+        this.#items[itemUUID].contentHash = await getContentHash(content)
+        return content;
     }
 
     async writeFile(itemUUID, content) {
 
         if (!this.isFile(itemUUID)) return;
 
-        const prev = await this.readFile(itemUUID);
-        if (content === prev) {
-            console.log("[writeFile] skipped (unchanged)", itemUUID);
+        const oldHash = this.#items[itemUUID].contentHash;
+        const newHash = await getContentHash(content);
+
+        if(oldHash === newHash){
+            console.log(`[WriteFile] Skip (unchanged) item ${itemUUID}`);
             return;
         }
 
-        const compressed = await compressString(content);
-        localStorage.setItem(this.#fileKey(itemUUID), compressed);
+        localStorage.setItem(this.#fileKey(itemUUID), content);
+        this.#items[itemUUID].contentHash = newHash;
+        this.#saveWorkspaceTreeToLocalStorage();
+        console.log(`[WriteFile] item ${itemUUID}: update hash = ${newHash}`);
     }
 
     deleteFile(itemUUID) {
@@ -409,7 +414,7 @@ export class LeanFs{
 
         const uuid = createUUID();
 
-        this.#items[uuid] = { index: uuid, isFolder: null, children: [], data: getTimestampName(), parent: parentId };
+        this.#items[uuid] = { index: uuid, isFolder: null, children: [], data: getTimestampName(), parent: parentId, contentHash: null};
         console.log("[CREATE] item.parent =", this.#items[uuid].parent);
         p.children ||= [];
         // p.children.push(uuid);
@@ -443,63 +448,19 @@ function getTimestampName() {
   return `${yyyy}.${mm}.${dd}-${hh}.${mi}.${sec}`;
 }
 
-// === Compress Helper === // 
-
-/* Uint8Array -> base64 */
-function uint8ToBase64(bytes) {
-    let binary = '';
-    bytes.forEach(b => binary += String.fromCharCode(b));
-    return btoa(binary);
+function bufferToHex(buffer) {
+  return [...new Uint8Array(buffer)]
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-/* base64 -> Uint8Array */
-function base64ToUint8(base64) {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-}
-
-async function compressString(str) {
-
-    if(!compressString.textEncoder){
-        compressString.textEncoder = new TextEncoder();
+async function getContentHash(content){
+    if(!getContentHash.textEncoder){
+        getContentHash.textEncoder = new TextEncoder();
     }
 
-    const t1 = performance.now();
-    const stream = new Blob([compressString.textEncoder.encode(str)])
-        .stream()
-        .pipeThrough(new CompressionStream('gzip'));
-
-    const buffer = await new Response(stream).arrayBuffer();
-    const compressed = uint8ToBase64(new Uint8Array(buffer));
-
-    const t2 = performance.now();
-    console.log(`[COMPRESS] ${str.length} -> ${compressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
-
-    return compressed;
-}
-
-async function decompressString(base64) {
-
-    if(!decompressString.textDecoder){
-        decompressString.textDecoder = new TextDecoder();
-    }
-
-    const t1 = performance.now();
-    const bytes = base64ToUint8(base64);
-
-    const stream = new Blob([bytes])
-        .stream()
-        .pipeThrough(new DecompressionStream('gzip'));
-
-    const buffer = await new Response(stream).arrayBuffer();
-    const decompressed = decompressString.textDecoder.decode(buffer);
-
-    const t2 = performance.now();
-    console.log(`[DECOMPRESS] ${base64.length} -> ${decompressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
-
-    return decompressed;
+    const data = getContentHash.textEncoder.encode(content ?? "");
+    const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+    const newHash = bufferToHex(hashBuffer);
+    return newHash;
 }
