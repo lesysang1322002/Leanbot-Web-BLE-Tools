@@ -170,7 +170,10 @@ export class LeanFs{
 
         if (!this.isFile(itemUUID)) return null;
 
-        const content = localStorage.getItem(this.#fileKey(itemUUID));
+        const compressed = localStorage.getItem(this.#fileKey(itemUUID));
+        if (!compressed) return null;
+
+        const content = await decompressString(compressed);
 
         this.#items[itemUUID].contentHash = await getContentHash(content)
         return content;
@@ -188,7 +191,9 @@ export class LeanFs{
             return;
         }
 
-        localStorage.setItem(this.#fileKey(itemUUID), content);
+        const compressed = await compressString(content);
+        localStorage.setItem(this.#fileKey(itemUUID), compressed);
+        
         this.#items[itemUUID].contentHash = newHash;
         this.#saveWorkspaceTreeToLocalStorage();
         console.log(`[WriteFile] item ${itemUUID}: update hash = ${newHash}`);
@@ -447,6 +452,69 @@ function getTimestampName() {
 
   return `${yyyy}.${mm}.${dd}-${hh}.${mi}.${sec}`;
 }
+
+// === Compress Helper === // 
+
+/* Uint8Array -> base64 */
+function uint8ToBase64(bytes) {
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return btoa(binary);
+}
+
+/* base64 -> Uint8Array */
+function base64ToUint8(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+async function compressString(str) {
+
+    if(!compressString.textEncoder){
+        compressString.textEncoder = new TextEncoder();
+    }
+
+    const t1 = performance.now();
+    const stream = new Blob([compressString.textEncoder.encode(str)])
+        .stream()
+        .pipeThrough(new CompressionStream('gzip'));
+
+    const buffer = await new Response(stream).arrayBuffer();
+    const compressed = uint8ToBase64(new Uint8Array(buffer));
+
+    const t2 = performance.now();
+    console.log(`[COMPRESS] ${str.length} -> ${compressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
+
+    return compressed;
+}
+
+async function decompressString(base64) {
+
+    if(!decompressString.textDecoder){
+        decompressString.textDecoder = new TextDecoder();
+    }
+
+    const t1 = performance.now();
+    const bytes = base64ToUint8(base64);
+
+    const stream = new Blob([bytes])
+        .stream()
+        .pipeThrough(new DecompressionStream('gzip'));
+
+    const buffer = await new Response(stream).arrayBuffer();
+    const decompressed = decompressString.textDecoder.decode(buffer);
+
+    const t2 = performance.now();
+    console.log(`[DECOMPRESS] ${base64.length} -> ${decompressed.length} ` +`in ${(t2 - t1).toFixed(2)} ms`);
+
+    return decompressed;
+}
+
+// === Hash helper === //
 
 function bufferToHex(buffer) {
   return [...new Uint8Array(buffer)]
