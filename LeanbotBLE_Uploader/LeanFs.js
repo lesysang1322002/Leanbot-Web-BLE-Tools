@@ -20,18 +20,20 @@ export class LeanFs{
             contentHash: null,
         },
     };
+    #delaySaveTree = false
     
     constructor(){
         // Enforce to always create New Object
         if (!new.target) {
             throw new Error("LeanFs must be called with 'new'");
         }
+        this.#delaySaveTree = false
     }
 
     mount(){
         try{
             // Restore workspace from localStorage if available (overwrites items, root UUID, and currentID).
-            this.#loadWorkspaceFromLocalStorage(); 
+            this.#loadWorkspaceTreeFromLocalStorage(); 
 
             this.#rebuildParents();
             // console.log("items:", this.#items)
@@ -39,7 +41,7 @@ export class LeanFs{
             console.log("[MOUNT LeanFs] Mount success");
         }
         catch(e){
-            alert("Mount LeanFs Failed!");
+            alert(`Mount LeanFs Failed!. Error occur: ${e}`);
             throw new Error(`[MOUNT LeanFs] Error occur: ${e}`)
         }
     }
@@ -119,6 +121,8 @@ export class LeanFs{
         const item = this.#getItem(itemUUID);
         if (!item) return;
 
+        if (item.data === newName) return; // name not change
+        
         item.data = newName;
         this.#saveWorkspaceTreeToLocalStorage();
     }
@@ -204,6 +208,9 @@ export class LeanFs{
         if(itemUUID === this.getRoot())return; // NEVER delte root id.
         if (this.isFile(itemUUID) === false) return;
 
+        // log to debug
+        console.log(`[DeleteFile] name = ${this.getName(itemUUID)}, uuid = ${itemUUID}`);
+
         // gỡ itemUUID khỏi mọi folder trước, tránh lệch parent sau drag
         this.#removeFromParent(itemUUID);
 
@@ -259,6 +266,12 @@ export class LeanFs{
 
         if(itemUUID === this.getRoot())return; // NEVER delte root id.
 
+        // log to debug
+        console.log(`[DeleteDir] name = ${this.getName(itemUUID)}, uuid = ${itemUUID}`);
+
+        let prevDelaySaveTree = this.#delaySaveTree
+        this.#delaySaveTree = true
+
         const children = [...this.getAllChildren(itemUUID)];
         
         for(const child of children){ // remove subtree
@@ -269,8 +282,8 @@ export class LeanFs{
 
         this.#removeItem(itemUUID); // Remove the directory itself
 
+        this.#delaySaveTree = prevDelaySaveTree
         this.#rebuildParents();
-
         this.#saveWorkspaceTreeToLocalStorage();
     }
 
@@ -311,6 +324,53 @@ export class LeanFs{
         return childUUID ;
     }
 
+    getAncestorFolders(uuid) { // get ancestor until the root
+        const out = [];
+        let p = this.getParent(uuid);
+
+        while (p && p !== this.getRoot()) {
+            out.unshift(p);
+            p = this.getParent(p);
+        }
+        return out;
+    }
+
+    hasAnyFileOfType(type) { // Check if there is any .ino file in the workspace
+        const stack = [this.getRoot()];
+        while (stack.length) {
+            const id = stack.pop();
+            if (this.isType(id, type)) return true;
+            if (this.isDir(id)) stack.push(...this.getAllChildren(id));
+        }
+        return false;
+    }
+
+    pickNextItemAfterDelete(uuid) {
+        // Prefer parent folder
+        const parent = this.getParent(uuid);
+        if (parent && parent !== this.getRoot()) {
+            return parent;
+        }
+
+        // Otherwise scan root children
+        const children = this.getAllChildren(this.getRoot());
+        let firstFolder = null;
+
+        for (const id of children) {
+            if (id === uuid) continue;
+
+            if (this.isFile(id)) {
+                return id;
+            }
+
+            if (!firstFolder) {
+                firstFolder = id;
+            }
+        }
+
+        return firstFolder || null;
+    }
+
     //============================================================
     // Private
     //============================================================
@@ -318,6 +378,10 @@ export class LeanFs{
     // === Storage Manage === //
 
     #saveWorkspaceTreeToLocalStorage() {
+        if (this.#delaySaveTree) {
+            console.log("Skip Save Tree (delaySave)"); // log debug
+            return;
+        }
         console.log("Save workspace tree to Local Storage");
         const data = {
             items: this.#items,
@@ -332,13 +396,14 @@ export class LeanFs{
         return LeanFs.#FILE_KEY_PREFIX + uuid;
     }
 
-    #loadWorkspaceFromLocalStorage() {
+    #loadWorkspaceTreeFromLocalStorage() {
         console.log("Load workspace tree from Local Storage");
         try {
             const rawTree = localStorage.getItem(LeanFs.#LS_KEY_TREE);
 
             if (!rawTree) {
                 console.log("[LS] No workspace found in localStorage");
+                this.#saveWorkspaceTreeToLocalStorage();
                 return;
             }
             const data = JSON.parse(rawTree);
@@ -346,7 +411,9 @@ export class LeanFs{
             Object.keys(this.#items).forEach(k => delete this.#items[k]);
             Object.assign(this.#items, data.items || {});
 
-                        this.#saveWorkspaceTreeToLocalStorage();
+            this.#ClearAllContentHash();
+
+            // this.#saveWorkspaceTreeToLocalStorage();
             console.log("[LS] Workspace restored");
         } catch (e) {
             console.error("[LS] Restore failed", e);
@@ -371,6 +438,13 @@ export class LeanFs{
 
     // Gắn parent cho mỗi node, để move nhanh
     #rebuildParents() {
+        if (this.#delaySaveTree) {
+            console.log("Skip Rebuild Parents (delaySave)"); // log debug
+            return;
+        }
+
+        console.log("Rebuild Parents");
+
         for (const uuid in this.#items) this.#items[uuid].parent = null;
         for (const uuid in this.#items) {
             const ch = this.#items[uuid].children;
@@ -432,6 +506,13 @@ export class LeanFs{
         this.#saveWorkspaceTreeToLocalStorage();
 
         return uuid;
+    }
+
+    #ClearAllContentHash(){
+        for(const uuid in this.#items){
+            const it = this.#items[uuid];
+            it.contentHash = null;
+        }
     }
 }
 
@@ -528,7 +609,7 @@ async function getContentHash(content){
     }
 
     const data = getContentHash.textEncoder.encode(content ?? "");
-    const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+    const hashBuffer = await window.crypto.subtle.digest("SHA-1", data);
     const newHash = bufferToHex(hashBuffer);
     return newHash;
 }

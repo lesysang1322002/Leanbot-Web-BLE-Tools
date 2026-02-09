@@ -588,17 +588,7 @@ window.__pendingOpenFileId = window.__pendingOpenFileId ?? null;
 
 // Create basicMotion.ino if there isnt any .ino file in the workspace
 
-function hasAnyInoFile() { // Check if there is any .ino file in the workspace
-  const stack = [leanfs.getRoot()];
-  while (stack.length) {
-    const id = stack.pop();
-    if (leanfs.isType(id, LeanFs.leanfs_TYPE.INO)) return true;
-    if (leanfs.isDir(id)) stack.push(...leanfs.getAllChildren(id));
-  }
-  return false;
-}
-
-if (!hasAnyInoFile()) { // If no .ino file exists, create a default basicMotion.ino directly at root
+if (!leanfs.hasAnyFileOfType(LeanFs.leanfs_TYPE.INO)) { // If no .ino file exists, create a default basicMotion.ino directly at root
   console.log("[LS] No .ino file found, creating default BasicMotion.ino");
   const uuid = leanfs.createFile(leanfs.getRoot());
   leanfs.rename(uuid, "BasicMotion.ino");
@@ -617,17 +607,6 @@ await openFileInMonaco(window.currentFileId || null);
 // track focus, selection để tạo file, folder, move đúng vị trí
 let lastFocusedId    = window.currentFileId; 
 let lastSelectedIds  = [window.currentFileId];
-
-function getAncestorFolders(uuid) { // get ancestor until the root
-  const out = [];
-  let p = leanfs.getParent(uuid);
-
-  while (p && p !== leanfs.getRoot()) {
-    out.unshift(p);
-    p = leanfs.getParent(p);
-  }
-  return out;
-}
 
 async function openFileInMonaco(fileId) { 
   if (leanfs.isDir(fileId)) return; // avoid if a folder is passed
@@ -987,7 +966,7 @@ async function renameFileId(uuid, newDisplayName) {
 // ============================================================
 const initialOpenId = leanfs.isExist(window.currentFileId)? window.currentFileId: null;
 
-const ancestorFolders = getAncestorFolders(initialOpenId);
+const ancestorFolders = leanfs.getAncestorFolders(initialOpenId);
 
 const viewState = {
   tree: {
@@ -1056,37 +1035,11 @@ async function deleteItemWithConfirm(uuid) {
   await deleteItemById(uuid);
 }
 
-function pickNextTreeItem(uuid) {
-  // Prefer parent folder
-  const parent = leanfs.getParent(uuid);
-  if (parent && parent !== leanfs.getRoot()) {
-    return parent;
-  }
-
-  // Otherwise scan root children
-  const children = leanfs.getAllChildren(leanfs.getRoot());
-  let firstFolder = null;
-
-  for (const id of children) {
-    if (id === uuid) continue;
-
-    if (leanfs.isFile(id)) {
-      return id;
-    }
-
-    if (!firstFolder) {
-      firstFolder = id;
-    }
-  }
-
-  return firstFolder || null;
-}
-
 async function deleteItemById(uuid) {
   if (!leanfs.isExist(uuid)) return;
   if (uuid === leanfs.getRoot()) return;
 
-  const nextFocus = pickNextTreeItem(uuid);
+  const nextFocus = leanfs.pickNextItemAfterDelete(uuid);
 
   if (leanfs.isDir(uuid)) {
     leanfs.deleteDir(uuid);
