@@ -199,7 +199,6 @@ export class LeanFs{
         localStorage.setItem(this.#fileKey(itemUUID), compressed);
         
         this.#items[itemUUID].contentHash = newHash;
-        this.#saveWorkspaceTreeToLocalStorage();
         console.log(`[WriteFile] item ${itemUUID}: update hash = ${newHash}`);
     }
 
@@ -215,9 +214,6 @@ export class LeanFs{
         this.#removeFromParent(itemUUID);
 
         this.#removeItem(itemUUID);
-
-        this.#rebuildParents();
-
         this.#saveWorkspaceTreeToLocalStorage();
     }
 
@@ -283,7 +279,6 @@ export class LeanFs{
         this.#removeItem(itemUUID); // Remove the directory itself
 
         this.#delaySaveTree = prevDelaySaveTree
-        this.#rebuildParents();
         this.#saveWorkspaceTreeToLocalStorage();
     }
 
@@ -438,13 +433,6 @@ export class LeanFs{
 
     // Gắn parent cho mỗi node, để move nhanh
     #rebuildParents() {
-        if (this.#delaySaveTree) {
-            console.log("Skip Rebuild Parents (delaySave)"); // log debug
-            return;
-        }
-
-        console.log("Rebuild Parents");
-
         for (const uuid in this.#items) this.#items[uuid].parent = null;
         for (const uuid in this.#items) {
             const ch = this.#items[uuid].children;
