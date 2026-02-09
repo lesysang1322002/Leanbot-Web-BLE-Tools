@@ -373,12 +373,24 @@ function uiUpdateProgress(element, progress, total) {
 }
 
 // =================== Uploader Event Handlers =================== //
-leanbot.Uploader.onMessage = ({ timeStamp, message }) => {
+// leanbot.Uploader.onMessage = ({ timeStamp, message }) => {
+//   uiUpdateTime(uploadStart, UploaderTimeUpload);
+
+//   const msg = `[${(timeStamp / 1000).toFixed(3)}] ${message}`;
+
+//   UploaderLogUpload.value += "\n" + msg;
+//   UploaderLogUpload.scrollTop = UploaderLogUpload.scrollHeight;
+// };
+
+leanbot.Uploader.onMessage = input => {
   uiUpdateTime(uploadStart, UploaderTimeUpload);
 
-  const msg = `[${(timeStamp / 1000).toFixed(3)}] ${message}`;
+  const line =
+    typeof input === "string"
+      ? input
+      : `[${(input.timeStamp / 1000).toFixed(3)}] ${input.message}`;
 
-  UploaderLogUpload.value += "\n" + msg;
+  UploaderLogUpload.value += "\n" + line;
   UploaderLogUpload.scrollTop = UploaderLogUpload.scrollHeight;
 };
 

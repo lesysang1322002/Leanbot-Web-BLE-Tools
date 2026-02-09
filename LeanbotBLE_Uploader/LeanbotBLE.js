@@ -378,6 +378,10 @@ class Uploader {
     Uploader.#config = config;
   }
 
+  static getBLE_MaxLength(){
+    return Uploader.#config.BLE_MaxLength;
+  }
+
   #JDYUploader = null;
 
   setJDYUploader(jdyUploader) {
@@ -567,11 +571,11 @@ class Uploader {
       const progress = parseInt(m[1]);
       // console.log(`[RECV ${progress}]`);
       const recvHash = m[2] ? m[2].toUpperCase() : null;
-      // console.log(`Received Hash:`, recvHash);
+      console.log(`Received Hash:`, recvHash);
 
       if (recvHash) {
         const expected = this.#packetHashes[progress];
-        // console.log(`Expected Hash:`, expected);
+        console.log(`Expected Hash:`, expected);
         if (recvHash !== expected) {
           this.isUploadSessionActive = false;
           const err = `Transfer Error: Hash mismatch. ESP32: ${recvHash}, WEB: ${expected}`;
@@ -734,6 +738,7 @@ class Uploader {
   }
 
   emitTransferError(err) { // call both transfer error and general error
+    console.log(err)
     if (this.onTransferError) this.onTransferError();
     if (this.onError) this.onError(err);
   }
@@ -1260,7 +1265,7 @@ function hexLineToBytes(block) {
  * @returns {Uint8Array[]} packets - Array of BLE message bytes ready to send
  */
 function convertHexToBlePackets(hexText, { returnStep2 = false } = {}) {
-  const BLE_MaxLength = Uploader.BLE_MaxLength;
+  const BLE_MaxLength = Uploader.getBLE_MaxLength();
   console.log(`convertHexToBlePackets: Using BLE_MaxLength = ${BLE_MaxLength}`);
 
   // --- STEP 0: Split HEX text into LinesMessage ---
@@ -1364,8 +1369,20 @@ function convertHexToBlePackets(hexText, { returnStep2 = false } = {}) {
 // 🔹 HASH FUNCTION (32-bit)
 // ======================================================
 
-// Hằng số P1
-const P1 = 0xDE1AD64D;
+/**
+ * 
+ * @param {*} x: key Hash (uint32)
+ * @returns hash32 (uint32)
+ */
+
+function hash_prospector(x) {
+    x ^= x >>> 16;
+    x = Math.imul(x, 0x21f0aaad);
+    x ^= x >>> 15;
+    x = Math.imul(x, 0xd35a2d97);
+    x ^= x >>> 15;
+    return x;
+}
 
 /**
  * @param {number} hash - hash hiện tại
@@ -1374,11 +1391,7 @@ const P1 = 0xDE1AD64D;
  */
 function updateHash(hash, data) {
   hash ^= data;
-  hash ^= hash >>> 15;
-  hash = Math.imul(hash, P1);
-  hash ^= hash >>> 15;
-  hash = Math.imul(hash, P1);
-  hash ^= hash >>> 15;
+  hash = hash_prospector(hash)
   return hash >>> 0; // đảm bảo trả về uint32
 }
 
