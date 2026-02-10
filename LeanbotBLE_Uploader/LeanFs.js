@@ -35,7 +35,7 @@ export class LeanFs{
             // Restore workspace from localStorage if available (overwrites items, root UUID, and currentID).
             this.#loadWorkspaceTreeFromLocalStorage(); 
 
-            // console.log("items:", this.#items)
+            console.log("items:", this.#items)
 
             console.log("[MOUNT LeanFs] Mount success");
         }
@@ -386,7 +386,6 @@ export class LeanFs{
             const it = this.#items[uuid];
 
             items[uuid] = {
-                index: it.index,
                 isFolder: it.isFolder,
                 data: it.data,
                 children: Array.isArray(it.children) ? [...it.children] : [],
@@ -413,12 +412,19 @@ export class LeanFs{
                 return;
             }
             const data = JSON.parse(rawTree);
+            const items = data.items || {};
+
+            // loop through json key value list
+            for (const [uuid, item] of Object.entries(items)) {
+                //console.log(`${uuid}: ${item}`);
+                item.index = uuid
+                item.contentHash = null
+            }
 
             Object.keys(this.#items).forEach(k => delete this.#items[k]);
             Object.assign(this.#items, data.items || {});
 
             this.#rebuildParents();
-            this.#ClearAllContentHash();
 
             // this.#saveWorkspaceTreeToLocalStorage();
             console.log("[LS] Workspace restored");
