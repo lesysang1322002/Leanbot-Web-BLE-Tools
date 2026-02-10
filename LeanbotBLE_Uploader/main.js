@@ -13,7 +13,7 @@ import { LeanFs } from "./LeanFs.js";
 // ============================================================
 
 const leanfs = new LeanFs();
-leanfs.mount();
+await leanfs.mount();
 
 // ============================================================
 // CONFIG LOADING
@@ -602,8 +602,8 @@ window.__pendingOpenFileId = window.__pendingOpenFileId ?? null;
 
 if (!leanfs.hasAnyFileOfType(LeanFs.leanfs_TYPE.INO)) { // If no .ino file exists, create a default basicMotion.ino directly at root
   console.log("[LS] No .ino file found, creating default BasicMotion.ino");
-  const uuid = leanfs.createFile(leanfs.getRoot());
-  leanfs.rename(uuid, "BasicMotion.ino");
+  const uuid = await leanfs.createFile(leanfs.getRoot());
+  await leanfs.rename(uuid, "BasicMotion.ino");
   await leanfs.writeFile(uuid, inoTemplates.basicMotion || "");
   await changeCurrentFileId(uuid);
 }
@@ -687,8 +687,8 @@ window.importLocalFileToTree = async (loaded) => {
 
   const parentId = getTargetFolderId();
 
-  const uuid = leanfs.createFile(parentId);
-  leanfs.rename(uuid, fileName);
+  const uuid = await leanfs.createFile(parentId);
+  await leanfs.rename(uuid, fileName);
 
   await leanfs.writeFile(uuid, text);
 
@@ -797,10 +797,10 @@ btnNewFile?.addEventListener("click", async () => {
   const parentId = getTargetFolderId();
   // console.log("[CREATE] target parentId =", parentId);
 
-  const itemUUID = leanfs.createFile(parentId); // Create a file
+  const itemUUID = await leanfs.createFile(parentId); // Create a file
   const newname = NameEnsureInoExtension(itemUUID);
   console.log("new file name:", newname);
-  leanfs.rename(itemUUID, newname);             // rename it to somename with .ino (for example: "2025.12.31-08.44.22.ino")
+  await leanfs.rename(itemUUID, newname);             // rename it to somename with .ino (for example: "2025.12.31-08.44.22.ino")
   await leanfs.writeFile(itemUUID, inoTemplates.default || ""); // content = deafult.ino
   
   emitChanged([parentId, itemUUID]);
@@ -811,11 +811,11 @@ btnNewFile?.addEventListener("click", async () => {
   await openFileInMonaco(itemUUID);
 });
 
-btnNewFolder?.addEventListener("click", () => {
+btnNewFolder?.addEventListener("click", async () => {
  const parentId = getTargetFolderId();
   // console.log("[CREATE] target parentId =", parentId);
 
-  const itemUUID = leanfs.createDir(parentId); // Create a dir, default name: "2025.12.31-08.44.22"
+  const itemUUID = await leanfs.createDir(parentId); // Create a dir, default name: "2025.12.31-08.44.22"
 
   emitChanged([parentId, itemUUID]);
 
@@ -843,13 +843,13 @@ async function renameFileId(uuid, newDisplayName) {
   
   if (leanfs.isExist(uuid) === false) return;
 
-  leanfs.rename(uuid, newDisplayName);
+  await leanfs.rename(uuid, newDisplayName);
 
   // Rename a folder in root to LocalConfigName => auto  Create LocalConfig File
   if(newDisplayName === LocalConfigName && leanfs.getParent(uuid) == leanfs.getRoot()){ // Creat localConfigFolder => also create localConfigFile.yaml
     console.log("Auto Create Local Config File");
-    const childUUID = leanfs.createFile(uuid); // Create a file
-    leanfs.rename(childUUID,  `${LocalConfigName}.yaml`);    // rename
+    const childUUID = await leanfs.createFile(uuid); // Create a file
+    await leanfs.rename(childUUID,  `${LocalConfigName}.yaml`);    // rename
     await leanfs.writeFile(childUUID, Config.getUserConfigFile()); // copy content of UserConfigFile
   
     emitChanged([uuid, childUUID]);
@@ -1054,9 +1054,9 @@ async function deleteItemById(uuid) {
   const nextFocus = leanfs.pickNextItemAfterDelete(uuid);
 
   if (leanfs.isDir(uuid)) {
-    leanfs.deleteDir(uuid);
+    await leanfs.deleteDir(uuid);
   } else {
-    leanfs.deleteFile(uuid);
+    await leanfs.deleteFile(uuid);
   }
 
   await changeCurrentFileId(nextFocus);
