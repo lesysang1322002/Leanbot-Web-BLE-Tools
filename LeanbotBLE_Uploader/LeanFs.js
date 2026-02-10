@@ -35,13 +35,14 @@ export class LeanFs{
             // Restore workspace from localStorage if available (overwrites items, root UUID, and currentID).
             this.#loadWorkspaceTreeFromLocalStorage(); 
 
-            console.log("items:", this.#items)
+            // console.log("items:", this.#items)
 
-            console.log("[MOUNT LeanFs] Mount success");
+            console.log("[LeanFS.mount] Mount success");
         }
         catch(e){
-            alert(`Mount LeanFs Failed!. Error occur: ${e}`);
-            throw new Error(`[MOUNT LeanFs] Error occur: ${e}`)
+            const err = `[LeanFS.mount] Mount Failed!. Error occur: ${e}`
+            alert(err);
+            throw new Error(err)
         }
     }
 
@@ -96,7 +97,6 @@ export class LeanFs{
         if(!childUUID) return null;
 
         this.#items[childUUID].isFolder = false; // file
-        console.log("Creating new file (uuid):", childUUID);
 
         return childUUID;
     }
@@ -107,7 +107,6 @@ export class LeanFs{
         if(!childUUID) return null;
 
         this.#items[childUUID].isFolder = true; // dir
-        console.log("Creating new Dir (uuid):", childUUID);
 
         return childUUID;
     }
@@ -119,13 +118,10 @@ export class LeanFs{
         
         const item = this.#getItem(itemUUID);
         if (!item) return;
-
-        // if (item.data === newName) {
-        //     console.log(`[RENAME] skip (name unchanged): ${item.data}`);
-        //     return; // name not change
-        // }
         
         item.data = newName;
+        console.log( "[LeanFS.rename]", {uuid: itemUUID, newName: newName});
+
         this.#saveWorkspaceTreeToLocalStorage();
     }
 
@@ -193,7 +189,6 @@ export class LeanFs{
         const newHash = await getContentHash(content);
 
         if(oldHash === newHash){
-            console.log(`[WriteFile] Skip (unchanged) item ${itemUUID}`);
             return;
         }
 
@@ -201,7 +196,7 @@ export class LeanFs{
         localStorage.setItem(this.#fileKey(itemUUID), compressed);
         
         this.#items[itemUUID].contentHash = newHash;
-        console.log(`[WriteFile] item ${itemUUID}: update hash = ${newHash}`);
+        console.log("[LeanFS.writeFile]:", {uuid: itemUUID, hash: newHash});
     }
 
     deleteFile(itemUUID) {
@@ -210,7 +205,7 @@ export class LeanFs{
         if (this.isFile(itemUUID) === false) return;
 
         // log to debug
-        console.log(`[DeleteFile] name = ${this.getName(itemUUID)}, uuid = ${itemUUID}`);
+        console.info("[LeanFS.deleteFile] file remove:", { uuid: itemUUID });
 
         // gỡ itemUUID khỏi mọi folder trước, tránh lệch parent sau drag
         this.#removeFromParent(itemUUID);
@@ -264,9 +259,6 @@ export class LeanFs{
 
         if(itemUUID === this.getRoot())return; // NEVER delte root id.
 
-        // log to debug
-        console.log(`[DeleteDir] name = ${this.getName(itemUUID)}, uuid = ${itemUUID}`);
-
         let prevDelaySaveTree = this.#delaySaveTree
         this.#delaySaveTree = true
 
@@ -279,6 +271,8 @@ export class LeanFs{
         this.#removeFromParent(itemUUID); // Remove this directory from its parent
 
         this.#removeItem(itemUUID); // Remove the directory itself
+
+        console.info("[LeanFS.deleteDir] dir removed", { uuid: itemUUID });
 
         this.#delaySaveTree = prevDelaySaveTree
         this.#saveWorkspaceTreeToLocalStorage();
@@ -375,24 +369,19 @@ export class LeanFs{
     // === Storage Manage === //
 
     #saveWorkspaceTreeToLocalStorage() {
-        if (this.#delaySaveTree) {
-            console.log("Skip Save Tree (delaySave)"); // log debug
-            return;
-        }
-        console.log("Save workspace tree to Local Storage");
+        if (this.#delaySaveTree) {return;}
+        console.log("[LeanFS.saveTree] Save workspace");
         const items = {};
 
-        for(const uuid in this.#items){
-            const it = this.#items[uuid];
-
+        for(const [uuid, item] of Object.entries(this.#items)){
             items[uuid] = {
-                isFolder: it.isFolder,
-                data: it.data,
-                children: Array.isArray(it.children) ? [...it.children] : [],
+                isFolder: item.isFolder,
+                data: item.data,
+                children: Array.isArray(item.children) ? [...item.children] : [],
             };
         }
 
-        const json = JSON.stringify({ items });
+        const json = JSON.stringify(items);
 
         localStorage.setItem(LeanFs.#LS_KEY_TREE, json);
     }
@@ -402,17 +391,15 @@ export class LeanFs{
     }
 
     #loadWorkspaceTreeFromLocalStorage() {
-        console.log("Load workspace tree from Local Storage");
         try {
             const rawTree = localStorage.getItem(LeanFs.#LS_KEY_TREE);
 
             if (!rawTree) {
-                console.log("[LS] No workspace found in localStorage");
+                console.log("[LeanFS.loadTree] No workspace found in localStorage");
                 this.#saveWorkspaceTreeToLocalStorage();
                 return;
             }
-            const data = JSON.parse(rawTree);
-            const items = data.items || {};
+            const items = JSON.parse(rawTree);
 
             // loop through json key value list
             for (const [uuid, item] of Object.entries(items)) {
@@ -421,15 +408,14 @@ export class LeanFs{
                 item.contentHash = null
             }
 
-            Object.keys(this.#items).forEach(k => delete this.#items[k]);
-            Object.assign(this.#items, data.items || {});
+            this.#items = items || {}; // Completly overwrite curent #items by local storage
 
             this.#rebuildParents();
 
             // this.#saveWorkspaceTreeToLocalStorage();
-            console.log("[LS] Workspace restored");
+            console.log("[LeanFS.loadTree] Workspace restored");
         } catch (e) {
-            console.error("[LS] Restore failed", e);
+            console.error("[LeanFS.loadTree] Restore failed", e);
             throw e;
         } 
         // finally {
@@ -451,12 +437,17 @@ export class LeanFs{
 
     // Gắn parent cho mỗi node, để move nhanh
     #rebuildParents() {
-        for (const uuid in this.#items) this.#items[uuid].parent = null;
-        for (const uuid in this.#items) {
-            const ch = this.#items[uuid].children;
+
+        for (const [uuid, item] of Object.entries(this.#items)) {
+            item.parent = null;
+        }
+
+        for (const [uuid, item] of Object.entries(this.#items)) {
+            const ch = item.children;
             if (!Array.isArray(ch)) continue;
             for (const cid of ch) if (this.#items[cid]) this.#items[cid].parent = uuid;
         }
+
     }
 
     // drag drop, reorder, move folder
@@ -474,15 +465,15 @@ export class LeanFs{
         }
 
         // fallback: nếu parent bị sai, quét toàn bộ folder để xóa mọi chỗ đang chứa childId
-        for (const uuid in this.#items) {
-            const it = this.#items[uuid];
+        for (const [uuid, item] of Object.entries(this.#items)) {
             if (!this.isDir(uuid)) continue;
-            if (!Array.isArray(it.children)) continue;
+            if (!Array.isArray(item.children)) continue;
 
-            const before = it.children.length;
-            it.children = it.children.filter((x) => x !== childId);
-            if (it.children.length !== before) removedParent = removedParent || uuid;
+            const before = item.children.length;
+            item.children = item.children.filter((x) => x !== childId);
+            if (item.children.length !== before) removedParent = removedParent || uuid;
         }
+
 
         return removedParent;
     }
@@ -495,30 +486,17 @@ export class LeanFs{
         const p = this.#getItem(parentId);
         if(!p)return null;
 
-        console.log("[CREATE] target parentId =", parentId);
-
         const uuid = createUUID();
 
-        this.#items[uuid] = { index: uuid, isFolder: null, children: [], data: getTimestampName(), parent: parentId, contentHash: null};
-        console.log("[CREATE] item.parent =", this.#items[uuid].parent);
+        this.#items[uuid] = { index: uuid, isFolder: null, children: null, data: getTimestampName(), parent: parentId, contentHash: null};
         p.children ||= [];
         // p.children.push(uuid);
         p.children.unshift(uuid); // keep newly created items at the top of the list
-        console.log(
-            "[CHECK] parent contains child =",
-            p.children.includes(uuid)
-        );
 
+        console.log("[LeanFS.createItem] crate new Item (uuid):", {name: this.#items[uuid].data, uuid: uuid , parent: parentId});
         this.#saveWorkspaceTreeToLocalStorage();
 
         return uuid;
-    }
-
-    #ClearAllContentHash(){
-        for(const uuid in this.#items){
-            const it = this.#items[uuid];
-            it.contentHash = null;
-        }
     }
 }
 
@@ -568,7 +546,7 @@ async function compressString(str) {
     const t1 = performance.now();
     const stream = new Blob([compressString.textEncoder.encode(str)])
         .stream()
-        .pipeThrough(new CompressionStream('gzip'));
+        .pipeThrough(new CompressionStream('deflate-raw'));
 
     const buffer = await new Response(stream).arrayBuffer();
     const compressed = uint8ToBase64(new Uint8Array(buffer));
@@ -590,7 +568,7 @@ async function decompressString(base64) {
 
     const stream = new Blob([bytes])
         .stream()
-        .pipeThrough(new DecompressionStream('gzip'));
+        .pipeThrough(new DecompressionStream('deflate-raw'));
 
     const buffer = await new Response(stream).arrayBuffer();
     const decompressed = decompressString.textDecoder.decode(buffer);
