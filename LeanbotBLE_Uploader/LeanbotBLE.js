@@ -144,7 +144,7 @@ export class LeanbotBLE {
     
     /** ---------- SETUP SUB-CONNECTIONS ---------- */
     await this.Serial.setupConnection(this.#chars);
-    await this.Uploader.setupConnection(this.#chars, Uploader.BLE_MaxLength, Uploader.BLE_Interval);
+    await this.Uploader.setupConnection(this.#chars, LeanbotBLE.#config.EspUploader.BLE_MaxLength, LeanbotBLE.#config.EspUploader.BLE_Interval);
 
     /** ---------- CONNECT CALLBACK ---------- */
 
