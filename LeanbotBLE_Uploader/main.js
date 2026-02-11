@@ -550,7 +550,7 @@ inoEditor.onChangeContent = () =>  {
 // Restore Current ID
 // ============================================================
 
-const CURRENT_FILEID_KEY = "leanbot_workspace_current_fileID";
+const CURRENT_FILEID_KEY = "LeanFs10_current_fileID";
 
 window.currentFileId = localStorage.getItem(CURRENT_FILEID_KEY) || leanfs.getRoot() || null;
 
@@ -1347,5 +1347,5 @@ function NameEnsureExtension(itemUUID, Extension) {
   if (currentName.toLowerCase().endsWith(Extension)) return currentName;
 
   // không có đuôi → tự thêm .ino
-  return currentName + ".ino";
+  return currentName + Extension;
 }

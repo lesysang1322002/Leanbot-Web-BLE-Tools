@@ -1,6 +1,6 @@
 export class LeanFs{
-    static #LS_KEY_TREE =     "leanbot_workspace_tree";
-    static #FILE_KEY_PREFIX = "Workspace_File_";
+    static #LS_KEY_TREE =     "LeanFs10__tree";
+    static #FILE_KEY_PREFIX = "LeanFs10_";
     static #rootUUID =        "bd70ce61-fc7d-41a5-b0f9-0017e998813a"; // random generate from https://www.uuidgenerator.net/
 
     static leanfs_TYPE = Object.freeze({
@@ -164,6 +164,19 @@ export class LeanFs{
         return leanfs_TYPE === this.getItemType(itemUUID);
     }
 
+    // async readFile(itemUUID) {
+
+    //     if (!this.isFile(itemUUID)) return null;
+
+    //     const compressed = localStorage.getItem(this.#fileKey(itemUUID));
+    //     if (!compressed) return null;
+
+    //     const content = await decompressString(compressed);
+
+    //     this.#items[itemUUID].contentHash = await getContentHash(content)
+    //     return content;
+    // }
+
     async readFile(itemUUID) {
 
         if (!this.isFile(itemUUID)) return null;
@@ -171,10 +184,22 @@ export class LeanFs{
         const compressed = localStorage.getItem(this.#fileKey(itemUUID));
         if (!compressed) return null;
 
-        const content = await decompressString(compressed);
+        try {
+            const content = await decompressString(compressed);
 
-        this.#items[itemUUID].contentHash = await getContentHash(content)
-        return content;
+            this.#items[itemUUID].contentHash = await getContentHash(content);
+            return content;
+
+        } catch (err) {
+
+            const fallbackRawData =`ERROR : File corrupted\nRaw file data:\n\n${compressed}`;
+
+            console.log(`${fallbackRawData}\n err: ${err}`);
+
+            this.#items[itemUUID].contentHash = await getContentHash(fallbackRawData);
+
+            return fallbackRawData;
+        }
     }
 
     async writeFile(itemUUID, content) {
@@ -421,18 +446,17 @@ export class LeanFs{
                 await this.#newTree();
                 return;
             }
-            const items = JSON.parse(rawTree);
+            
+            this.#items = JSON.parse(rawTree)
 
             // loop through json key value list
-            for (const [uuid, item] of Object.entries(items)) {
+            for (const [uuid, item] of Object.entries(this.#items)) {
                 //console.log(`${uuid}: ${item}`);
                 item.isFolder = Array.isArray(item.children);
                 if (!item.isFolder) item.children = null; // extra safe
                 item.index = uuid
                 item.contentHash = null
             }
-
-            this.#items = items || {}; // Completly overwrite curent #items by local storage
 
             this.#rebuildParents();
 
