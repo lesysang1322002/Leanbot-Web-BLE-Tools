@@ -571,9 +571,10 @@ async function changeCurrentFileId(newFileId){
 // ============================================================
 
 // Templates ino
-const inoTemplates = {
+const fileTemplates = {
   basicMotion: "",
-  default: ""
+  default: "",
+  defaultBlockly: ""
 };
 
 async function loadText(url) {
@@ -584,12 +585,13 @@ async function loadText(url) {
   return await res.text();
 }
 
-async function initInoTemplates() {
-  inoTemplates.basicMotion = await loadText("./TemplateSourceCode/BasicMotion.ino");
-  inoTemplates.default     = await loadText("./TemplateSourceCode/Default.ino");
+async function initfileTemplates() {
+  fileTemplates.basicMotion = await loadText("./TemplateSourceCode/BasicMotion.ino");
+  fileTemplates.default     = await loadText("./TemplateSourceCode/Default.ino");
+  fileTemplates.defaultBlockly = await loadText("./TemplateSourceCode/DefaultBlockly.bduino");
 }
 
-await initInoTemplates();
+await initfileTemplates();
 
 const { UncontrolledTreeEnvironment, Tree, StaticTreeDataProvider } = window.ReactComplexTree;
 const dataProvider = new StaticTreeDataProvider(leanfs.getItems(), (item, data) => ({ ...item, data }));
@@ -604,7 +606,7 @@ if (!leanfs.hasAnyFileOfType(LeanFs.leanfs_TYPE.INO)) { // If no .ino file exist
   console.log("[LS] No .ino file found, creating default BasicMotion.ino");
   const uuid = await leanfs.createFile(leanfs.getRoot());
   await leanfs.rename(uuid, "BasicMotion.ino");
-  await leanfs.writeFile(uuid, inoTemplates.basicMotion || "");
+  await leanfs.writeFile(uuid, fileTemplates.basicMotion || "");
   await changeCurrentFileId(uuid);
 }
 
@@ -792,16 +794,35 @@ btnShowTree.addEventListener('click', () => {
 
 const btnNewFile = document.getElementById("btnNewFile");
 const btnNewFolder = document.getElementById("btnNewFolder");
+const btnNewBlocklyFile = document.getElementById("btnNewBlocklyFile");
 
 btnNewFile?.addEventListener("click", async () => {
   const parentId = getTargetFolderId();
   // console.log("[CREATE] target parentId =", parentId);
 
   const itemUUID = await leanfs.createFile(parentId); // Create a file
-  const newname = NameEnsureInoExtension(itemUUID);
+  const newname = NameEnsureExtension(itemUUID, '.ino');
   console.log("new file name:", newname);
   await leanfs.rename(itemUUID, newname);             // rename it to somename with .ino (for example: "2025.12.31-08.44.22.ino")
-  await leanfs.writeFile(itemUUID, inoTemplates.default || ""); // content = deafult.ino
+  await leanfs.writeFile(itemUUID, fileTemplates.default || ""); // content = deafult.ino
+  
+  emitChanged([parentId, itemUUID]);
+  
+  pendingTreeRenameId = itemUUID;
+  pendingTreeFocusId  = itemUUID;
+
+  await openFileInMonaco(itemUUID);
+});
+
+btnNewBlocklyFile?.addEventListener("click", async () => {
+  const parentId = getTargetFolderId();
+  // console.log("[CREATE] target parentId =", parentId);
+
+  const itemUUID = await leanfs.createFile(parentId); // Create a file
+  const newname = NameEnsureExtension(itemUUID, '.bduino');
+  console.log("new file name:", newname);
+  await leanfs.rename(itemUUID, newname);             // rename it to somename with .bduino(for example: "2025.12.31-08.44.22.bduino")
+  await leanfs.writeFile(itemUUID, fileTemplates.defaultBlockly || ""); // content = DefaultBlockly.bduino
   
   emitChanged([parentId, itemUUID]);
   
@@ -1318,12 +1339,12 @@ function logLbIDEEvent(event) {
   );
 }
 
-function NameEnsureInoExtension(itemUUID) {
+function NameEnsureExtension(itemUUID, Extension) {
 
   let currentName = String(leanfs.getName(itemUUID));
 
   // nếu đã có .ino thì giữ nguyên
-  if (currentName.toLowerCase().endsWith(".ino")) return currentName;
+  if (currentName.toLowerCase().endsWith(Extension)) return currentName;
 
   // không có đuôi → tự thêm .ino
   return currentName + ".ino";
