@@ -594,7 +594,7 @@ async function compressString(str) {
     const t1 = performance.now();
     const stream = new Blob([compressString.textEncoder.encode(str)])
         .stream()
-        .pipeThrough(new CompressionStream('deflate-raw'));
+        .pipeThrough(new CompressionStream('gzip'));
 
     const buffer = await new Response(stream).arrayBuffer();
     const compressed = uint8ToBase64(new Uint8Array(buffer));
@@ -616,7 +616,7 @@ async function decompressString(base64) {
 
     const stream = new Blob([bytes])
         .stream()
-        .pipeThrough(new DecompressionStream('deflate-raw'));
+        .pipeThrough(new DecompressionStream('gzip'));
 
     const buffer = await new Response(stream).arrayBuffer();
     const decompressed = decompressString.textDecoder.decode(buffer);
