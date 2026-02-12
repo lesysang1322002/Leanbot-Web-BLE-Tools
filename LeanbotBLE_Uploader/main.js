@@ -512,7 +512,7 @@ tabs.forEach(tab => {
   });
 });
 
-editorSection.addEventListener('focusin', (e) => {
+editorSection.addEventListener('pointerdown', (e) => {
   if (!autoHideCheckbox.checked) return;
 
   // nếu serial đang mở thì mới hide
