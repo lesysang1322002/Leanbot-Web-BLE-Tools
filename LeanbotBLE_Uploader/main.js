@@ -213,6 +213,7 @@ function setUICompileAndBuildEnabled(enable){
   window.treelocked = !enable;    // Lock file tree to prevent switching files, renaming
 
   btnNewFile.disabled  = !enable;  // Disable workspace mutation actions (create / import)
+  btnNewBlocklyFile.disabled = !enable;
   btnNewFolder.disabled  = !enable; 
   btnLoadFile.disabled = !enable;
 }

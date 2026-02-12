@@ -832,7 +832,20 @@ class JDYUploader {
     this.#uploadEndMs = 0;
     this.#BLEPackets = convertHexToBlePackets(hexText, { returnStep2: true });
 
-    while (!this.#isGetSyncOK) await new Promise(resolve => setTimeout(resolve, 5));
+    // while (!this.#isGetSyncOK) await new Promise(resolve => setTimeout(resolve, 5));
+
+
+    const start = performance.now();
+    const TIMEOUT = 5000; // 5 seconds
+
+    while (!this.#isGetSyncOK) {
+      if (performance.now() - start > TIMEOUT) {
+        clearInterval(this.intervalGetSync);
+        this.isUploading = false;
+        throw new Error("GET_SYNC timeout");
+      }
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
 
     await this.#uploadCode();
 
@@ -856,13 +869,22 @@ class JDYUploader {
     await new Promise(resolve => setTimeout(resolve, JDYUploader.#config.prepareUploadDelayMs));
 
     console.log("[UPLOAD] Reconnecting...");
+    let retry = 0;
+    const MAX_RETRY = 20;
     let resultReco;
-    while (!(resultReco?.success)) {
+    while (!(resultReco?.success) && retry < MAX_RETRY) {
       try {
         resultReco = await this.#leanbot.reconnect();
+        retry++;
       } catch {}
       await new Promise(r => setTimeout(r, 50));
     }
+
+    if (!resultReco?.success) {
+      this.isUploading = false;
+      throw new Error(`Reconnect failed after ${MAX_RETRY} retries`);
+    }
+
     console.log("[UPLOAD] Reconnect success.");
     this.isUploading = true;
 
@@ -905,8 +927,8 @@ class JDYUploader {
     // STK_GET_SYNC + STK_CRC_EOP
     const getSyncCmd = new Uint8Array([0x30, 0x20]); 
     console.log("[SYNC] Sent GET_SYNC command");
-    await this.#serial.SerialPipe_sendToLeanbot(getSyncCmd, false);
     this.#isSyncing  = true;
+    await this.#serial.SerialPipe_sendToLeanbot(getSyncCmd, false);
   }
 
   async #handleGetSyncAck(bytes) {
@@ -943,6 +965,7 @@ class JDYUploader {
     if (!this.#isACK(bytes)) {
       console.log("[LOAD] Invalid LOAD_ADDRESS ACK response");
       this.#emitUploadMessage("Load address failed");
+      this.abortAll(); // quick fix as there is no handle for load adress failed
       this.isUploading = false;
       return;
     }
