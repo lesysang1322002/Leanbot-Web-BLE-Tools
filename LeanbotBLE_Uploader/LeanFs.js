@@ -1,6 +1,6 @@
 export class LeanFs{
-    static #LS_KEY_TREE =     "LeanFs10__tree";
-    static #FILE_KEY_PREFIX = "LeanFs10_";
+    static #LS_KEY_TREE =     "LeanFs11__tree";
+    static #FILE_KEY_PREFIX = "LeanFs11_";
     static #rootUUID =        "bd70ce61-fc7d-41a5-b0f9-0017e998813a"; // random generate from https://www.uuidgenerator.net/
 
     static leanfs_TYPE = Object.freeze({
@@ -403,6 +403,9 @@ export class LeanFs{
 
         this.#treeHash = newHash;
 
+        const uuidToIndexMap = buildUuidIndexMap(this.#items);
+        console.log("[LeanFS.saveTree] Saved Tree order (uuid: index):", uuidToIndexMap); // log to test
+
         // save tree
         console.log("[LeanFS.saveTree] Save workspace");
         const items = {};
@@ -410,7 +413,7 @@ export class LeanFs{
         for(const [uuid, item] of Object.entries(this.#items)){
             items[uuid] = {
                 data: item.data,
-                children: Array.isArray(item.children) ? [...item.children] : null,
+                children: mapChildrenUuidToIndex(item.children, uuidToIndexMap), // convert children uuid to index
             };
         }
 
@@ -449,11 +452,15 @@ export class LeanFs{
             
             this.#items = JSON.parse(rawTree)
 
+            const uuidToIndexMap = buildUuidIndexMap(this.#items);
+            console.log("[LeanFS.loadTree] Load Tree order (uuid: index):", uuidToIndexMap); // log to test
+
             // loop through json key value list
             for (const [uuid, item] of Object.entries(this.#items)) {
                 //console.log(`${uuid}: ${item}`);
                 item.isFolder = Array.isArray(item.children);
                 if (!item.isFolder) item.children = null; // extra safe
+                else item.children = mapChildrenIndexToUuid(item.children, uuidToIndexMap); // convert children index back to uuid
                 item.index = uuid
                 item.contentHash = null
             }
@@ -644,4 +651,46 @@ async function getContentHash(content){
     const hashBuffer = await window.crypto.subtle.digest("SHA-1", data);
     const newHash = bufferToHex(hashBuffer);
     return newHash;
+}
+
+function buildUuidIndexMap(items) {
+    const map = Object.create(null);
+    let i = 0;
+
+    for (const uuid of Object.keys(items)) {
+        map[uuid] = i++;
+    }
+
+    return map;
+}
+
+function mapChildrenUuidToIndex(children, uuidToIndex) {
+    if (!Array.isArray(children)) return null;
+
+    const out = new Array(children.length);
+
+    for (let i = 0; i < children.length; i++) {
+        const uuid = children[i];
+        out[i] = uuidToIndex[uuid] ?? null; // null if missing
+    }
+
+    return out;
+}
+
+function mapChildrenIndexToUuid(childrenIdx, uuidToIndex) {
+    if (!Array.isArray(childrenIdx)) return null;
+
+    const out = new Array(childrenIdx.length);
+
+    /// Create reserve map from index to uuid for reverse lookup
+    const indexToUuid = Object.create(null);
+    for (const uuid in uuidToIndex) {
+        indexToUuid[uuidToIndex[uuid]] = uuid;
+    }
+
+    for (let i = 0; i < childrenIdx.length; i++) {
+        out[i] = indexToUuid[childrenIdx[i]] ?? null;
+    }
+
+    return out;
 }
