@@ -360,28 +360,27 @@ function handleChangedValue(event) {
 
                 lineState = ir2L.toString() + ir0L.toString() + ir1R.toString() + ir3R.toString();
 
-                // if (lineState === '1111' || lineState === '0000') {
-                //     testFollowline.style.color = "#CCCCCC";
-                // }
-                // else {
-                testFollowline.style.color = "green";
-                // if (checkAlertFollowLine) {
-                if (true) {
-                    AlertFollowLine.style.display = 'none';
-                    checkClickDone = false;
-                    runTest(
-                        "Followline",
-                        [
-                            ".LineFollow",
-                            toStr(threshold[2], 3),
-                            toStr(threshold[3], 3),
-                            toStr(threshold[4], 3),
-                            toStr(threshold[5], 3),
-                        ].join(' ')
-                    );
-                    checkAlertFollowLine = false;
+                if (lineState === '1111' || lineState === '0000') {
+                    testFollowline.style.color = "#CCCCCC";
                 }
-                // }
+                else {
+                    testFollowline.style.color = "green";
+                    if (checkAlertFollowLine) {
+                        AlertFollowLine.style.display = 'none';
+                        checkClickDone = false;
+                        runTest(
+                            "Followline",
+                            [
+                                ".LineFollow",
+                                toStr(threshold[2], 3),
+                                toStr(threshold[3], 3),
+                                toStr(threshold[4], 3),
+                                toStr(threshold[5], 3),
+                            ].join(' ')
+                        );
+                        checkAlertFollowLine = false;
+                    }
+                }
 
                 for (let i = 0; i < 4; i++) {
                     let element = document.getElementById(elementIds[i]);
@@ -901,32 +900,23 @@ let checkAlertFollowLine = false;
 function TestLineFollow() {
     if (checkmessage) {
         // if(lineState !== '1111' && lineState !== '0000'){
-        //     runTest(
-        //         "Followline",
-        //         [
-        //           ".LineFollow",
-        //           toStr(threshold[2], 3),
-        //           toStr(threshold[3], 3),
-        //           toStr(threshold[4], 3),
-        //           toStr(threshold[5], 3),
-        //         ].join(' ')
-        //     );     
-        // }
-        // else{
-        //     AlertFollowLine.style.display = 'block';
-        //     checkClickDone = true;
-        //     checkAlertFollowLine = true;
-        // }
-        runTest(
-            "Followline",
-            [
-                ".LineFollow",
-                toStr(threshold[2], 3),
-                toStr(threshold[3], 3),
-                toStr(threshold[4], 3),
-                toStr(threshold[5], 3),
-            ].join(' ')
-        );
+        if (true) {
+            runTest(
+                "Followline",
+                [
+                    ".LineFollow",
+                    toStr(threshold[2], 3),
+                    toStr(threshold[3], 3),
+                    toStr(threshold[4], 3),
+                    toStr(threshold[5], 3),
+                ].join(' ')
+            );
+        }
+        else {
+            AlertFollowLine.style.display = 'block';
+            checkClickDone = true;
+            checkAlertFollowLine = true;
+        }
     }
 }
 
