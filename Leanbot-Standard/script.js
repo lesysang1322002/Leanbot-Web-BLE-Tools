@@ -365,7 +365,8 @@ function handleChangedValue(event) {
                 // }
                 // else {
                 testFollowline.style.color = "green";
-                if (checkAlertFollowLine) {
+                // if (checkAlertFollowLine) {
+                if (true) {
                     AlertFollowLine.style.display = 'none';
                     checkClickDone = false;
                     runTest(
