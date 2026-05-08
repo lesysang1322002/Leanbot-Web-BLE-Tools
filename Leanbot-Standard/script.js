@@ -360,7 +360,8 @@ function handleChangedValue(event) {
 
                 lineState = ir2L.toString() + ir0L.toString() + ir1R.toString() + ir3R.toString();
 
-                if (lineState === '1111' || lineState === '0000') {
+                // if (lineState === '1111' || lineState === '0000') {
+                if (true) {
                     testFollowline.style.color = "#CCCCCC";
                 }
                 else {
