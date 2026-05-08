@@ -360,27 +360,27 @@ function handleChangedValue(event) {
 
                 lineState = ir2L.toString() + ir0L.toString() + ir1R.toString() + ir3R.toString();
 
-                if (lineState === '1111' || lineState === '0000') {
-                    testFollowline.style.color = "#CCCCCC";
+                // if (lineState === '1111' || lineState === '0000') {
+                //     testFollowline.style.color = "#CCCCCC";
+                // }
+                // else {
+                testFollowline.style.color = "green";
+                if (checkAlertFollowLine) {
+                    AlertFollowLine.style.display = 'none';
+                    checkClickDone = false;
+                    runTest(
+                        "Followline",
+                        [
+                            ".LineFollow",
+                            toStr(threshold[2], 3),
+                            toStr(threshold[3], 3),
+                            toStr(threshold[4], 3),
+                            toStr(threshold[5], 3),
+                        ].join(' ')
+                    );
+                    checkAlertFollowLine = false;
                 }
-                else {
-                    testFollowline.style.color = "green";
-                    if (checkAlertFollowLine) {
-                        AlertFollowLine.style.display = 'none';
-                        checkClickDone = false;
-                        runTest(
-                            "Followline",
-                            [
-                                ".LineFollow",
-                                toStr(threshold[2], 3),
-                                toStr(threshold[3], 3),
-                                toStr(threshold[4], 3),
-                                toStr(threshold[5], 3),
-                            ].join(' ')
-                        );
-                        checkAlertFollowLine = false;
-                    }
-                }
+                // }
 
                 for (let i = 0; i < 4; i++) {
                     let element = document.getElementById(elementIds[i]);
